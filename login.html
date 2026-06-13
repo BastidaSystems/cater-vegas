@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Login de Cater Vegas con Supabase Auth." />
+    <title>Cater Vegas | Login</title>
+    <link rel="stylesheet" href="style.css?v=scale-2" />
+    <style>
+      body {
+        min-height: 100vh;
+        min-height: 100svh;
+        overflow: auto;
+      }
+
+      .auth-shell {
+        display: grid;
+        min-height: 100vh;
+        min-height: 100svh;
+        place-items: center;
+        padding: clamp(5.5rem, 12vh, 8rem) var(--page-gutter) 3rem;
+        background:
+          linear-gradient(180deg, rgba(185, 144, 91, 0.11), transparent 34%),
+          linear-gradient(145deg, #020202 0%, var(--black) 58%, #0a0a0a 100%);
+      }
+
+      .auth-panel {
+        width: min(100%, 28rem);
+        border: 1px solid rgba(185, 144, 91, 0.24);
+        border-radius: 1.4rem;
+        background: rgba(5, 5, 5, 0.82);
+        box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.36);
+        padding: clamp(1.5rem, 4vw, 2.35rem);
+      }
+
+      .auth-kicker {
+        color: var(--gold-light);
+        font-size: 0.68rem;
+        font-weight: 800;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+      }
+
+      .auth-panel h1 {
+        margin-top: 0.85rem;
+        font-size: clamp(2.1rem, 9vw, 4rem);
+        line-height: 0.9;
+        letter-spacing: 0.03em;
+      }
+
+      .auth-panel p {
+        margin-top: 1rem;
+        color: var(--muted);
+        font-size: 0.92rem;
+        line-height: 1.6;
+      }
+
+      .auth-form {
+        display: grid;
+        gap: 0.85rem;
+        margin-top: 1.6rem;
+      }
+
+      .auth-form label {
+        display: grid;
+        gap: 0.42rem;
+        color: rgba(245, 241, 234, 0.76);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .auth-form input {
+        width: 100%;
+        border: 1px solid rgba(185, 144, 91, 0.26);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--text);
+        outline: 0;
+        padding: 0.94rem 1rem;
+      }
+
+      .auth-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        margin-top: 0.35rem;
+      }
+
+      .auth-button {
+        border-radius: 999px;
+        background: var(--gold);
+        color: #050505;
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.12em;
+        padding: 0.9rem 1rem;
+        text-transform: uppercase;
+      }
+
+      .auth-button.secondary {
+        border: 1px solid rgba(185, 144, 91, 0.32);
+        background: transparent;
+        color: var(--gold-light);
+      }
+
+      .auth-status {
+        min-height: 1.25rem;
+        color: var(--gold-light);
+        font-size: 0.8rem;
+      }
+
+      .auth-links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.9rem;
+        margin-top: 1.25rem;
+        color: var(--gold-light);
+        font-size: 0.82rem;
+      }
+
+      @media (max-width: 560px) {
+        .auth-actions {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header" aria-label="Encabezado principal">
+      <a class="logo" href="index.html" aria-label="Cater Vegas inicio">CATER VEGAS</a>
+    </header>
+
+    <main class="auth-shell">
+      <section class="auth-panel" aria-labelledby="auth-title">
+        <span class="auth-kicker">Supabase Auth</span>
+        <h1 id="auth-title">Acceso</h1>
+        <p>
+          Entra con tu cuenta para administrar eventos, revisar planes y usar BEOFlow
+          desde Supabase.
+        </p>
+
+        <form class="auth-form" id="authForm">
+          <label>
+            Email
+            <input id="authEmail" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            Password
+            <input id="authPassword" type="password" autocomplete="current-password" />
+          </label>
+
+          <div class="auth-actions">
+            <button class="auth-button" type="submit">Entrar</button>
+            <button class="auth-button secondary" id="signupButton" type="button">Crear cuenta</button>
+          </div>
+
+          <button class="auth-button secondary" id="magicLinkButton" type="button">
+            Enviar magic link
+          </button>
+
+          <p class="auth-status" id="authStatus" aria-live="polite"></p>
+        </form>
+
+        <nav class="auth-links" aria-label="Navegación de sesión">
+          <a href="admin/">Admin</a>
+          <a href="index.html">Volver al generador</a>
+          <button class="auth-button secondary" id="signoutButton" type="button">Salir</button>
+        </nav>
+      </section>
+    </main>
+
+    <script type="module">
+      import { isSupabaseConfigured, requireSupabase } from "./lib/supabaseClient.js";
+
+      const authForm = document.querySelector("#authForm");
+      const emailInput = document.querySelector("#authEmail");
+      const passwordInput = document.querySelector("#authPassword");
+      const signupButton = document.querySelector("#signupButton");
+      const magicLinkButton = document.querySelector("#magicLinkButton");
+      const signoutButton = document.querySelector("#signoutButton");
+      const authStatus = document.querySelector("#authStatus");
+
+      function setStatus(message) {
+        authStatus.textContent = message;
+      }
+
+      if (!isSupabaseConfigured) {
+        setStatus("Configura Supabase en lib/supabaseClient.js antes de usar Auth.");
+      }
+
+      const supabase = isSupabaseConfigured ? requireSupabase() : null;
+
+      async function refreshSessionStatus() {
+        if (!supabase) return;
+        const { data } = await supabase.auth.getSession();
+        if (data.session) {
+          setStatus(`Sesión activa: ${data.session.user.email}`);
+        }
+      }
+
+      authForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!supabase) return;
+
+        setStatus("Entrando...");
+        const { error } = await supabase.auth.signInWithPassword({
+          email: emailInput.value.trim(),
+          password: passwordInput.value,
+        });
+
+        if (error) {
+          setStatus(error.message);
+          return;
+        }
+
+        window.location.href = "admin/";
+      });
+
+      signupButton.addEventListener("click", async () => {
+        if (!supabase) return;
+
+        setStatus("Creando cuenta...");
+        const { error } = await supabase.auth.signUp({
+          email: emailInput.value.trim(),
+          password: passwordInput.value,
+        });
+
+        setStatus(error ? error.message : "Cuenta creada. Revisa tu email si Supabase pide confirmación.");
+      });
+
+      magicLinkButton.addEventListener("click", async () => {
+        if (!supabase) return;
+
+        setStatus("Enviando magic link...");
+        const { error } = await supabase.auth.signInWithOtp({
+          email: emailInput.value.trim(),
+          options: {
+            emailRedirectTo: new URL("login.html", window.location.href).href,
+          },
+        });
+
+        setStatus(error ? error.message : "Magic link enviado.");
+      });
+
+      signoutButton.addEventListener("click", async () => {
+        if (!supabase) return;
+        await supabase.auth.signOut();
+        setStatus("Sesión cerrada.");
+      });
+
+      refreshSessionStatus();
+    </script>
+  </body>
+</html>
+

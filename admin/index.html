@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Panel administrativo de Cater Vegas." />
+    <title>Cater Vegas | Admin</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body>
+    <header class="admin-header">
+      <a class="admin-logo" href="../index.html">CATER VEGAS</a>
+      <nav>
+        <a href="../index.html">Generador</a>
+        <a href="../login.html">Login</a>
+        <button id="signoutButton" type="button">Salir</button>
+      </nav>
+    </header>
+
+    <main class="admin-shell">
+      <section class="admin-hero">
+        <p class="admin-kicker">Supabase Admin</p>
+        <h1>Eventos, planes y BEOFlow.</h1>
+        <p id="sessionStatus">Verificando sesión...</p>
+      </section>
+
+      <section class="admin-grid">
+        <form class="admin-card event-form" id="eventForm">
+          <div>
+            <p class="admin-kicker">Nuevo evento</p>
+            <h2>Crear plan base</h2>
+          </div>
+
+          <label>
+            Nombre del evento
+            <input id="eventTitle" type="text" placeholder="Cena VIP en Las Vegas" required />
+          </label>
+
+          <label>
+            Tipo
+            <select id="eventType">
+              <option>Boda</option>
+              <option>Corporativo</option>
+              <option>VIP</option>
+            </select>
+          </label>
+
+          <label>
+            Presupuesto
+            <select id="eventBudget">
+              <option value="$2K - $5K">Esencial · $2K - $5K</option>
+              <option value="$5K - $10K" selected>Premium · $5K - $10K</option>
+              <option value="$10K - $25K">Completo · $10K - $25K</option>
+              <option value="$25K+">Luxury · $25K+</option>
+            </select>
+          </label>
+
+          <label>
+            Fecha tentativa
+            <input id="eventDate" type="date" />
+          </label>
+
+          <label>
+            Invitados
+            <input id="guestCount" type="number" min="1" placeholder="80" />
+          </label>
+
+          <button class="primary-button" type="submit">Crear evento</button>
+          <p class="admin-status" id="eventFormStatus" aria-live="polite"></p>
+        </form>
+
+        <section class="admin-card">
+          <div class="events-heading">
+            <div>
+              <p class="admin-kicker">Realtime</p>
+              <h2>Eventos</h2>
+            </div>
+            <button id="refreshEventsButton" type="button">Actualizar</button>
+          </div>
+          <div class="events-list" id="eventsList" aria-live="polite"></div>
+        </section>
+
+        <section class="admin-card beoflow-admin">
+          <div>
+            <p class="admin-kicker">BEOFlow</p>
+            <h2>Actualizar plan</h2>
+          </div>
+          <p id="selectedEventLabel">Selecciona un evento para enviar instrucciones.</p>
+          <form id="adminBeoflowForm">
+            <textarea
+              id="adminBeoflowPrompt"
+              rows="5"
+              placeholder="Ej. Agrega transporte, hospedaje y staff para un evento VIP."
+            ></textarea>
+            <button class="primary-button" type="submit">Enviar a BEOFlow</button>
+          </form>
+          <pre id="beoflowResult"></pre>
+        </section>
+      </section>
+    </main>
+
+    <script type="module" src="admin.js"></script>
+  </body>
+</html>
+

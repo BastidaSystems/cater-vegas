@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Cater Vegas, coordinación de eventos y servicios de catering premium."
+    />
+    <title>Cater Vegas</title>
+    <link rel="stylesheet" href="style.css?v=scale-2" />
+  </head>
+  <body>
+    <header class="site-header" aria-label="Encabezado principal">
+      <a class="logo" href="#" aria-label="Cater Vegas inicio">CATER VEGAS</a>
+
+      <button class="menu-toggle" type="button" aria-label="Abrir menú visual">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
+    </header>
+
+    <main class="hero" data-screen="home">
+      <nav class="flow-progress" aria-label="Progreso del plan">
+        <ol class="flow-progress-list">
+          <li class="is-active" data-progress-step="budget">
+            <span>01</span>
+            <strong>Presupuesto</strong>
+          </li>
+          <li data-progress-step="event">
+            <span>02</span>
+            <strong>Evento</strong>
+          </li>
+          <li data-progress-step="menu">
+            <span>03</span>
+            <strong>Menú</strong>
+          </li>
+          <li data-progress-step="services">
+            <span>04</span>
+            <strong>Servicios</strong>
+          </li>
+          <li data-progress-step="done">
+            <span>05</span>
+            <strong>Listo</strong>
+          </li>
+        </ol>
+      </nav>
+
+      <section class="hero-content screen-panel is-active" data-panel="home" aria-labelledby="hero-title">
+        <p class="hero-subtitle">
+          COORDINACIÓN DE EVENTOS Y SERVICIOS
+        </p>
+
+        <h1 id="hero-title" class="hero-title">CATER VEGAS</h1>
+
+        <p class="hero-description">
+          Creamos experiencias inolvidables a través de una coordinación impecable,
+          gastronomía premium y servicios diseñados para superar expectativas.
+        </p>
+
+        <button class="generate-button" id="generateButton" type="button">
+          <span class="button-orbit" aria-hidden="true"></span>
+          <svg
+            class="cloche-icon"
+            viewBox="0 0 96 96"
+            fill="none"
+            aria-hidden="true"
+          >
+            <path
+              d="M48 25V18"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+            <path
+              d="M41 18H55"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+            <path
+              d="M22 62C24.5 42.5 35.5 31 48 31C60.5 31 71.5 42.5 74 62"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+            <path
+              d="M16 67H80"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+            <path
+              d="M25 75H71"
+              stroke="currentColor"
+              stroke-width="4"
+              stroke-linecap="round"
+            />
+          </svg>
+          <span>GENERAR CATER</span>
+        </button>
+
+        <div class="process" aria-label="5 pasos">
+          <p class="process-label">5 PASOS</p>
+
+          <ol class="steps-track">
+            <li class="step-item">
+              <span class="step-number">01</span>
+              <span class="step-name">PRESUPUESTO</span>
+            </li>
+            <li class="step-item">
+              <span class="step-number">02</span>
+              <span class="step-name">EVENTO</span>
+            </li>
+            <li class="step-item">
+              <span class="step-number">03</span>
+              <span class="step-name">MENÚ</span>
+            </li>
+            <li class="step-item">
+              <span class="step-number">04</span>
+              <span class="step-name">SERVICIOS</span>
+            </li>
+            <li class="step-item">
+              <span class="step-number">05</span>
+              <span class="step-name">LISTO</span>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <section class="loading-panel screen-panel" data-panel="loading" aria-live="polite">
+        <div class="loading-ring" aria-hidden="true">
+          <span></span>
+        </div>
+        <p class="loading-title">Generando evento con BEOFlow</p>
+        <p class="loading-copy">
+          Analizando catering, logística, transporte y hospedaje.
+        </p>
+      </section>
+
+      <section class="budget-panel screen-panel" data-panel="budget" aria-labelledby="budget-title">
+        <p class="flow-step">01 / 05</p>
+        <h2 id="budget-title" class="flow-title">¿Cuál es tu presupuesto aproximado?</h2>
+        <p class="flow-copy">
+          BEOFlow usará este rango para filtrar proveedores, logística y nivel de servicio.
+        </p>
+
+        <div class="budget-grid" aria-label="Rangos de presupuesto">
+          <button class="budget-card" type="button" data-budget="2k-5k">
+            <span>$2K - $5K</span>
+            <small>Esencial</small>
+          </button>
+          <button class="budget-card is-selected" type="button" data-budget="5k-10k">
+            <span>$5K - $10K</span>
+            <small>Premium</small>
+          </button>
+          <button class="budget-card" type="button" data-budget="10k-25k">
+            <span>$10K - $25K</span>
+            <small>Completo</small>
+          </button>
+          <button class="budget-card" type="button" data-budget="25k-plus">
+            <span>$25K+</span>
+            <small>Luxury</small>
+          </button>
+        </div>
+
+        <p class="smart-note" id="budgetInsight">
+          BEOFlow priorizará catering premium y proveedores flexibles para eventos medianos.
+        </p>
+
+        <button class="continue-button" id="budgetContinue" type="button">Continuar</button>
+      </section>
+
+      <section class="event-panel screen-panel" data-panel="event" aria-labelledby="event-title">
+        <p class="flow-step">02 / 05</p>
+        <h2 id="event-title" class="flow-title">¿Qué tipo de evento quieres crear?</h2>
+        <p class="flow-copy" id="eventInsight">
+          Con tu presupuesto, BEOFlow ajustará el tipo de experiencia y proveedores recomendados.
+        </p>
+
+        <div class="event-carousel" aria-label="Tipos de evento">
+          <button class="carousel-arrow" type="button" data-carousel="prev" aria-label="Evento anterior">
+            ‹
+          </button>
+
+          <div class="event-cards">
+            <button class="event-card is-selected" type="button" data-event="Boda">
+              <span class="event-icon" aria-hidden="true">♢</span>
+              <span>Boda</span>
+            </button>
+            <button class="event-card" type="button" data-event="Corporativo">
+              <span class="event-icon" aria-hidden="true">□</span>
+              <span>Corporativo</span>
+            </button>
+            <button class="event-card" type="button" data-event="VIP">
+              <span class="event-icon" aria-hidden="true">☆</span>
+              <span>VIP</span>
+            </button>
+          </div>
+
+          <button class="carousel-arrow" type="button" data-carousel="next" aria-label="Siguiente evento">
+            ›
+          </button>
+        </div>
+
+        <div class="event-preview" aria-live="polite">
+          <p id="eventDescription">Bodas privadas, cenas elegantes y experiencias completas.</p>
+        </div>
+
+        <button class="continue-button" id="eventContinue" type="button">Continuar</button>
+      </section>
+
+      <aside class="plan-summary" aria-label="Plan actual">
+        <p class="summary-kicker">Plan actual</p>
+
+        <dl class="summary-list">
+          <div class="summary-row">
+            <dt>Presupuesto</dt>
+            <dd id="summaryBudget">$5K - $10K</dd>
+            <button type="button" data-edit-step="budget">Editar</button>
+          </div>
+
+          <div class="summary-row">
+            <dt>Evento</dt>
+            <dd id="summaryEvent">Boda</dd>
+            <button type="button" data-edit-step="event">Editar</button>
+          </div>
+
+          <div class="summary-row">
+            <dt>Menú</dt>
+            <dd id="summaryMenu">Pendiente</dd>
+            <span></span>
+          </div>
+
+          <div class="summary-row">
+            <dt>Servicios</dt>
+            <dd id="summaryServices">Pendiente</dd>
+            <span></span>
+          </div>
+        </dl>
+
+        <form class="beoflow-prompt" id="beoflowPromptForm" aria-label="Asistente BEOFlow">
+          <div class="beoflow-orb" aria-hidden="true">BF</div>
+          <input
+            id="beoflowPrompt"
+            type="text"
+            autocomplete="off"
+            placeholder="Dile a BEOFlow qué necesitas..."
+          />
+          <button class="beoflow-submit" type="submit">Enviar</button>
+          <p class="beoflow-status" id="beoflowStatus" aria-live="polite"></p>
+        </form>
+      </aside>
+    </main>
+
+    <script type="module" src="script.js"></script>
+  </body>
+</html>
