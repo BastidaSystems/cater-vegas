@@ -80,6 +80,126 @@
           <div class="events-list" id="eventsList" aria-live="polite"></div>
         </section>
 
+        <section class="admin-card collaborators-admin">
+          <div class="events-heading">
+            <div>
+              <p class="admin-kicker">Collaborators</p>
+              <h2>Equipo y asignaciones</h2>
+            </div>
+            <button id="refreshCollaboratorsButton" type="button">Actualizar</button>
+          </div>
+
+          <div class="collaborator-layout">
+            <form class="collaborator-form" id="collaboratorForm">
+              <input id="collaboratorId" type="hidden" />
+
+              <label>
+                Nombre
+                <input id="collaboratorName" type="text" placeholder="Juan Perez" required />
+              </label>
+
+              <label>
+                Email
+                <input id="collaboratorEmail" type="email" placeholder="juan@example.com" />
+              </label>
+
+              <label>
+                Teléfono
+                <input id="collaboratorPhone" type="tel" placeholder="+1 702..." />
+              </label>
+
+              <label>
+                Rol
+                <select id="collaboratorRole">
+                  <option value="owner">Owner</option>
+                  <option value="admin">Admin</option>
+                  <option value="organizer" selected>Organizer</option>
+                  <option value="chef">Chef</option>
+                  <option value="driver">Driver</option>
+                  <option value="server">Server</option>
+                  <option value="staff">Staff</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </label>
+
+              <label>
+                Status
+                <select id="collaboratorStatus">
+                  <option value="active" selected>Active</option>
+                  <option value="invited">Invited</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </label>
+
+              <label class="wide-field">
+                Notas
+                <textarea id="collaboratorNotes" rows="3" placeholder="Disponibilidad, función o instrucciones"></textarea>
+              </label>
+
+              <div class="form-actions">
+                <button class="primary-button" type="submit">Guardar colaborador</button>
+                <button class="secondary-button" id="resetCollaboratorButton" type="button">Limpiar</button>
+              </div>
+
+              <p class="admin-status" id="collaboratorFormStatus" aria-live="polite"></p>
+            </form>
+
+            <div class="collaborator-list" id="collaboratorsList" aria-live="polite"></div>
+          </div>
+
+          <div class="assignment-panel">
+            <div>
+              <p class="admin-kicker">Asignación</p>
+              <h3>Asignar colaborador a evento</h3>
+            </div>
+
+            <form class="assignment-form" id="assignmentForm">
+              <label>
+                Evento
+                <select id="assignmentEvent"></select>
+              </label>
+
+              <label>
+                Colaborador
+                <select id="assignmentCollaborator"></select>
+              </label>
+
+              <label>
+                Rol en evento
+                <select id="assignmentRole">
+                  <option value="organizer" selected>Organizer</option>
+                  <option value="chef">Chef</option>
+                  <option value="driver">Driver</option>
+                  <option value="server">Server</option>
+                  <option value="staff">Staff</option>
+                  <option value="viewer">Viewer</option>
+                  <option value="admin">Admin</option>
+                  <option value="owner">Owner</option>
+                </select>
+              </label>
+
+              <label>
+                Status
+                <select id="assignmentStatus">
+                  <option value="active" selected>Active</option>
+                  <option value="invited">Invited</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </label>
+
+              <label class="wide-field">
+                Notas
+                <input id="assignmentNotes" type="text" placeholder="Horario, punto de encuentro, responsabilidad" />
+              </label>
+
+              <button class="primary-button" type="submit">Asignar</button>
+              <p class="admin-status" id="assignmentStatusText" aria-live="polite"></p>
+            </form>
+
+            <div class="assignment-list" id="assignmentsList" aria-live="polite"></div>
+          </div>
+        </section>
+
         <section class="admin-card beoflow-admin">
           <div>
             <p class="admin-kicker">BEOFlow</p>
@@ -102,4 +222,3 @@
     <script type="module" src="admin.js"></script>
   </body>
 </html>
-

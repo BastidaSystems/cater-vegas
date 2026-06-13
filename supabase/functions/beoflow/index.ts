@@ -20,7 +20,37 @@ type BeoflowResult = {
   };
   suggestions: string[];
   source?: "openai" | "local";
+  collaboratorAction?: CollaboratorActionResult | null;
 };
+
+type CollaboratorCommand = {
+  fullName: string;
+  email: string | null;
+  role: CollaboratorRole;
+  eventHint: string | null;
+};
+
+type CollaboratorActionResult = {
+  collaboratorId: number;
+  collaboratorName: string;
+  role: CollaboratorRole;
+  eventId: number | null;
+  eventTitle: string | null;
+  assigned: boolean;
+  message: string;
+};
+
+type CollaboratorRole =
+  | "owner"
+  | "admin"
+  | "organizer"
+  | "chef"
+  | "driver"
+  | "server"
+  | "staff"
+  | "viewer";
+
+const DEFAULT_WORKSPACE_ID = "cater-vegas";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -173,15 +203,260 @@ function mergedPlan(currentPlan: CaterPlan, updates: BeoflowResult["updates"]) {
   };
 }
 
+function normalizeText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function cleanName(value: string) {
+  return value
+    .replace(/\b(con|with)\s+email\s+\S+/gi, "")
+    .replace(/\b(email|correo)\s+\S+/gi, "")
+    .replace(/[.,;:]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function roleFromAlias(value: string): CollaboratorRole | null {
+  const normalized = normalizeText(value);
+  const roleMap: Record<string, CollaboratorRole> = {
+    dueno: "owner",
+    owner: "owner",
+    admin: "admin",
+    administrador: "admin",
+    organizador: "organizer",
+    organizadora: "organizer",
+    organizer: "organizer",
+    planner: "organizer",
+    coordinador: "organizer",
+    coordinadora: "organizer",
+    chef: "chef",
+    cocinero: "chef",
+    cocinera: "chef",
+    driver: "driver",
+    chofer: "driver",
+    conductor: "driver",
+    conductora: "driver",
+    server: "server",
+    mesero: "server",
+    mesera: "server",
+    staff: "staff",
+    equipo: "staff",
+    viewer: "viewer",
+    observador: "viewer",
+    observadora: "viewer",
+    lector: "viewer",
+  };
+
+  return roleMap[normalized] || null;
+}
+
+function parseCollaboratorCommand(message: string): CollaboratorCommand | null {
+  const roleAliases =
+    "dueño|dueno|owner|admin|administrador|organizador|organizadora|organizer|planner|coordinador|coordinadora|chef|cocinero|cocinera|driver|chofer|conductor|conductora|server|mesero|mesera|staff|equipo|viewer|observador|observadora|lector";
+
+  const patterns = [
+    new RegExp(
+      `(?:agrega|añade|anade|invita|asigna)\\s+a\\s+(.+?)\\s+como\\s+(${roleAliases})(?:\\s+(?:al|a el|para el|para la|en el|en la)\\s+(?:evento\\s+)?(.+))?$`,
+      "i",
+    ),
+    new RegExp(
+      `(?:add|invite|assign)\\s+(.+?)\\s+as\\s+(${roleAliases})(?:\\s+(?:to|for|in)\\s+(?:event\\s+)?(.+))?$`,
+      "i",
+    ),
+  ];
+
+  for (const pattern of patterns) {
+    const match = message.match(pattern);
+    if (!match) continue;
+
+    const email = message.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0] || null;
+    const role = roleFromAlias(match[2]);
+    const fullName = cleanName(match[1]);
+
+    if (!role || !fullName) return null;
+
+    return {
+      fullName,
+      email,
+      role,
+      eventHint: match[3] ? match[3].replace(/[.,;:]+$/g, "").trim() : null,
+    };
+  }
+
+  return null;
+}
+
+async function getCurrentCaterRole(userClient: ReturnType<typeof createClient>, userId: string) {
+  const { data } = await userClient
+    .from("cater_profiles")
+    .select("role")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return data?.role || null;
+}
+
+async function findAccessibleEvent(
+  userClient: ReturnType<typeof createClient>,
+  eventId: number | null,
+  eventHint: string | null,
+) {
+  if (eventId) {
+    const { data } = await userClient
+      .from("cater_events")
+      .select("id,title")
+      .eq("id", eventId)
+      .maybeSingle();
+
+    return data || null;
+  }
+
+  if (!eventHint) return null;
+
+  const { data: directMatch } = await userClient
+    .from("cater_events")
+    .select("id,title")
+    .ilike("title", `%${eventHint}%`)
+    .limit(1)
+    .maybeSingle();
+
+  if (directMatch) return directMatch;
+
+  const { data: candidates } = await userClient
+    .from("cater_events")
+    .select("id,title")
+    .order("updated_at", { ascending: false })
+    .limit(50);
+
+  const normalizedHint = normalizeText(eventHint);
+  return (
+    candidates?.find((event: { title: string }) =>
+      normalizeText(event.title || "").includes(normalizedHint),
+    ) || null
+  );
+}
+
+async function upsertCollaboratorFromCommand(
+  serviceClient: ReturnType<typeof createClient>,
+  command: CollaboratorCommand,
+  workspaceId: string,
+) {
+  const baseQuery = serviceClient
+    .from("cater_collaborators")
+    .select("id,full_name,email,role,status")
+    .eq("workspace_id", workspaceId);
+
+  const { data: existing } = command.email
+    ? await baseQuery.eq("email", command.email).maybeSingle()
+    : await baseQuery.ilike("full_name", command.fullName).limit(1).maybeSingle();
+
+  const payload = {
+    workspace_id: workspaceId,
+    full_name: command.fullName,
+    email: command.email,
+    role: command.role,
+    status: "active",
+  };
+
+  if (existing?.id) {
+    const { data, error } = await serviceClient
+      .from("cater_collaborators")
+      .update(payload)
+      .eq("id", existing.id)
+      .select("id,full_name,email,role,status")
+      .single();
+
+    if (error) throw error;
+    return data;
+  }
+
+  const { data, error } = await serviceClient
+    .from("cater_collaborators")
+    .insert(payload)
+    .select("id,full_name,email,role,status")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+async function handleCollaboratorCommand(params: {
+  command: CollaboratorCommand | null;
+  userClient: ReturnType<typeof createClient>;
+  serviceClient: ReturnType<typeof createClient>;
+  userId: string;
+  eventId: number | null;
+  workspaceId: string;
+}): Promise<CollaboratorActionResult | null> {
+  if (!params.command) return null;
+
+  const role = await getCurrentCaterRole(params.userClient, params.userId);
+  if (role !== "admin") {
+    return {
+      collaboratorId: 0,
+      collaboratorName: params.command.fullName,
+      role: params.command.role,
+      eventId: null,
+      eventTitle: null,
+      assigned: false,
+      message: "Solo un admin de Cater Vegas puede crear o actualizar colaboradores.",
+    };
+  }
+
+  const targetEvent = await findAccessibleEvent(
+    params.userClient,
+    params.eventId,
+    params.command.eventHint,
+  );
+  const collaborator = await upsertCollaboratorFromCommand(
+    params.serviceClient,
+    params.command,
+    params.workspaceId,
+  );
+
+  let assigned = false;
+
+  if (targetEvent?.id) {
+    const { error } = await params.serviceClient.from("cater_event_assignments").upsert(
+      {
+        event_id: targetEvent.id,
+        collaborator_id: collaborator.id,
+        assignment_role: params.command.role,
+        status: "active",
+        notes: "Asignado por BEOFlow.",
+      },
+      { onConflict: "event_id,collaborator_id" },
+    );
+
+    if (error) throw error;
+    assigned = true;
+  }
+
+  return {
+    collaboratorId: collaborator.id,
+    collaboratorName: collaborator.full_name,
+    role: params.command.role,
+    eventId: targetEvent?.id || null,
+    eventTitle: targetEvent?.title || null,
+    assigned,
+    message: assigned
+      ? `${collaborator.full_name} quedó como ${params.command.role} en ${targetEvent.title}.`
+      : `${collaborator.full_name} quedó guardado como ${params.command.role}.`,
+  };
+}
+
 async function persistBeoflowRun(
   request: Request,
   eventId: number | null,
   message: string,
   currentPlan: CaterPlan,
   result: BeoflowResult,
+  workspaceId: string,
 ) {
-  if (!eventId) return;
-
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -203,6 +478,24 @@ async function persistBeoflowRun(
 
   if (!user) return;
 
+  const serviceClient = createClient(supabaseUrl, serviceRoleKey);
+  const collaboratorCommand = parseCollaboratorCommand(message);
+  const collaboratorAction = await handleCollaboratorCommand({
+    command: collaboratorCommand,
+    userClient,
+    serviceClient,
+    userId: user.id,
+    eventId,
+    workspaceId,
+  });
+
+  if (collaboratorAction) {
+    result.collaboratorAction = collaboratorAction;
+    result.reply = `${result.reply} ${collaboratorAction.message}`;
+  }
+
+  if (!eventId) return;
+
   const { data: accessibleEvent, error: accessError } = await userClient
     .from("cater_events")
     .select("id")
@@ -211,7 +504,6 @@ async function persistBeoflowRun(
 
   if (accessError || !accessibleEvent) return;
 
-  const serviceClient = createClient(supabaseUrl, serviceRoleKey);
   const nextPlan = mergedPlan(currentPlan, result.updates);
 
   await serviceClient.from("cater_beoflow_messages").insert([
@@ -231,6 +523,7 @@ async function persistBeoflowRun(
         updates: result.updates,
         suggestions: result.suggestions,
         source: result.source,
+        collaboratorAction,
       },
     },
   ]);
@@ -283,6 +576,7 @@ Deno.serve(async (request) => {
     const message = String(body.message || "").trim();
     const currentPlan = (body.currentPlan || {}) as CaterPlan;
     const eventId = body.eventId ? Number(body.eventId) : null;
+    const workspaceId = String(body.workspaceId || DEFAULT_WORKSPACE_ID);
 
     if (!message) {
       return new Response(JSON.stringify({ error: "Message is required" }), {
@@ -292,7 +586,7 @@ Deno.serve(async (request) => {
     }
 
     const result = await callOpenAI(message, currentPlan);
-    await persistBeoflowRun(request, eventId, message, currentPlan, result);
+    await persistBeoflowRun(request, eventId, message, currentPlan, result, workspaceId);
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },

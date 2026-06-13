@@ -4,6 +4,7 @@ import {
   subscribeToEvents,
 } from "./lib/supabaseClient.js";
 
+const WORKSPACE_ID = "cater-vegas";
 const supabase = isSupabaseConfigured ? requireSupabase() : null;
 const hero = document.querySelector(".hero");
 const panels = document.querySelectorAll("[data-panel]");
@@ -182,6 +183,7 @@ async function sendToBeoflowAI(prompt) {
     body: {
       message: prompt,
       currentPlan: { ...caterPlan },
+      workspaceId: WORKSPACE_ID,
     },
   });
 

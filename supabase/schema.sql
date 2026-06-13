@@ -57,6 +57,34 @@ create table if not exists public.cater_plan_versions (
   unique (event_id, version_number)
 );
 
+create table if not exists public.cater_collaborators (
+  id bigint generated always as identity primary key,
+  workspace_id text not null default 'cater-vegas',
+  full_name text not null,
+  email text,
+  phone text,
+  role text not null default 'staff' check (
+    role in ('owner', 'admin', 'organizer', 'chef', 'driver', 'server', 'staff', 'viewer')
+  ),
+  status text not null default 'active' check (status in ('active', 'inactive', 'invited')),
+  notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.cater_event_assignments (
+  id bigint generated always as identity primary key,
+  event_id bigint not null references public.cater_events(id) on delete cascade,
+  collaborator_id bigint not null references public.cater_collaborators(id) on delete cascade,
+  assignment_role text not null default 'staff' check (
+    assignment_role in ('owner', 'admin', 'organizer', 'chef', 'driver', 'server', 'staff', 'viewer')
+  ),
+  status text not null default 'active' check (status in ('active', 'inactive', 'invited')),
+  notes text,
+  created_at timestamptz not null default now(),
+  unique (event_id, collaborator_id)
+);
+
 create index if not exists cater_profiles_role_idx on public.cater_profiles (role);
 create index if not exists cater_events_client_id_idx on public.cater_events (client_id);
 create index if not exists cater_events_assigned_to_idx on public.cater_events (assigned_to);
@@ -66,6 +94,16 @@ create index if not exists cater_beoflow_messages_event_id_idx on public.cater_b
 create index if not exists cater_beoflow_messages_user_id_idx on public.cater_beoflow_messages (user_id);
 create index if not exists cater_plan_versions_event_id_idx on public.cater_plan_versions (event_id);
 create index if not exists cater_plan_versions_created_by_idx on public.cater_plan_versions (created_by);
+create index if not exists cater_collaborators_workspace_id_idx on public.cater_collaborators (workspace_id);
+create index if not exists cater_collaborators_email_idx on public.cater_collaborators (email);
+create index if not exists cater_collaborators_role_status_idx on public.cater_collaborators (role, status);
+create unique index if not exists cater_collaborators_workspace_email_uidx
+  on public.cater_collaborators (workspace_id, lower(email))
+  where email is not null;
+create index if not exists cater_event_assignments_event_id_idx on public.cater_event_assignments (event_id);
+create index if not exists cater_event_assignments_collaborator_id_idx on public.cater_event_assignments (collaborator_id);
+create index if not exists cater_event_assignments_role_status_idx
+  on public.cater_event_assignments (assignment_role, status);
 
 create or replace function public.cater_set_updated_at()
 returns trigger
@@ -85,6 +123,11 @@ for each row execute function public.cater_set_updated_at();
 drop trigger if exists cater_events_set_updated_at on public.cater_events;
 create trigger cater_events_set_updated_at
 before update on public.cater_events
+for each row execute function public.cater_set_updated_at();
+
+drop trigger if exists cater_collaborators_set_updated_at on public.cater_collaborators;
+create trigger cater_collaborators_set_updated_at
+before update on public.cater_collaborators
 for each row execute function public.cater_set_updated_at();
 
 create or replace function public.cater_handle_new_user()
@@ -165,10 +208,27 @@ as $$
   );
 $$;
 
+create or replace function public.cater_can_access_collaborator(target_collaborator_id bigint)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.cater_event_assignments a
+    where a.collaborator_id = target_collaborator_id
+      and public.cater_can_access_event(a.event_id)
+  );
+$$;
+
 alter table public.cater_profiles enable row level security;
 alter table public.cater_events enable row level security;
 alter table public.cater_beoflow_messages enable row level security;
 alter table public.cater_plan_versions enable row level security;
+alter table public.cater_collaborators enable row level security;
+alter table public.cater_event_assignments enable row level security;
 
 drop policy if exists "cater_profiles_select_own_or_staff" on public.cater_profiles;
 create policy "cater_profiles_select_own_or_staff"
@@ -308,11 +368,74 @@ for delete
 to authenticated
 using (public.cater_is_admin());
 
+drop policy if exists "cater_collaborators_select_by_role_or_event" on public.cater_collaborators;
+create policy "cater_collaborators_select_by_role_or_event"
+on public.cater_collaborators
+for select
+to authenticated
+using (
+  public.cater_is_staff()
+  or public.cater_can_access_collaborator(id)
+);
+
+drop policy if exists "cater_collaborators_insert_admin" on public.cater_collaborators;
+create policy "cater_collaborators_insert_admin"
+on public.cater_collaborators
+for insert
+to authenticated
+with check (public.cater_is_admin());
+
+drop policy if exists "cater_collaborators_update_admin" on public.cater_collaborators;
+create policy "cater_collaborators_update_admin"
+on public.cater_collaborators
+for update
+to authenticated
+using (public.cater_is_admin())
+with check (public.cater_is_admin());
+
+drop policy if exists "cater_collaborators_delete_admin" on public.cater_collaborators;
+create policy "cater_collaborators_delete_admin"
+on public.cater_collaborators
+for delete
+to authenticated
+using (public.cater_is_admin());
+
+drop policy if exists "cater_event_assignments_select_event_access" on public.cater_event_assignments;
+create policy "cater_event_assignments_select_event_access"
+on public.cater_event_assignments
+for select
+to authenticated
+using (public.cater_is_staff() or public.cater_can_access_event(event_id));
+
+drop policy if exists "cater_event_assignments_insert_staff" on public.cater_event_assignments;
+create policy "cater_event_assignments_insert_staff"
+on public.cater_event_assignments
+for insert
+to authenticated
+with check (public.cater_is_staff() and public.cater_can_access_event(event_id));
+
+drop policy if exists "cater_event_assignments_update_staff" on public.cater_event_assignments;
+create policy "cater_event_assignments_update_staff"
+on public.cater_event_assignments
+for update
+to authenticated
+using (public.cater_is_staff() and public.cater_can_access_event(event_id))
+with check (public.cater_is_staff() and public.cater_can_access_event(event_id));
+
+drop policy if exists "cater_event_assignments_delete_admin" on public.cater_event_assignments;
+create policy "cater_event_assignments_delete_admin"
+on public.cater_event_assignments
+for delete
+to authenticated
+using (public.cater_is_admin());
+
 grant usage on schema public to anon, authenticated;
 grant select, insert, update on public.cater_profiles to authenticated;
 grant select, insert, update, delete on public.cater_events to authenticated;
 grant select, insert, delete on public.cater_beoflow_messages to authenticated;
 grant select, insert, update, delete on public.cater_plan_versions to authenticated;
+grant select, insert, update, delete on public.cater_collaborators to authenticated;
+grant select, insert, update, delete on public.cater_event_assignments to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 
 alter table public.cater_events replica identity full;
