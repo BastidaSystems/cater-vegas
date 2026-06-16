@@ -592,7 +592,7 @@ using (
   or exists (
     select 1
     from public.beoflow_workspace_members m
-    where m.workspace_id = id
+    where m.workspace_id = public.beoflow_workspaces.id
       and m.user_id = (select auth.uid())
       and m.status in ('pending', 'invited')
   )
@@ -917,14 +917,11 @@ alter table public.cater_events replica identity full;
 
 do $$
 begin
-  if not exists (
-    select 1
-    from pg_publication_tables
-    where pubname = 'supabase_realtime'
-      and schemaname = 'public'
-      and tablename = 'cater_events'
-  ) then
-    alter publication supabase_realtime add table public.cater_events;
-  end if;
+  alter publication supabase_realtime add table public.cater_events;
+exception
+  when duplicate_object then
+    null;
+  when undefined_object then
+    null;
 end;
 $$;

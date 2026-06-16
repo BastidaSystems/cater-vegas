@@ -65,7 +65,7 @@ a {
 }
 
 .logo,
-.menu-toggle {
+.header-actions {
   pointer-events: auto;
 }
 
@@ -82,6 +82,41 @@ a {
 
 .logo:hover {
   color: var(--gold-light);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.header-link {
+  display: inline-flex;
+  min-height: 2.45rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gold-border);
+  border-radius: 999px;
+  background: rgba(5, 5, 5, 0.32);
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  padding: 0 0.9rem;
+  text-transform: uppercase;
+  transition: border-color 300ms var(--ease), color 300ms var(--ease),
+    background 300ms var(--ease), transform 300ms var(--ease);
+}
+
+.header-link:hover {
+  border-color: rgba(214, 178, 124, 0.58);
+  color: var(--gold-light);
+  transform: translateY(-1px);
+}
+
+.header-link-primary {
+  background: rgba(185, 144, 91, 0.2);
 }
 
 .menu-toggle {
@@ -914,9 +949,15 @@ a {
     letter-spacing: 0.3em;
   }
 
-  .menu-toggle {
-    width: 2.8rem;
-    height: 2.8rem;
+  .header-actions {
+    gap: 0.38rem;
+  }
+
+  .header-link {
+    min-height: 2.22rem;
+    font-size: 0.58rem;
+    letter-spacing: 0.08em;
+    padding: 0 0.62rem;
   }
 
   .hero {
