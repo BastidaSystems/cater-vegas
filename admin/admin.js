@@ -693,6 +693,33 @@ async function bootAdmin() {
   );
 }
 
+async function syncEventToBeoflow(eventId) {
+  if (!supabase || !eventId) {
+    return { status: "skipped", reason: "No event id." };
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke("beoflow", {
+      body: {
+        action: "sync-event",
+        eventId,
+        workspaceId: WORKSPACE_ID,
+      },
+    });
+
+    if (error) {
+      return { status: "failed", reason: error.message };
+    }
+
+    return data?.beoflowSync || { status: "skipped", reason: "No sync response." };
+  } catch (error) {
+    return {
+      status: "failed",
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 eventForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabase || !canManageEvents()) return;
@@ -706,7 +733,7 @@ eventForm.addEventListener("submit", async (event) => {
     services: [],
   };
 
-  const { error } = await supabase.from("cater_events").insert({
+  const { data: createdEvent, error } = await supabase.from("cater_events").insert({
     workspace_id: WORKSPACE_ID,
     title: eventTitle.value.trim(),
     event_type: eventType.value,
@@ -716,15 +743,20 @@ eventForm.addEventListener("submit", async (event) => {
     guest_count: guestCount.value ? Number(guestCount.value) : null,
     created_by: currentUser.id,
     plan,
-  });
+  }).select("*").single();
 
   if (error) {
     setEventStatus(error.message);
     return;
   }
 
+  const syncResult = await syncEventToBeoflow(createdEvent?.id);
   eventForm.reset();
-  setEventStatus("Evento creado.");
+  setEventStatus(
+    syncResult.status === "synced"
+      ? "Evento creado y sincronizado con BEOFlow."
+      : `Evento creado. Sync BEOFlow pendiente${syncResult.reason ? `: ${syncResult.reason}` : "."}`
+  );
   await Promise.all([loadEvents(), loadWorkspace()]);
 });
 
