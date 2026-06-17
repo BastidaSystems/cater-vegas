@@ -141,11 +141,9 @@ h2 {
   padding: clamp(1.1rem, 3vw, 1.6rem);
 }
 
-.beoflow-admin {
-  grid-column: 1 / -1;
-}
-
-.collaborators-admin {
+.beoflow-admin,
+.collaborators-admin,
+.providers-admin {
   grid-column: 1 / -1;
 }
 
@@ -157,6 +155,8 @@ h2 {
 .event-form,
 .event-form label,
 #adminBeoflowForm,
+.provider-form,
+.provider-form label,
 .collaborator-form,
 .collaborator-form label,
 .assignment-form,
@@ -166,6 +166,7 @@ h2 {
 }
 
 .event-form label,
+.provider-form label,
 .collaborator-form label,
 .assignment-form label {
   color: rgba(245, 241, 234, 0.78);
@@ -196,14 +197,16 @@ textarea {
   resize: vertical;
 }
 
-.collaborator-layout {
+.collaborator-layout,
+.provider-layout {
   display: grid;
   grid-template-columns: minmax(18rem, 0.9fr) minmax(20rem, 1.1fr);
   gap: 1rem;
   align-items: start;
 }
 
-.collaborator-form {
+.collaborator-form,
+.provider-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -262,6 +265,7 @@ textarea {
 }
 
 .event-row,
+.provider-row,
 .collaborator-row,
 .assignment-row,
 .request-row,
@@ -277,12 +281,14 @@ textarea {
 }
 
 .event-row.is-selected,
+.provider-row.is-selected,
 .collaborator-row.is-selected {
   border-color: rgba(214, 178, 124, 0.72);
   box-shadow: 0 0 0 1px rgba(214, 178, 124, 0.18);
 }
 
 .event-row button,
+.provider-row button,
 .collaborator-row button {
   border: 0;
   background: none;
@@ -292,6 +298,7 @@ textarea {
 }
 
 .event-row strong,
+.provider-row strong,
 .collaborator-row strong,
 .assignment-row strong,
 .request-row strong,
@@ -302,6 +309,7 @@ textarea {
 }
 
 .event-meta,
+.provider-meta,
 .collaborator-meta,
 .assignment-meta,
 .request-meta,
@@ -311,6 +319,7 @@ textarea {
   font-size: 0.78rem;
 }
 
+.provider-list,
 .collaborator-list,
 .request-list,
 .customer-list,
@@ -320,7 +329,8 @@ textarea {
   gap: 0.75rem;
 }
 
-.collaborator-actions {
+.collaborator-actions,
+.provider-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
@@ -392,7 +402,9 @@ pre {
   }
 
   .collaborator-layout,
+  .provider-layout,
   .collaborator-form,
+  .provider-form,
   .assignment-form {
     grid-template-columns: 1fr;
   }

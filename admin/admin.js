@@ -40,6 +40,24 @@ const adminBeoflowForm = document.querySelector("#adminBeoflowForm");
 const adminBeoflowPrompt = document.querySelector("#adminBeoflowPrompt");
 const beoflowResult = document.querySelector("#beoflowResult");
 
+const providersSection = document.querySelector("#providersSection");
+const providerForm = document.querySelector("#providerForm");
+const providerId = document.querySelector("#providerId");
+const providerName = document.querySelector("#providerName");
+const providerType = document.querySelector("#providerType");
+const providerContactName = document.querySelector("#providerContactName");
+const providerEmail = document.querySelector("#providerEmail");
+const providerPhone = document.querySelector("#providerPhone");
+const providerWebsite = document.querySelector("#providerWebsite");
+const providerCity = document.querySelector("#providerCity");
+const providerState = document.querySelector("#providerState");
+const providerStatus = document.querySelector("#providerStatus");
+const providerNotes = document.querySelector("#providerNotes");
+const providerFormStatus = document.querySelector("#providerFormStatus");
+const resetProviderButton = document.querySelector("#resetProviderButton");
+const refreshProvidersButton = document.querySelector("#refreshProvidersButton");
+const providersList = document.querySelector("#providersList");
+
 const collaboratorForm = document.querySelector("#collaboratorForm");
 const collaboratorId = document.querySelector("#collaboratorId");
 const collaboratorName = document.querySelector("#collaboratorName");
@@ -69,9 +87,11 @@ let currentMembership = null;
 let currentRole = null;
 let currentWorkspace = null;
 let selectedEvent = null;
+let selectedProvider = null;
 let selectedCollaborator = null;
 let eventsChannel = null;
 let allEvents = [];
+let allProviders = [];
 let allCollaborators = [];
 let allAssignments = [];
 
@@ -81,6 +101,10 @@ function setSessionStatus(message) {
 
 function setEventStatus(message) {
   eventFormStatus.textContent = message;
+}
+
+function setProviderStatus(message) {
+  providerFormStatus.textContent = message;
 }
 
 function setCollaboratorStatus(message) {
@@ -105,6 +129,10 @@ function escapeHtml(value) {
 }
 
 function canManageEvents() {
+  return ["owner", "admin", "organizer"].includes(currentRole);
+}
+
+function canManageProviders() {
   return ["owner", "admin", "organizer"].includes(currentRole);
 }
 
@@ -152,7 +180,7 @@ function renderWorkspaceSummary(stats = {}) {
       </span>
     </article>
     <article class="workspace-stat">
-      <strong>${stats.events || 0} eventos · ${stats.collaborators || 0} colaboradores · ${stats.customers || 0} clientes</strong>
+      <strong>${stats.events || 0} eventos · ${stats.providers || 0} proveedores · ${stats.collaborators || 0} colaboradores · ${stats.customers || 0} clientes</strong>
       <span class="workspace-meta">Workspace ID: ${escapeHtml(WORKSPACE_ID)}</span>
     </article>
   `;
@@ -227,6 +255,65 @@ function renderEvents(rows = []) {
   });
 
   renderEventOptions();
+}
+
+function renderProviders(rows = []) {
+  if (!rows.length) {
+    providersList.innerHTML = "<p>No hay proveedores todavía.</p>";
+    return;
+  }
+
+  providersList.innerHTML = rows
+    .map((provider) => {
+      const selectedClass = selectedProvider?.id === provider.id ? " is-selected" : "";
+      const location = [provider.city, provider.state].filter(Boolean).join(", ") || "Sin ubicación";
+      const contact = [provider.contact_name, provider.email, provider.phone].filter(Boolean).join(" · ") || "Sin contacto";
+      const nextStatus = provider.status === "archived" ? "active" : "archived";
+      const toggleLabel = provider.status === "archived" ? "Reactivar" : "Archivar";
+
+      return `
+        <article class="provider-row${selectedClass}">
+          <button type="button" data-provider-select="${provider.id}">
+            <strong>${escapeHtml(provider.provider_name || "Proveedor sin nombre")}</strong>
+            <span class="provider-meta">
+              #${provider.id} · ${escapeHtml(provider.provider_type || "vendor")} · ${escapeHtml(provider.status || "active")}
+            </span>
+            <span class="provider-meta">${escapeHtml(contact)}</span>
+            <span class="provider-meta">${escapeHtml(location)}</span>
+          </button>
+          <div class="provider-actions">
+            <button class="tiny-button" type="button" data-provider-edit="${provider.id}">Editar</button>
+            <button class="tiny-button" type="button" data-provider-status="${provider.id}" data-next-status="${nextStatus}">
+              ${toggleLabel}
+            </button>
+          </div>
+        </article>
+      `;
+    })
+    .join("");
+
+  providersList.querySelectorAll("[data-provider-select]").forEach((button) => {
+    button.addEventListener("click", () => {
+      selectedProvider = rows.find((provider) => String(provider.id) === button.dataset.providerSelect);
+      renderProviders(rows);
+    });
+  });
+
+  providersList.querySelectorAll("[data-provider-edit]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const provider = rows.find((item) => String(item.id) === button.dataset.providerEdit);
+      if (!provider) return;
+      selectedProvider = provider;
+      fillProviderForm(provider);
+      renderProviders(rows);
+    });
+  });
+
+  providersList.querySelectorAll("[data-provider-status]").forEach((button) => {
+    button.addEventListener("click", () => {
+      updateProviderStatus(button.dataset.providerStatus, button.dataset.nextStatus);
+    });
+  });
 }
 
 function renderCollaborators(rows = []) {
@@ -396,6 +483,29 @@ function renderUserRequests(requests = []) {
   });
 }
 
+function fillProviderForm(provider) {
+  providerId.value = provider.id;
+  providerName.value = provider.provider_name || "";
+  providerType.value = provider.provider_type || "vendor";
+  providerContactName.value = provider.contact_name || "";
+  providerEmail.value = provider.email || "";
+  providerPhone.value = provider.phone || "";
+  providerWebsite.value = provider.website || "";
+  providerCity.value = provider.city || "";
+  providerState.value = provider.state || "";
+  providerStatus.value = provider.status || "active";
+  providerNotes.value = provider.notes || "";
+}
+
+function resetProviderForm() {
+  providerForm.reset();
+  providerId.value = "";
+  providerType.value = "vendor";
+  providerStatus.value = "active";
+  selectedProvider = null;
+  renderProviders(allProviders);
+}
+
 function fillCollaboratorForm(collaborator) {
   collaboratorId.value = collaborator.id;
   collaboratorName.value = collaborator.full_name || "";
@@ -418,9 +528,10 @@ function resetCollaboratorForm() {
 async function loadWorkspace() {
   if (!supabase) return;
 
-  const [workspaceResult, eventsResult, collaboratorsResult, customersResult] = await Promise.all([
+  const [workspaceResult, eventsResult, providersResult, collaboratorsResult, customersResult] = await Promise.all([
     supabase.from("beoflow_workspaces").select("*").eq("id", WORKSPACE_ID).maybeSingle(),
     supabase.from("cater_events").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
+    supabase.from("cater_providers").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
     supabase.from("cater_collaborators").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
     supabase.from("cater_customers").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
   ]);
@@ -433,6 +544,7 @@ async function loadWorkspace() {
   currentWorkspace = workspaceResult.data;
   renderWorkspaceSummary({
     events: eventsResult.count,
+    providers: providersResult.count,
     collaborators: collaboratorsResult.count,
     customers: customersResult.count,
   });
@@ -457,6 +569,25 @@ async function loadEvents() {
 
   allEvents = data || [];
   renderEvents(allEvents);
+}
+
+async function loadProviders() {
+  if (!supabase) return;
+
+  const { data, error } = await supabase
+    .from("cater_providers")
+    .select("*")
+    .eq("workspace_id", WORKSPACE_ID)
+    .order("updated_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    providersList.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
+    return;
+  }
+
+  allProviders = data || [];
+  renderProviders(allProviders);
 }
 
 async function loadCollaborators() {
@@ -578,6 +709,10 @@ async function refreshCollaboratorModule() {
   await loadAssignments();
 }
 
+async function refreshProviderModule() {
+  await loadProviders();
+}
+
 async function approveUserRequest(userId, approvedRole) {
   if (!supabase || !canManageRequests()) return;
 
@@ -675,16 +810,19 @@ async function bootAdmin() {
 
   setSessionStatus(`${currentUser.email} · ${currentWorkspace?.name || WORKSPACE_ID} · rol ${currentRole}`);
   eventForm.hidden = !canManageEvents();
+  providersSection.hidden = !canManageProviders();
+  providerForm.hidden = !canManageProviders();
   collaboratorForm.hidden = !canManageCollaborators();
   requestsSection.hidden = !canManageRequests();
   assignmentForm.hidden = !canManageEvents();
 
-  await Promise.all([loadWorkspace(), loadEvents(), loadCollaborators(), loadCustomers(), loadUserRequests()]);
+  await Promise.all([loadWorkspace(), loadEvents(), loadProviders(), loadCollaborators(), loadCustomers(), loadUserRequests()]);
   await loadAssignments();
 
   eventsChannel = subscribeToEvents(
     () => {
       loadEvents().then(loadAssignments);
+      loadProviders();
       loadWorkspace();
     },
     {
@@ -703,6 +841,33 @@ async function syncEventToBeoflow(eventId) {
       body: {
         action: "sync-event",
         eventId,
+        workspaceId: WORKSPACE_ID,
+      },
+    });
+
+    if (error) {
+      return { status: "failed", reason: error.message };
+    }
+
+    return data?.beoflowSync || { status: "skipped", reason: "No sync response." };
+  } catch (error) {
+    return {
+      status: "failed",
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
+async function syncProviderToBeoflow(providerRecordId) {
+  if (!supabase || !providerRecordId) {
+    return { status: "skipped", reason: "No provider id." };
+  }
+
+  try {
+    const { data, error } = await supabase.functions.invoke("beoflow", {
+      body: {
+        action: "sync-provider",
+        providerId: providerRecordId,
         workspaceId: WORKSPACE_ID,
       },
     });
@@ -758,6 +923,62 @@ eventForm.addEventListener("submit", async (event) => {
       : `Evento creado. Sync BEOFlow pendiente${syncResult.reason ? `: ${syncResult.reason}` : "."}`
   );
   await Promise.all([loadEvents(), loadWorkspace()]);
+});
+
+providerForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (!supabase || !canManageProviders()) return;
+
+  const payload = {
+    workspace_id: WORKSPACE_ID,
+    provider_name: providerName.value.trim(),
+    provider_type: providerType.value,
+    contact_name: providerContactName.value.trim() || null,
+    email: providerEmail.value.trim() || null,
+    phone: providerPhone.value.trim() || null,
+    website: providerWebsite.value.trim() || null,
+    city: providerCity.value.trim() || null,
+    state: providerState.value.trim() || null,
+    status: providerStatus.value,
+    notes: providerNotes.value.trim() || null,
+  };
+
+  if (!payload.provider_name) {
+    setProviderStatus("Agrega el nombre del proveedor.");
+    return;
+  }
+
+  setProviderStatus(providerId.value ? "Actualizando proveedor..." : "Creando proveedor...");
+
+  const query = providerId.value
+    ? supabase
+        .from("cater_providers")
+        .update(payload)
+        .eq("workspace_id", WORKSPACE_ID)
+        .eq("id", Number(providerId.value))
+        .select("id")
+        .single()
+    : supabase
+        .from("cater_providers")
+        .insert({ ...payload, created_by: currentUser.id })
+        .select("id")
+        .single();
+
+  const { data, error } = await query;
+
+  if (error) {
+    setProviderStatus(error.message);
+    return;
+  }
+
+  const syncResult = await syncProviderToBeoflow(data?.id);
+  resetProviderForm();
+  setProviderStatus(
+    syncResult.status === "synced"
+      ? "Proveedor guardado y sincronizado con BEOFlow."
+      : `Proveedor guardado. Sync BEOFlow pendiente${syncResult.reason ? `: ${syncResult.reason}` : "."}`
+  );
+  await Promise.all([refreshProviderModule(), loadWorkspace()]);
 });
 
 collaboratorForm.addEventListener("submit", async (event) => {
@@ -864,8 +1085,31 @@ adminBeoflowForm.addEventListener("submit", async (event) => {
   }
 
   beoflowResult.textContent = JSON.stringify(data, null, 2);
-  await Promise.all([loadEvents(), loadCustomers(), refreshCollaboratorModule(), loadWorkspace()]);
+  await Promise.all([loadEvents(), refreshProviderModule(), loadCustomers(), refreshCollaboratorModule(), loadWorkspace()]);
 });
+
+async function updateProviderStatus(id, status) {
+  if (!supabase || !canManageProviders()) return;
+
+  const { error } = await supabase
+    .from("cater_providers")
+    .update({ status })
+    .eq("workspace_id", WORKSPACE_ID)
+    .eq("id", Number(id));
+
+  if (error) {
+    setProviderStatus(error.message);
+    return;
+  }
+
+  const syncResult = await syncProviderToBeoflow(id);
+  setProviderStatus(
+    syncResult.status === "synced"
+      ? `Proveedor ${status === "archived" ? "archivado" : "reactivado"} y sincronizado.`
+      : `Proveedor ${status === "archived" ? "archivado" : "reactivado"}. Sync pendiente${syncResult.reason ? `: ${syncResult.reason}` : "."}`
+  );
+  await refreshProviderModule();
+}
 
 async function updateCollaboratorStatus(id, status) {
   if (!supabase || !canManageCollaborators()) return;
@@ -896,6 +1140,8 @@ refreshRequestsButton.addEventListener("click", () => {
 
 refreshCollaboratorsButton.addEventListener("click", refreshCollaboratorModule);
 resetCollaboratorButton.addEventListener("click", resetCollaboratorForm);
+refreshProvidersButton.addEventListener("click", refreshProviderModule);
+resetProviderButton.addEventListener("click", resetProviderForm);
 
 signoutButton.addEventListener("click", async () => {
   if (!supabase) return;

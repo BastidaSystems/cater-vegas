@@ -93,6 +93,26 @@ create table if not exists public.cater_events (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.cater_providers (
+  id bigint generated always as identity primary key,
+  workspace_id text not null default 'cater-vegas' references public.beoflow_workspaces(id),
+  provider_name text not null,
+  provider_type text not null default 'vendor' check (
+    provider_type in ('venue', 'food', 'beverage', 'rental', 'staffing', 'transportation', 'entertainment', 'floral', 'decor', 'service', 'vendor', 'other')
+  ),
+  contact_name text,
+  email text,
+  phone text,
+  website text,
+  city text,
+  state text,
+  status text not null default 'active' check (status in ('active', 'preferred', 'inactive', 'archived')),
+  notes text,
+  created_by uuid references public.cater_profiles(id) on delete set null default auth.uid(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists public.cater_beoflow_messages (
   id bigint generated always as identity primary key,
   workspace_id text not null default 'cater-vegas' references public.beoflow_workspaces(id),
@@ -172,6 +192,30 @@ update public.cater_events set workspace_id = 'cater-vegas' where workspace_id i
 alter table public.cater_events alter column workspace_id set not null;
 alter table public.cater_events add column if not exists customer_id bigint;
 
+alter table public.cater_providers add column if not exists workspace_id text not null default 'cater-vegas';
+alter table public.cater_providers alter column workspace_id set default 'cater-vegas';
+update public.cater_providers set workspace_id = 'cater-vegas' where workspace_id is null;
+alter table public.cater_providers alter column workspace_id set not null;
+alter table public.cater_providers add column if not exists provider_type text not null default 'vendor';
+alter table public.cater_providers alter column provider_type set default 'vendor';
+alter table public.cater_providers add column if not exists contact_name text;
+alter table public.cater_providers add column if not exists email text;
+alter table public.cater_providers add column if not exists phone text;
+alter table public.cater_providers add column if not exists website text;
+alter table public.cater_providers add column if not exists city text;
+alter table public.cater_providers add column if not exists state text;
+alter table public.cater_providers add column if not exists status text not null default 'active';
+alter table public.cater_providers alter column status set default 'active';
+alter table public.cater_providers add column if not exists notes text;
+alter table public.cater_providers add column if not exists created_by uuid;
+alter table public.cater_providers alter column created_by set default auth.uid();
+alter table public.cater_providers drop constraint if exists cater_providers_provider_type_check;
+alter table public.cater_providers add constraint cater_providers_provider_type_check
+  check (provider_type in ('venue', 'food', 'beverage', 'rental', 'staffing', 'transportation', 'entertainment', 'floral', 'decor', 'service', 'vendor', 'other'));
+alter table public.cater_providers drop constraint if exists cater_providers_status_check;
+alter table public.cater_providers add constraint cater_providers_status_check
+  check (status in ('active', 'preferred', 'inactive', 'archived'));
+
 alter table public.cater_beoflow_messages add column if not exists workspace_id text not null default 'cater-vegas';
 alter table public.cater_beoflow_messages alter column workspace_id set default 'cater-vegas';
 update public.cater_beoflow_messages set workspace_id = 'cater-vegas' where workspace_id is null;
@@ -210,6 +254,18 @@ begin
     alter table public.cater_events
       add constraint cater_events_customer_id_fkey
       foreign key (customer_id) references public.cater_customers(id) on delete set null;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'cater_providers_workspace_id_fkey') then
+    alter table public.cater_providers
+      add constraint cater_providers_workspace_id_fkey
+      foreign key (workspace_id) references public.beoflow_workspaces(id);
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'cater_providers_created_by_fkey') then
+    alter table public.cater_providers
+      add constraint cater_providers_created_by_fkey
+      foreign key (created_by) references public.cater_profiles(id) on delete set null;
   end if;
 
   if not exists (select 1 from pg_constraint where conname = 'cater_beoflow_messages_workspace_id_fkey') then
@@ -264,6 +320,12 @@ create index if not exists cater_events_workspace_status_updated_at_idx
   on public.cater_events (workspace_id, status, updated_at desc);
 create index if not exists cater_events_status_updated_at_idx on public.cater_events (status, updated_at desc);
 
+create index if not exists cater_providers_workspace_id_idx on public.cater_providers (workspace_id);
+create index if not exists cater_providers_created_by_idx on public.cater_providers (created_by);
+create index if not exists cater_providers_email_idx on public.cater_providers (email);
+create index if not exists cater_providers_workspace_status_type_idx
+  on public.cater_providers (workspace_id, status, provider_type);
+
 create index if not exists cater_beoflow_messages_workspace_id_idx on public.cater_beoflow_messages (workspace_id);
 create index if not exists cater_beoflow_messages_event_id_idx on public.cater_beoflow_messages (event_id);
 create index if not exists cater_beoflow_messages_user_id_idx on public.cater_beoflow_messages (user_id);
@@ -315,6 +377,11 @@ for each row execute function public.cater_set_updated_at();
 drop trigger if exists cater_events_set_updated_at on public.cater_events;
 create trigger cater_events_set_updated_at
 before update on public.cater_events
+for each row execute function public.cater_set_updated_at();
+
+drop trigger if exists cater_providers_set_updated_at on public.cater_providers;
+create trigger cater_providers_set_updated_at
+before update on public.cater_providers
 for each row execute function public.cater_set_updated_at();
 
 drop trigger if exists cater_collaborators_set_updated_at on public.cater_collaborators;
@@ -557,6 +624,7 @@ alter table public.beoflow_workspace_members enable row level security;
 alter table public.cater_profiles enable row level security;
 alter table public.cater_customers enable row level security;
 alter table public.cater_events enable row level security;
+alter table public.cater_providers enable row level security;
 alter table public.cater_beoflow_messages enable row level security;
 alter table public.cater_plan_versions enable row level security;
 alter table public.cater_collaborators enable row level security;
@@ -570,6 +638,10 @@ drop policy if exists "cater_events_select_by_role" on public.cater_events;
 drop policy if exists "cater_events_insert_by_role" on public.cater_events;
 drop policy if exists "cater_events_update_by_role" on public.cater_events;
 drop policy if exists "cater_events_delete_admin" on public.cater_events;
+drop policy if exists "cater_providers_select_workspace_staff" on public.cater_providers;
+drop policy if exists "cater_providers_insert_workspace_staff" on public.cater_providers;
+drop policy if exists "cater_providers_update_workspace_staff" on public.cater_providers;
+drop policy if exists "cater_providers_delete_workspace_admin" on public.cater_providers;
 drop policy if exists "cater_beoflow_messages_delete_admin" on public.cater_beoflow_messages;
 drop policy if exists "cater_plan_versions_update_admin" on public.cater_plan_versions;
 drop policy if exists "cater_plan_versions_delete_admin" on public.cater_plan_versions;
@@ -779,6 +851,35 @@ for delete
 to authenticated
 using (public.beoflow_is_workspace_admin(workspace_id));
 
+drop policy if exists "cater_providers_select_workspace_staff" on public.cater_providers;
+create policy "cater_providers_select_workspace_staff"
+on public.cater_providers
+for select
+to authenticated
+using (public.beoflow_is_workspace_staff(workspace_id));
+
+drop policy if exists "cater_providers_insert_workspace_staff" on public.cater_providers;
+create policy "cater_providers_insert_workspace_staff"
+on public.cater_providers
+for insert
+to authenticated
+with check (public.beoflow_is_workspace_staff(workspace_id));
+
+drop policy if exists "cater_providers_update_workspace_staff" on public.cater_providers;
+create policy "cater_providers_update_workspace_staff"
+on public.cater_providers
+for update
+to authenticated
+using (public.beoflow_is_workspace_staff(workspace_id))
+with check (public.beoflow_is_workspace_staff(workspace_id));
+
+drop policy if exists "cater_providers_delete_workspace_admin" on public.cater_providers;
+create policy "cater_providers_delete_workspace_admin"
+on public.cater_providers
+for delete
+to authenticated
+using (public.beoflow_is_workspace_admin(workspace_id));
+
 drop policy if exists "cater_beoflow_messages_select_event_access" on public.cater_beoflow_messages;
 create policy "cater_beoflow_messages_select_event_access"
 on public.cater_beoflow_messages
@@ -907,6 +1008,7 @@ grant select, insert, update, delete on public.beoflow_workspace_members to auth
 grant select, insert, update on public.cater_profiles to authenticated;
 grant select, insert, update, delete on public.cater_customers to authenticated;
 grant select, insert, update, delete on public.cater_events to authenticated;
+grant select, insert, update, delete on public.cater_providers to authenticated;
 grant select, insert, delete on public.cater_beoflow_messages to authenticated;
 grant select, insert, update, delete on public.cater_plan_versions to authenticated;
 grant select, insert, update, delete on public.cater_collaborators to authenticated;
@@ -914,10 +1016,22 @@ grant select, insert, update, delete on public.cater_event_assignments to authen
 grant usage, select on all sequences in schema public to authenticated;
 
 alter table public.cater_events replica identity full;
+alter table public.cater_providers replica identity full;
 
 do $$
 begin
   alter publication supabase_realtime add table public.cater_events;
+exception
+  when duplicate_object then
+    null;
+  when undefined_object then
+    null;
+end;
+$$;
+
+do $$
+begin
+  alter publication supabase_realtime add table public.cater_providers;
 exception
   when duplicate_object then
     null;

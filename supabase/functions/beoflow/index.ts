@@ -31,6 +31,8 @@ type BeoflowSyncResult = {
   reason?: string;
   clientId?: string;
   eventId?: string | null;
+  providerId?: string | null;
+  providerRecordId?: string | null;
   activityId?: string | null;
 };
 
@@ -52,6 +54,24 @@ type CaterEventRow = {
   notes?: string | null;
   client_id?: string | null;
   assigned_to?: string | null;
+  created_by?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+};
+
+type CaterProviderRow = {
+  id: number;
+  workspace_id: string;
+  provider_name: string | null;
+  provider_type?: string | null;
+  contact_name?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  city?: string | null;
+  state?: string | null;
+  status?: string | null;
+  notes?: string | null;
   created_by?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
@@ -916,6 +936,146 @@ async function syncCaterEventToBeoflow(
   }
 }
 
+function normalizeBeoflowProviderName(provider: CaterProviderRow) {
+  return provider.provider_name?.trim() || `Cater Vegas provider #${provider.id}`;
+}
+
+function buildBeoflowProviderNotes(provider: CaterProviderRow) {
+  return [
+    provider.notes,
+    provider.contact_name ? `Contact: ${provider.contact_name}` : null,
+    provider.email ? `Email: ${provider.email}` : null,
+    provider.phone ? `Phone: ${provider.phone}` : null,
+    provider.website ? `Website: ${provider.website}` : null,
+    [provider.city, provider.state].filter(Boolean).length
+      ? `Location: ${[provider.city, provider.state].filter(Boolean).join(", ")}`
+      : null,
+    `Source: Cater Vegas provider #${provider.id}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+function buildBeoflowProviderPayload(provider: CaterProviderRow, clientId: string, syncedAt: string) {
+  return {
+    client_id: clientId,
+    name: normalizeBeoflowProviderName(provider),
+    provider_type: provider.provider_type || "vendor",
+    contact_name: provider.contact_name || null,
+    email: provider.email || null,
+    phone: provider.phone || null,
+    website: provider.website || null,
+    city: provider.city || null,
+    state: provider.state || null,
+    status: provider.status || "active",
+    notes: buildBeoflowProviderNotes(provider),
+    source: "cater-vegas",
+    source_id: String(provider.id),
+    source_url: null,
+    source_metadata: {
+      cater_provider_id: provider.id,
+      cater_workspace_id: provider.workspace_id,
+      cater_created_by: provider.created_by || null,
+      cater_updated_at: provider.updated_at || null,
+    },
+    last_synced_at: syncedAt,
+  };
+}
+
+function buildProviderActivitySummary(provider: CaterProviderRow) {
+  const details = [
+    provider.provider_type ? `type ${provider.provider_type}` : null,
+    provider.status ? `status ${provider.status}` : null,
+    provider.email ? `email ${provider.email}` : null,
+    [provider.city, provider.state].filter(Boolean).length
+      ? `location ${[provider.city, provider.state].filter(Boolean).join(", ")}`
+      : null,
+  ].filter(Boolean);
+
+  return details.length
+    ? `Cater Vegas provider "${normalizeBeoflowProviderName(provider)}" synced with ${details.join(", ")}.`
+    : `Cater Vegas provider "${normalizeBeoflowProviderName(provider)}" synced.`;
+}
+
+async function syncCaterProviderToBeoflow(
+  serviceClient: ReturnType<typeof createClient>,
+  providerRecordId: number,
+  workspaceId: string,
+): Promise<BeoflowSyncResult> {
+  const { client: beoflowClient, reason } = getBeoflowSyncClient();
+  if (!beoflowClient) return { status: "skipped", reason };
+
+  const { data: provider, error: providerError } = await serviceClient
+    .from("cater_providers")
+    .select("*")
+    .eq("workspace_id", workspaceId)
+    .eq("id", providerRecordId)
+    .maybeSingle();
+
+  if (providerError) {
+    return { status: "failed", reason: providerError.message };
+  }
+
+  if (!provider) {
+    return { status: "skipped", reason: `Cater provider ${providerRecordId} was not found.` };
+  }
+
+  try {
+    const clientId = await resolveBeoflowClientId(beoflowClient);
+    const syncedAt = new Date().toISOString();
+    const providerRow = provider as CaterProviderRow;
+    const { data: beoflowProvider, error: beoflowProviderError } = await beoflowClient
+      .from("beoflow_providers")
+      .upsert(buildBeoflowProviderPayload(providerRow, clientId, syncedAt), {
+        onConflict: "client_id,source,source_id",
+      })
+      .select("id")
+      .single();
+
+    if (beoflowProviderError) throw beoflowProviderError;
+
+    const activityPayload = {
+      client_id: clientId,
+      source: "cater-vegas",
+      source_table: "cater_providers",
+      source_id: String(providerRow.id),
+      activity_type: "provider_synced",
+      title: `Synced provider: ${normalizeBeoflowProviderName(providerRow)}`,
+      summary: buildProviderActivitySummary(providerRow),
+      metadata: {
+        cater_provider_id: providerRow.id,
+        beoflow_provider_id: beoflowProvider?.id || null,
+        cater_workspace_id: providerRow.workspace_id,
+        synced_at: syncedAt,
+      },
+      status: "active",
+    };
+
+    const { data: activity, error: activityError } = await beoflowClient
+      .from("beoflow_activity_log")
+      .upsert(activityPayload, {
+        onConflict: "client_id,source,source_table,source_id,activity_type",
+      })
+      .select("id")
+      .single();
+
+    if (activityError) throw activityError;
+
+    return {
+      status: "synced",
+      clientId,
+      providerId: beoflowProvider?.id || null,
+      providerRecordId: String(providerRow.id),
+      activityId: activity?.id || null,
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 async function validateSyncEventRequest(
   request: Request,
   eventId: number,
@@ -968,6 +1128,76 @@ async function validateSyncEventRequest(
   if (error || !accessibleEvent) {
     return {
       errorResponse: new Response(JSON.stringify({ error: "Event is not accessible." }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
+      }),
+      serviceClient: null,
+    };
+  }
+
+  return {
+    errorResponse: null,
+    serviceClient: createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    }),
+  };
+}
+
+async function validateSyncProviderRequest(
+  request: Request,
+  providerRecordId: number,
+  workspaceId: string,
+) {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const authHeader = request.headers.get("Authorization");
+
+  if (!supabaseUrl || !anonKey || !serviceRoleKey || !authHeader) {
+    return {
+      errorResponse: new Response(JSON.stringify({ error: "Sync is not configured." }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
+      }),
+      serviceClient: null,
+    };
+  }
+
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: {
+      headers: {
+        Authorization: authHeader,
+      },
+    },
+  });
+
+  const {
+    data: { user },
+  } = await userClient.auth.getUser();
+
+  if (!user) {
+    return {
+      errorResponse: new Response(JSON.stringify({ error: "Authentication is required." }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
+      }),
+      serviceClient: null,
+    };
+  }
+
+  const { data: accessibleProvider, error } = await userClient
+    .from("cater_providers")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("id", providerRecordId)
+    .maybeSingle();
+
+  if (error || !accessibleProvider) {
+    return {
+      errorResponse: new Response(JSON.stringify({ error: "Provider is not accessible." }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
       }),
@@ -1161,6 +1391,7 @@ Deno.serve(async (request) => {
     const message = String(body.message || "").trim();
     const currentPlan = (body.currentPlan || {}) as CaterPlan;
     const eventId = body.eventId ? Number(body.eventId) : null;
+    const providerRecordId = body.providerId ? Number(body.providerId) : null;
     const workspaceId = String(body.workspaceId || body.workspace_id || DEFAULT_WORKSPACE_ID);
 
     if (action === "sync-event") {
@@ -1182,6 +1413,33 @@ Deno.serve(async (request) => {
       const beoflowSync = await syncCaterEventToBeoflow(
         serviceClient!,
         eventId,
+        workspaceId,
+      );
+
+      return new Response(JSON.stringify({ beoflowSync }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
+      });
+    }
+
+    if (action === "sync-provider") {
+      if (!providerRecordId) {
+        return new Response(JSON.stringify({ error: "providerId is required" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
+        });
+      }
+
+      const { errorResponse, serviceClient } = await validateSyncProviderRequest(
+        request,
+        providerRecordId,
+        workspaceId,
+      );
+
+      if (errorResponse) return errorResponse;
+
+      const beoflowSync = await syncCaterProviderToBeoflow(
+        serviceClient!,
+        providerRecordId,
         workspaceId,
       );
 

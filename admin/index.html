@@ -111,6 +111,98 @@
           <div class="events-list" id="eventsList" aria-live="polite"></div>
         </section>
 
+        <section class="admin-card providers-admin" id="providersSection">
+          <div class="events-heading">
+            <div>
+              <p class="admin-kicker">Providers</p>
+              <h2>Proveedores</h2>
+            </div>
+            <button id="refreshProvidersButton" type="button">Actualizar</button>
+          </div>
+
+          <div class="provider-layout">
+            <form class="provider-form" id="providerForm">
+              <input id="providerId" type="hidden" />
+
+              <label>
+                Nombre del proveedor
+                <input id="providerName" type="text" placeholder="Venue, rental, supplier..." required />
+              </label>
+
+              <label>
+                Tipo
+                <select id="providerType">
+                  <option value="vendor" selected>Vendor</option>
+                  <option value="venue">Venue</option>
+                  <option value="food">Food</option>
+                  <option value="beverage">Beverage</option>
+                  <option value="rental">Rental</option>
+                  <option value="staffing">Staffing</option>
+                  <option value="transportation">Transportation</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="floral">Floral</option>
+                  <option value="decor">Decor</option>
+                  <option value="service">Service</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+
+              <label>
+                Contacto
+                <input id="providerContactName" type="text" placeholder="Nombre contacto" />
+              </label>
+
+              <label>
+                Email
+                <input id="providerEmail" type="email" placeholder="contacto@example.com" />
+              </label>
+
+              <label>
+                Telefono
+                <input id="providerPhone" type="tel" placeholder="+1 702..." />
+              </label>
+
+              <label>
+                Website
+                <input id="providerWebsite" type="url" placeholder="https://..." />
+              </label>
+
+              <label>
+                Ciudad
+                <input id="providerCity" type="text" placeholder="Las Vegas" />
+              </label>
+
+              <label>
+                Estado
+                <input id="providerState" type="text" placeholder="NV" />
+              </label>
+
+              <label>
+                Status
+                <select id="providerStatus">
+                  <option value="active" selected>Active</option>
+                  <option value="preferred">Preferred</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="archived">Archived</option>
+                </select>
+              </label>
+
+              <label class="wide-field">
+                Notas
+                <textarea id="providerNotes" rows="3" placeholder="Servicios, precios, restricciones, contacto"></textarea>
+              </label>
+
+              <div class="form-actions">
+                <button class="primary-button" type="submit">Guardar proveedor</button>
+                <button class="secondary-button" id="resetProviderButton" type="button">Limpiar</button>
+              </div>
+              <p class="admin-status" id="providerFormStatus" aria-live="polite"></p>
+            </form>
+
+            <div class="provider-list" id="providersList" aria-live="polite"></div>
+          </div>
+        </section>
+
         <section class="admin-card collaborators-admin">
           <div class="events-heading">
             <div>
