@@ -187,20 +187,16 @@ function hasAnyRole(allowedRoles) {
   return currentUserRoles().some((role) => allowedRoles.has(role));
 }
 
-function hasWorkspaceAccess() {
-  return currentWorkspace?.id === WORKSPACE_ID || currentMembership?.workspace_id === WORKSPACE_ID || currentProfile?.workspace_id === WORKSPACE_ID;
-}
-
 function canManageEvents() {
-  return Boolean(currentUser) && hasWorkspaceAccess() && hasAnyRole(EVENT_MANAGER_ROLES);
+  return Boolean(currentUser) && hasAnyRole(EVENT_MANAGER_ROLES);
 }
 
 function canManageCollaborators() {
-  return Boolean(currentUser) && hasWorkspaceAccess() && hasAnyRole(WORKSPACE_MANAGER_ROLES);
+  return Boolean(currentUser) && hasAnyRole(WORKSPACE_MANAGER_ROLES);
 }
 
 function canManageRequests() {
-  return Boolean(currentUser) && hasWorkspaceAccess() && hasAnyRole(WORKSPACE_MANAGER_ROLES);
+  return Boolean(currentUser) && hasAnyRole(WORKSPACE_MANAGER_ROLES);
 }
 
 function profileRoleForMembershipRole(role) {
@@ -1222,7 +1218,7 @@ function syncAdminPermissionsUi() {
 }
 
 async function ensureAdminReady(setStatus) {
-  if (currentUser && hasWorkspaceAccess() && hasAnyRole(WORKSPACE_MANAGER_ROLES)) {
+  if (currentUser && hasAnyRole(WORKSPACE_MANAGER_ROLES)) {
     authReady = true;
     syncAdminPermissionsUi();
     return true;
@@ -1292,8 +1288,9 @@ async function bootAdmin() {
   }
 
   if (!canManageEvents()) {
-    if (currentRole === "collaborator") window.location.href = "../collaborator/";
-    else window.location.href = "../client/";
+    authReady = true;
+    syncAdminPermissionsUi();
+    setSessionStatus("Sesion activa, pero Supabase no devolvio rol admin/owner para este workspace.");
     return;
   }
 
