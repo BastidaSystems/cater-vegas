@@ -64,8 +64,12 @@ const beoflowResult = document.querySelector("#beoflowResult");
 const collaboratorForm = document.querySelector("#collaboratorForm");
 const collaboratorId = document.querySelector("#collaboratorId");
 const collaboratorName = document.querySelector("#collaboratorName");
+const providerContactName = document.querySelector("#providerContactName");
 const collaboratorEmail = document.querySelector("#collaboratorEmail");
 const collaboratorPhone = document.querySelector("#collaboratorPhone");
+const providerWebsite = document.querySelector("#providerWebsite");
+const providerCity = document.querySelector("#providerCity");
+const providerState = document.querySelector("#providerState");
 const collaboratorRole = document.querySelector("#collaboratorRole");
 const collaboratorStatus = document.querySelector("#collaboratorStatus");
 const providerCoverage = document.querySelector("#providerCoverage");
@@ -183,16 +187,20 @@ function hasAnyRole(allowedRoles) {
   return currentUserRoles().some((role) => allowedRoles.has(role));
 }
 
+function hasWorkspaceAccess() {
+  return currentWorkspace?.id === WORKSPACE_ID || currentMembership?.workspace_id === WORKSPACE_ID || currentProfile?.workspace_id === WORKSPACE_ID;
+}
+
 function canManageEvents() {
-  return hasAnyRole(EVENT_MANAGER_ROLES);
+  return Boolean(currentUser) && hasWorkspaceAccess() && hasAnyRole(EVENT_MANAGER_ROLES);
 }
 
 function canManageCollaborators() {
-  return hasAnyRole(WORKSPACE_MANAGER_ROLES);
+  return Boolean(currentUser) && hasWorkspaceAccess() && hasAnyRole(WORKSPACE_MANAGER_ROLES);
 }
 
 function canManageRequests() {
-  return hasAnyRole(WORKSPACE_MANAGER_ROLES);
+  return Boolean(currentUser) && hasWorkspaceAccess() && hasAnyRole(WORKSPACE_MANAGER_ROLES);
 }
 
 function profileRoleForMembershipRole(role) {
@@ -294,6 +302,18 @@ function statusBadge(status) {
 
 function providerRoleLabel(role) {
   const labels = {
+    food: "Catering / Cocina",
+    beverage: "Bebidas",
+    service: "Servicio",
+    transportation: "Logistica / Delivery",
+    staffing: "Staff extra",
+    venue: "Venue",
+    rental: "Rental",
+    floral: "Floral",
+    decor: "Decor",
+    entertainment: "Entertainment",
+    vendor: "Vendor",
+    other: "Other",
     chef: "Catering / Cocina",
     server: "Servicio",
     driver: "Logistica / Delivery",
@@ -305,6 +325,14 @@ function providerRoleLabel(role) {
   };
   const value = String(role || "staff").toLowerCase();
   return labels[value] || role || "Proveedor";
+}
+
+function providerDisplayName(provider) {
+  return provider?.provider_name || provider?.full_name || "";
+}
+
+function providerDisplayType(provider) {
+  return provider?.provider_type || provider?.service_category || provider?.role || "vendor";
 }
 
 function userInitials(value) {
@@ -502,8 +530,8 @@ function renderActivityTimeline() {
     })),
     ...allCollaborators.slice(0, 2).map((collaborator) => ({
       icon: collaborator.status === "active" ? "✅" : "⚠️",
-      title: collaborator.full_name || "Proveedor",
-      meta: `${providerRoleLabel(collaborator.role)} · ${collaborator.status || "active"}`,
+      title: providerDisplayName(collaborator) || "Proveedor",
+      meta: `${providerRoleLabel(providerDisplayType(collaborator))} · ${collaborator.status || "active"}`,
     })),
     ...allAssignments.slice(0, 2).map((assignment) => ({
       icon: "💰",
@@ -549,7 +577,7 @@ function renderCollaboratorOptions() {
     .filter((collaborator) => collaborator.status !== "inactive")
     .map(
       (collaborator) =>
-        `<option value="${collaborator.id}">${escapeHtml(collaborator.full_name)} · ${escapeHtml(providerRoleLabel(collaborator.role))}</option>`
+        `<option value="${collaborator.id}">${escapeHtml(providerDisplayName(collaborator))} · ${escapeHtml(providerRoleLabel(providerDisplayType(collaborator)))}</option>`
     )
     .join("");
 
@@ -622,9 +650,9 @@ function renderCollaborators(rows = []) {
       return `
         <article class="collaborator-row${selectedClass}">
           <button type="button" data-collaborator-select="${collaborator.id}">
-            <strong>${escapeHtml(collaborator.full_name)}</strong>
+            <strong>${escapeHtml(providerDisplayName(collaborator))}</strong>
             <span class="collaborator-meta">
-              #${collaborator.id} · ${escapeHtml(providerRoleLabel(collaborator.role))} · ${statusBadge(collaborator.status)}
+              #${collaborator.id} · ${escapeHtml(providerRoleLabel(providerDisplayType(collaborator)))} · ${statusBadge(collaborator.status)}
             </span>
             <span class="collaborator-meta">
               ${escapeHtml(collaborator.email || "Sin email")} · ${escapeHtml(collaborator.phone || "Sin telefono")}
@@ -687,7 +715,7 @@ function renderAssignments(rows = []) {
 
       return `
         <article class="assignment-row">
-          <strong>${escapeHtml(collaborator?.full_name || `Proveedor #${assignment.collaborator_id}`)}</strong>
+          <strong>${escapeHtml(providerDisplayName(collaborator) || `Proveedor #${assignment.collaborator_id}`)}</strong>
           <span class="assignment-meta">
             ${escapeHtml(providerRoleLabel(assignment.assignment_role))} · ${statusBadge(assignment.status)} · ${escapeHtml(event?.title || `Evento #${assignment.event_id}`)}
           </span>
@@ -840,9 +868,13 @@ function buildProviderNotes() {
 
 function providerDetailPayload() {
   return {
-    coverage_area: providerCoverage?.value.trim() || null,
+    coverage_zone: providerCoverage?.value.trim() || null,
     availability: providerAvailability?.value.trim() || null,
-    base_pricing: providerBasePricing?.value.trim() || null,
+    base_prices: providerBasePricing?.value.trim() || null,
+    service_category: collaboratorRole.value,
+    public_visible: true,
+    public_description: collaboratorNotes.value.trim() || null,
+    source: "cater_vegas_admin",
     license_insurance: providerLicenseInsurance?.value.trim() || null,
   };
 }
@@ -860,28 +892,32 @@ async function insertProviderPayload(basePayload) {
   ].filter(Boolean);
 
   for (const payload of payloads) {
-    const result = await supabase.from("cater_collaborators").insert(payload);
+    const result = await supabase.from("cater_providers").insert(payload).select("id").single();
     if (!isMissingSchemaColumnError(result.error)) return result;
   }
 
-  return supabase.from("cater_collaborators").insert(basePayload);
+  return supabase.from("cater_providers").insert(basePayload).select("id").single();
 }
 
 async function updateProviderPayload(id, basePayload) {
   const detailPayload = providerDetailPayload();
   const firstResult = await supabase
-    .from("cater_collaborators")
+    .from("cater_providers")
     .update({ ...basePayload, ...detailPayload })
     .eq("workspace_id", WORKSPACE_ID)
-    .eq("id", Number(id));
+    .eq("id", Number(id))
+    .select("id")
+    .single();
 
   if (!isMissingSchemaColumnError(firstResult.error)) return firstResult;
 
   return supabase
-    .from("cater_collaborators")
+    .from("cater_providers")
     .update(basePayload)
     .eq("workspace_id", WORKSPACE_ID)
-    .eq("id", Number(id));
+    .eq("id", Number(id))
+    .select("id")
+    .single();
 }
 
 function splitProviderNotes(notes = "") {
@@ -912,18 +948,22 @@ function splitProviderNotes(notes = "") {
 }
 
 function fillCollaboratorForm(collaborator) {
-  const availableRoles = ["chef", "server", "driver", "organizer", "staff"];
+  const availableRoles = ["food", "beverage", "service", "transportation", "staffing", "venue", "rental", "floral", "decor", "entertainment", "vendor", "other"];
   const notes = splitProviderNotes(collaborator.notes);
   collaboratorId.value = collaborator.id;
-  collaboratorName.value = collaborator.full_name || "";
+  collaboratorName.value = providerDisplayName(collaborator);
+  if (providerContactName) providerContactName.value = collaborator.contact_name || "";
   collaboratorEmail.value = collaborator.email || "";
   collaboratorPhone.value = collaborator.phone || "";
-  collaboratorRole.value = availableRoles.includes(collaborator.role) ? collaborator.role : "staff";
+  if (providerWebsite) providerWebsite.value = collaborator.website || "";
+  if (providerCity) providerCity.value = collaborator.city || "";
+  if (providerState) providerState.value = collaborator.state || "";
+  collaboratorRole.value = availableRoles.includes(providerDisplayType(collaborator)) ? providerDisplayType(collaborator) : "vendor";
   collaboratorStatus.value = collaborator.status || "active";
   collaboratorNotes.value = notes.services;
-  if (providerCoverage) providerCoverage.value = collaborator.coverage_area || notes.details.get(PROVIDER_NOTE_LABELS.coverage) || "";
+  if (providerCoverage) providerCoverage.value = collaborator.coverage_zone || collaborator.coverage_area || notes.details.get(PROVIDER_NOTE_LABELS.coverage) || "";
   if (providerAvailability) providerAvailability.value = collaborator.availability || notes.details.get(PROVIDER_NOTE_LABELS.availability) || "";
-  if (providerBasePricing) providerBasePricing.value = collaborator.base_pricing || notes.details.get(PROVIDER_NOTE_LABELS.pricing) || "";
+  if (providerBasePricing) providerBasePricing.value = collaborator.base_prices || collaborator.base_pricing || notes.details.get(PROVIDER_NOTE_LABELS.pricing) || "";
   if (providerLicenseInsurance) {
     providerLicenseInsurance.value = collaborator.license_insurance || notes.details.get(PROVIDER_NOTE_LABELS.license) || "";
   }
@@ -932,7 +972,7 @@ function fillCollaboratorForm(collaborator) {
 function resetCollaboratorForm() {
   collaboratorForm.reset();
   collaboratorId.value = "";
-  collaboratorRole.value = "chef";
+  collaboratorRole.value = "food";
   collaboratorStatus.value = "active";
   providerDetailFields().forEach(([, field]) => {
     if (field) field.value = "";
@@ -947,7 +987,7 @@ async function loadWorkspace() {
   const [workspaceResult, eventsResult, collaboratorsResult, customersResult] = await Promise.all([
     supabase.from("beoflow_workspaces").select("*").eq("id", WORKSPACE_ID).maybeSingle(),
     supabase.from("cater_events").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
-    supabase.from("cater_collaborators").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
+    supabase.from("cater_providers").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
     supabase.from("cater_customers").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
   ]);
 
@@ -989,7 +1029,7 @@ async function loadCollaborators() {
   if (!supabase) return;
 
   const { data, error } = await supabase
-    .from("cater_collaborators")
+    .from("cater_providers")
     .select("*")
     .eq("workspace_id", WORKSPACE_ID)
     .order("updated_at", { ascending: false })
@@ -1182,13 +1222,17 @@ function syncAdminPermissionsUi() {
 }
 
 async function ensureAdminReady(setStatus) {
-  if (authReady && currentUser) return true;
+  if (currentUser && hasWorkspaceAccess() && hasAnyRole(WORKSPACE_MANAGER_ROLES)) {
+    authReady = true;
+    syncAdminPermissionsUi();
+    return true;
+  }
 
   setStatus("Verificando permisos...");
 
   if (adminBootPromise) {
     await Promise.race([
-      adminBootPromise,
+      adminBootPromise.catch(() => null),
       new Promise((resolve) => window.setTimeout(resolve, 1800)),
     ]);
   }
@@ -1216,9 +1260,9 @@ async function ensureAdminReady(setStatus) {
 
     authReady = true;
     syncAdminPermissionsUi();
-    return true;
+    return canManageEvents() || canManageCollaborators();
   } catch (error) {
-    setStatus(error?.message || "No se pudieron verificar permisos.");
+    setStatus("No se pudo verificar permisos. Revisa la conexion o las politicas de Supabase.");
     return false;
   }
 }
@@ -1270,6 +1314,24 @@ async function bootAdmin() {
   );
 }
 
+async function syncProviderToBeoflow(providerId) {
+  if (!supabase || !providerId) return { status: "skipped", reason: "No provider id." };
+
+  try {
+    const { data, error } = await supabase.functions.invoke("beoflow", {
+      body: {
+        action: "sync-provider",
+        providerId,
+        workspaceId: WORKSPACE_ID,
+      },
+    });
+
+    if (error) return { status: "failed", reason: error.message };
+    return data?.beoflowSync || { status: "skipped", reason: "No sync response." };
+  } catch (error) {
+    return { status: "failed", reason: error instanceof Error ? error.message : String(error) };
+  }
+}
 eventForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabase) {
@@ -1334,15 +1396,19 @@ collaboratorForm.addEventListener("submit", async (event) => {
 
   const payload = {
     workspace_id: WORKSPACE_ID,
-    full_name: collaboratorName.value.trim(),
+    provider_name: collaboratorName.value.trim(),
+    contact_name: providerContactName?.value.trim() || null,
     email: collaboratorEmail.value.trim() || null,
     phone: collaboratorPhone.value.trim() || null,
-    role: collaboratorRole.value,
+    website: providerWebsite?.value.trim() || null,
+    city: providerCity?.value.trim() || null,
+    state: providerState?.value.trim() || null,
+    provider_type: collaboratorRole.value,
     status: collaboratorStatus.value,
     notes: buildProviderNotes(),
   };
 
-  if (!payload.full_name) {
+  if (!payload.provider_name) {
     setCollaboratorStatus("Agrega el nombre del proveedor.");
     return;
   }
@@ -1350,13 +1416,16 @@ collaboratorForm.addEventListener("submit", async (event) => {
   const isEditing = Boolean(collaboratorId.value);
   setCollaboratorStatus(isEditing ? "Actualizando proveedor..." : "Creando proveedor...");
 
+  let data = null;
   let error = null;
 
   if (isEditing) {
     const result = await updateProviderPayload(collaboratorId.value, payload);
+    data = result.data;
     error = result.error;
   } else {
     const result = await insertProviderPayload(payload);
+    data = result.data;
     error = result.error;
   }
 
@@ -1365,7 +1434,12 @@ collaboratorForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  setCollaboratorStatus("Proveedor guardado.");
+  const syncResult = await syncProviderToBeoflow(data?.id || collaboratorId.value);
+  setCollaboratorStatus(
+    syncResult.status === "synced"
+      ? "Proveedor guardado y sincronizado."
+      : `Proveedor guardado. Sync pendiente${syncResult.reason ? `: ${syncResult.reason}` : "."}`
+  );
   resetCollaboratorForm();
   await Promise.all([refreshCollaboratorModule(), loadWorkspace()]);
 });
@@ -1445,7 +1519,7 @@ async function updateCollaboratorStatus(id, status) {
   }
 
   const { error } = await supabase
-    .from("cater_collaborators")
+    .from("cater_providers")
     .update({ status })
     .eq("workspace_id", WORKSPACE_ID)
     .eq("id", Number(id));
@@ -1455,7 +1529,12 @@ async function updateCollaboratorStatus(id, status) {
     return;
   }
 
-  setCollaboratorStatus(status === "active" ? "Proveedor activado." : "Proveedor desactivado.");
+  const syncResult = await syncProviderToBeoflow(id);
+  setCollaboratorStatus(
+    syncResult.status === "synced"
+      ? (status === "active" ? "Proveedor activado y sincronizado." : "Proveedor desactivado y sincronizado.")
+      : (status === "active" ? "Proveedor activado." : "Proveedor desactivado.")
+  );
   await refreshCollaboratorModule();
 }
 

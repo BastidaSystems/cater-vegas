@@ -194,16 +194,26 @@
                 <form class="collaborator-form provider-form" id="collaboratorForm">
                   <input id="collaboratorId" type="hidden" />
                   <label><span>Proveedor / empresa</span><input id="collaboratorName" type="text" placeholder="Cater Vegas Rentals" required /></label>
+                  <label><span>Contacto</span><input id="providerContactName" type="text" placeholder="Nombre contacto" /></label>
                   <label><span>Email</span><input id="collaboratorEmail" type="email" placeholder="contacto@proveedor.com" /></label>
                   <label><span>Telefono</span><input id="collaboratorPhone" type="tel" placeholder="+1 702..." /></label>
+                  <label><span>Website</span><input id="providerWebsite" type="url" placeholder="https://..." /></label>
+                  <label><span>Ciudad</span><input id="providerCity" type="text" placeholder="Las Vegas" /></label>
+                  <label><span>Estado</span><input id="providerState" type="text" placeholder="NV" /></label>
                   <label>
                     <span>Categoria</span>
                     <select id="collaboratorRole">
-                      <option value="chef" selected>Catering / Cocina</option>
-                      <option value="server">Servicio</option>
-                      <option value="driver">Logistica / Delivery</option>
-                      <option value="organizer">Coordinacion</option>
-                      <option value="staff">Staff extra</option>
+                      <option value="food" selected>Catering / Cocina</option>
+                      <option value="service">Servicio</option>
+                      <option value="transportation">Logistica / Delivery</option>
+                      <option value="staffing">Staff extra</option>
+                      <option value="venue">Venue</option>
+                      <option value="rental">Rental</option>
+                      <option value="floral">Floral</option>
+                      <option value="decor">Decor</option>
+                      <option value="entertainment">Entertainment</option>
+                      <option value="vendor">Vendor</option>
+                      <option value="other">Other</option>
                     </select>
                   </label>
                   <label>
@@ -261,11 +271,11 @@
                   <label>
                     <span>Funcion</span>
                     <select id="assignmentRole">
-                      <option value="chef" selected>Catering</option>
-                      <option value="server">Servicio</option>
-                      <option value="driver">Delivery</option>
-                      <option value="organizer">Coordinacion</option>
-                      <option value="staff">Staff extra</option>
+                      <option value="food" selected>Catering</option>
+                      <option value="service">Servicio</option>
+                      <option value="transportation">Delivery</option>
+                      <option value="staffing">Staff extra</option>
+                      <option value="vendor">Vendor</option>
                     </select>
                   </label>
                   <label>
