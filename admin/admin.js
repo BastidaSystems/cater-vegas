@@ -7,9 +7,13 @@ import {
   isSupabaseConfigured,
   requireSupabase,
   subscribeToEvents,
-} from "../lib/supabaseClient.js?v=admin-save-sync-20260619";
+} from "../lib/supabaseClient.js?v=supabase-auth-loader-20260619";
 
 const WORKSPACE_ID = DEFAULT_WORKSPACE_ID;
+const REALTIME_ENABLED =
+  window.CATER_VEGAS_ENABLE_REALTIME === true ||
+  new URLSearchParams(window.location.search).get("realtime") === "1";
+const ADMIN_REFRESH_INTERVAL_MS = 60000;
 const PENDING_PROFILE_ROLES = [
   "workspace_pending",
   "organizer_pending",
@@ -44,6 +48,16 @@ function clearAdminHash() {
   }
 }
 
+function syncAdminStickyOffset() {
+  const header = document.querySelector(".admin-header");
+  if (!header) return;
+
+  const headerStyle = window.getComputedStyle(header);
+  const isSticky = headerStyle.position === "sticky";
+  const offset = isSticky ? Math.ceil(header.getBoundingClientRect().height + 24) : 16;
+  document.documentElement.style.setProperty("--admin-sticky-offset", `${offset}px`);
+}
+
 function setActiveSidebarTarget(targetSelector) {
   document.querySelectorAll(".sidebar-link").forEach((link) => {
     link.classList.toggle("is-active", link.dataset.scrollTarget === targetSelector);
@@ -60,6 +74,7 @@ function scrollToAdminTarget(targetSelector) {
   }
 
   clearAdminHash();
+  syncAdminStickyOffset();
   window.requestAnimationFrame(() => {
     target.scrollIntoView({ behavior: "smooth", block: "start" });
     target.classList.add("is-pulsing");
@@ -149,6 +164,7 @@ let selectedCollaborator = null;
 let authReady = false;
 let adminBootPromise = null;
 let eventsChannel = null;
+let adminRefreshTimer = null;
 let allEvents = [];
 let allCollaborators = [];
 let allAssignments = [];
@@ -529,11 +545,43 @@ function lastSixMonths() {
   });
 }
 
-function renderWorkspaceSummary(stats = {}) {
+function syncStatusCopy(syncStatus) {
+  const status = String(syncStatus?.status || "unknown").toLowerCase();
+
+  if (status === "connected" || status === "synced") {
+    return {
+      title: "BEOFlow sync conectado",
+      meta: syncStatus?.clientId ? `Client ID: ${syncStatus.clientId}` : "Listo para enviar eventos y proveedores.",
+    };
+  }
+
+  if (status === "pending" || status === "skipped") {
+    return {
+      title: "BEOFlow sync pendiente",
+      meta: syncStatus?.reason || "Faltan secretos o configuracion de la Edge Function.",
+    };
+  }
+
+  if (status === "failed") {
+    return {
+      title: "BEOFlow sync con error",
+      meta: syncStatus?.reason || "No se pudo verificar la conexion externa.",
+    };
+  }
+
+  return {
+    title: "BEOFlow sync no verificado",
+    meta: "Usa Administrar para abrir BEOFlow Command.",
+  };
+}
+
+function renderWorkspaceSummary(stats = {}, syncStatus = null) {
   if (!currentWorkspace) {
     workspaceSummary.innerHTML = '<div class="empty-state">No se pudo leer el workspace activo.</div>';
     return;
   }
+
+  const connection = syncStatusCopy(syncStatus);
 
   workspaceSummary.innerHTML = `
     <article class="workspace-stat">
@@ -545,6 +593,10 @@ function renderWorkspaceSummary(stats = {}) {
     <article class="workspace-stat">
       <strong>${stats.events || 0} eventos · ${stats.collaborators || 0} proveedores · ${stats.customers || 0} clientes</strong>
       <span class="workspace-meta">Workspace ID: ${escapeHtml(WORKSPACE_ID)}</span>
+    </article>
+    <article class="workspace-stat">
+      <strong>${escapeHtml(connection.title)}</strong>
+      <span class="workspace-meta">${escapeHtml(connection.meta)}</span>
     </article>
   `;
 }
@@ -1167,11 +1219,12 @@ function resetCollaboratorForm() {
 async function loadWorkspace() {
   if (!supabase) return;
 
-  const [workspaceResult, eventsResult, collaboratorsResult, customersResult] = await Promise.all([
+  const [workspaceResult, eventsResult, collaboratorsResult, customersResult, syncStatus] = await Promise.all([
     supabase.from("beoflow_workspaces").select("*").eq("id", WORKSPACE_ID).maybeSingle(),
     supabase.from("cater_events").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
     supabase.from("cater_providers").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
     supabase.from("cater_customers").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
+    loadBeoflowSyncStatus(),
   ]);
 
   if (workspaceResult.error) {
@@ -1184,7 +1237,29 @@ async function loadWorkspace() {
     events: eventsResult.count,
     collaborators: collaboratorsResult.count,
     customers: customersResult.count,
-  });
+  }, syncStatus);
+}
+
+async function loadBeoflowSyncStatus() {
+  if (!supabase) return null;
+
+  try {
+    const { data, error } = await supabase.functions.invoke("beoflow", {
+      body: {
+        action: "sync-status",
+        workspaceId: WORKSPACE_ID,
+      },
+    });
+
+    if (error) return { status: "failed", reason: error.message };
+    if (data?.error) return { status: "failed", reason: data.error };
+    return data?.beoflowSync || null;
+  } catch (error) {
+    return {
+      status: "failed",
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 async function loadEvents() {
@@ -1470,6 +1545,49 @@ async function loadAdminData() {
   await loadAssignments();
 }
 
+function stopAdminLiveUpdates() {
+  if (adminRefreshTimer) {
+    window.clearInterval(adminRefreshTimer);
+    adminRefreshTimer = null;
+  }
+
+  if (eventsChannel && supabase) {
+    supabase.removeChannel(eventsChannel);
+    eventsChannel = null;
+  }
+}
+
+function refreshDashboardSnapshots() {
+  if (!authReady || document.hidden) return;
+
+  Promise.all([
+    loadEvents().then(loadAssignments),
+    loadWorkspace(),
+    loadUserRequests(),
+  ]).catch((error) => {
+    console.error("Admin background refresh failed:", error);
+  });
+}
+
+function startAdminLiveUpdates() {
+  stopAdminLiveUpdates();
+
+  if (REALTIME_ENABLED) {
+    eventsChannel = subscribeToEvents(
+      () => {
+        loadEvents().then(loadAssignments);
+        loadWorkspace();
+      },
+      {
+        workspaceId: WORKSPACE_ID,
+      }
+    );
+    return;
+  }
+
+  adminRefreshTimer = window.setInterval(refreshDashboardSnapshots, ADMIN_REFRESH_INTERVAL_MS);
+}
+
 async function bootAdmin() {
   if (!isSupabaseConfigured) {
     setSessionStatus("Configura Supabase en lib/supabaseClient.js para usar el admin.");
@@ -1495,16 +1613,7 @@ async function bootAdmin() {
   }
 
   await loadAdminData();
-
-  eventsChannel = subscribeToEvents(
-    () => {
-      loadEvents().then(loadAssignments);
-      loadWorkspace();
-    },
-    {
-      workspaceId: WORKSPACE_ID,
-    }
-  );
+  startAdminLiveUpdates();
 }
 
 async function syncEventToBeoflow(eventId) {
@@ -1782,11 +1891,11 @@ async function updateCollaboratorStatus(id, status) {
 }
 
 refreshWorkspaceButton.addEventListener("click", async () => {
-  setSessionStatus("Actualizando admin y conexion con BEOFlow...");
+  setSessionStatus("Abriendo BEOFlow Command...");
   const ready = await ensureAdminReady(setSessionStatus);
   if (!ready) return;
   await loadAdminData();
-  scrollToAdminTarget("#beoflow");
+  scrollToAdminTarget("#beoflow-command");
 });
 refreshEventsButton.addEventListener("click", () => {
   loadEvents().then(loadAssignments);
@@ -1815,6 +1924,8 @@ document.querySelectorAll(".sidebar-link").forEach((link) => {
 });
 
 window.addEventListener("hashchange", clearAdminHash);
+window.addEventListener("resize", syncAdminStickyOffset);
+window.addEventListener("load", syncAdminStickyOffset);
 
 signoutButton.addEventListener("click", async () => {
   if (!supabase) return;
@@ -1823,11 +1934,10 @@ signoutButton.addEventListener("click", async () => {
 });
 
 window.addEventListener("beforeunload", () => {
-  if (eventsChannel && supabase) {
-    supabase.removeChannel(eventsChannel);
-  }
+  stopAdminLiveUpdates();
 });
 
+syncAdminStickyOffset();
 renderAnalytics();
 adminBootPromise = bootAdmin().catch((error) => {
   setSessionStatus(error.message);

@@ -11,7 +11,7 @@
         window.addEventListener("load", () => window.scrollTo(0, 0), { once: true });
       }
     </script>
-    <link rel="stylesheet" href="admin.css?v=admin-save-sync-20260619" />
+    <link rel="stylesheet" href="admin.css?v=admin-dashboard-fix-20260619" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple">
@@ -298,7 +298,7 @@
               </div>
             </section>
 
-            <section class="panel beoflow-admin">
+            <section class="panel beoflow-admin" id="beoflow-command">
               <div class="panel-heading">
                 <div><span>🌊</span><h2>BEOFlow Command</h2></div>
               </div>
@@ -328,6 +328,7 @@
       </main>
     </div>
 
-    <script type="module" src="admin.js?v=admin-save-sync-20260619"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="module" src="admin.js?v=supabase-auth-loader-20260619"></script>
   </body>
 </html>

@@ -14,6 +14,7 @@
   --line: rgba(214, 178, 124, 0.22);
   --shadow: 0 24px 70px rgba(0, 0, 0, 0.34);
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --admin-sticky-offset: 10rem;
 }
 
 *,
@@ -24,6 +25,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: var(--admin-sticky-offset);
 }
 
 body {
@@ -1639,6 +1641,21 @@ textarea::placeholder {
 .simple-main {
   align-content: start;
   gap: 0.9rem;
+}
+
+.simple-hero,
+.metric-grid-simple,
+.simple-dashboard-grid,
+.admin-tools-accordion,
+#overview,
+#events,
+#requestsSection,
+#beoflow,
+#beoflow-command,
+#event-tools,
+#team-tools,
+#settings {
+  scroll-margin-top: var(--admin-sticky-offset);
 }
 
 .simple-hero {

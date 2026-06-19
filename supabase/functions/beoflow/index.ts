@@ -900,6 +900,25 @@ async function resolveBeoflowClientId(beoflowClient: ReturnType<typeof createCli
   return data.id as string;
 }
 
+async function getBeoflowSyncStatus(): Promise<BeoflowSyncResult> {
+  const { client: beoflowClient, reason } = getBeoflowSyncClient();
+  if (!beoflowClient) return { status: "skipped", reason };
+
+  try {
+    const clientId = await resolveBeoflowClientId(beoflowClient);
+    return {
+      status: "synced",
+      clientId,
+      reason: "BEOFlow sync is configured.",
+    };
+  } catch (error) {
+    return {
+      status: "failed",
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 function normalizeBeoflowEventName(event: CaterEventRow) {
   return event.title?.trim() || `Cater Vegas event #${event.id}`;
 }
@@ -1575,6 +1594,14 @@ Deno.serve(async (request) => {
       body.payload && typeof body.payload === "object"
         ? (body.payload as Record<string, unknown>)
         : {};
+
+    if (action === "sync-status") {
+      const context = await validateAuthenticatedWorkspaceRequest(request, workspaceId);
+      if (context.errorResponse || !context.serviceClient || !context.user) return context.errorResponse!;
+
+      const beoflowSync = await getBeoflowSyncStatus();
+      return jsonResponse({ beoflowSync });
+    }
 
     if (action === "save-event") {
       const context = await validateAuthenticatedWorkspaceRequest(request, workspaceId);

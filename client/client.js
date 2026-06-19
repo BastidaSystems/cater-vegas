@@ -6,7 +6,7 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=save-debug-20260618";
+} from "../lib/supabaseClient.js?v=supabase-auth-loader-20260619";
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const eventsList = document.querySelector("#eventsList");

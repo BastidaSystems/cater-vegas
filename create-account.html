@@ -227,12 +227,13 @@
       </div>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
       import {
         DEFAULT_WORKSPACE_ID,
         isSupabaseConfigured,
         requireSupabase,
-      } from "./lib/supabaseClient.js?v=save-debug-20260618";
+      } from "./lib/supabaseClient.js?v=supabase-auth-loader-20260619";
 
       const cards = [...document.querySelectorAll("[data-account-card]")];
       const form = document.querySelector("#accountForm");

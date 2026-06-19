@@ -3,7 +3,7 @@ import {
   isSupabaseConfigured,
   requireSupabase,
   subscribeToEvents,
-} from "./lib/supabaseClient.js?v=save-debug-20260618";
+} from "./lib/supabaseClient.js?v=supabase-auth-loader-20260619";
 
 const WORKSPACE_ID = DEFAULT_WORKSPACE_ID;
 const supabase = isSupabaseConfigured ? requireSupabase() : null;
