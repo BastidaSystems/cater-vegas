@@ -11,7 +11,7 @@
         window.addEventListener("load", () => window.scrollTo(0, 0), { once: true });
       }
     </script>
-    <link rel="stylesheet" href="admin.css?v=home-nav-20260618" />
+    <link rel="stylesheet" href="admin.css?v=admin-save-sync-20260619" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple">
@@ -22,11 +22,11 @@
         </a>
 
         <nav class="sidebar-nav">
-          <button class="sidebar-link is-active" type="button"><span>🏠</span>Dashboard</button>
-          <button class="sidebar-link" type="button"><span>📅</span>Eventos</button>
-          <button class="sidebar-link" type="button"><span>🧾</span>Solicitudes</button>
-          <button class="sidebar-link" type="button"><span>🏢</span>Proveedores</button>
-          <button class="sidebar-link" type="button"><span>🌊</span>BEOFlow</button>
+          <button class="sidebar-link is-active" type="button" data-scroll-target="#overview"><span>🏠</span>Dashboard</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#event-tools"><span>📅</span>Eventos</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#requestsSection"><span>🧾</span>Solicitudes</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#team-tools"><span>🏢</span>Proveedores</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#beoflow"><span>🌊</span>BEOFlow</button>
         </nav>
 
         <div class="sidebar-mini">
@@ -67,8 +67,9 @@
             </div>
             <p id="sessionStatus" class="session-status">Verificando sesion...</p>
             <div class="quick-actions" aria-label="Acciones rapidas">
-              <button type="button" data-scroll-target="#events">Eventos</button>
+              <button type="button" data-scroll-target="#event-tools">Eventos</button>
               <button type="button" data-scroll-target="#requestsSection">Solicitudes</button>
+              <button type="button" data-scroll-target="#team-tools">Proveedores</button>
               <button type="button" data-scroll-target="#beoflow">BEOFlow</button>
             </div>
           </article>
@@ -327,6 +328,6 @@
       </main>
     </div>
 
-    <script type="module" src="admin.js?v=save-debug-20260618"></script>
+    <script type="module" src="admin.js?v=admin-save-sync-20260619"></script>
   </body>
 </html>

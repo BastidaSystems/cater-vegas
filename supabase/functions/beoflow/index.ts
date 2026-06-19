@@ -73,6 +73,14 @@ type CaterProviderRow = {
   status?: string | null;
   notes?: string | null;
   created_by?: string | null;
+  coverage_zone?: string | null;
+  availability?: string | null;
+  base_prices?: string | null;
+  service_category?: string | null;
+  public_visible?: boolean | null;
+  public_description?: string | null;
+  source?: string | null;
+  license_insurance?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 };
@@ -138,6 +146,93 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+const SYNC_MANAGER_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
+const CATER_OWNER_EMAILS = new Set(["exmarquesado@gmail.com"]);
+
+const EVENT_SAVE_COLUMNS = new Set([
+  "workspace_id",
+  "customer_id",
+  "title",
+  "event_type",
+  "status",
+  "budget",
+  "budget_label",
+  "menu_style",
+  "services",
+  "plan",
+  "event_date",
+  "guest_count",
+  "venue_name",
+  "notes",
+  "client_id",
+  "assigned_to",
+  "created_by",
+]);
+
+const PROVIDER_DETAIL_COLUMNS = new Set([
+  "coverage_zone",
+  "availability",
+  "base_prices",
+  "service_category",
+  "public_visible",
+  "public_description",
+  "source",
+  "license_insurance",
+]);
+
+const PROVIDER_BASE_COLUMNS = new Set([
+  "workspace_id",
+  "provider_name",
+  "provider_type",
+  "contact_name",
+  "email",
+  "phone",
+  "website",
+  "city",
+  "state",
+  "status",
+  "notes",
+  "created_by",
+]);
+
+const PROVIDER_SAVE_COLUMNS = new Set([...PROVIDER_BASE_COLUMNS, ...PROVIDER_DETAIL_COLUMNS]);
+
+function jsonResponse(payload: Record<string, unknown>, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
+  });
+}
+
+function jsonError(error: string, status = 400, details?: unknown) {
+  return jsonResponse({ error, ...(details ? { details } : {}) }, status);
+}
+
+function normalizeRoleValue(role: unknown) {
+  return String(role || "").trim().toLowerCase();
+}
+
+function isSyncManagerRole(role: unknown) {
+  return SYNC_MANAGER_ROLES.has(normalizeRoleValue(role));
+}
+
+function isActiveStatus(status: unknown) {
+  const normalized = normalizeRoleValue(status || "active");
+  return normalized === "active";
+}
+
+function pickKnownPayload(payload: Record<string, unknown>, allowedColumns: Set<string>) {
+  return Object.fromEntries(
+    Object.entries(payload).filter(([key, value]) => allowedColumns.has(key) && value !== undefined),
+  );
+}
+
+function isSchemaCacheError(error: unknown) {
+  const typed = error as { code?: string; message?: string } | null;
+  const message = String(typed?.message || "").toLowerCase();
+  return typed?.code === "PGRST204" || message.includes("schema cache");
+}
 
 function localBeoflow(message: string, currentPlan: CaterPlan): BeoflowResult {
   const text = message.toLowerCase();
@@ -423,15 +518,20 @@ function parseEventForCustomerCommand(message: string): EventForCustomerCommand 
 }
 
 function profileRoleToWorkspaceRole(role: string | null) {
+  const normalized = normalizeRoleValue(role);
   const roleMap: Record<string, string> = {
+    owner: "owner",
     admin: "admin",
+    super_admin: "super_admin",
+    platform_admin: "platform_admin",
     staff: "organizer",
     organizer: "organizer",
     collaborator: "collaborator",
     client: "viewer",
+    viewer: "viewer",
   };
 
-  return role ? roleMap[role] || null : null;
+  return normalized ? roleMap[normalized] || null : null;
 }
 
 async function getCurrentWorkspaceRole(
@@ -1076,11 +1176,13 @@ async function syncCaterProviderToBeoflow(
   }
 }
 
-async function validateSyncEventRequest(
-  request: Request,
-  eventId: number,
-  workspaceId: string,
-) {
+type AuthenticatedServiceContext = {
+  errorResponse: Response | null;
+  serviceClient: ReturnType<typeof createClient> | null;
+  user: { id: string; email?: string | null } | null;
+};
+
+async function buildAuthenticatedServiceContext(request: Request): Promise<AuthenticatedServiceContext> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -1088,11 +1190,9 @@ async function validateSyncEventRequest(
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey || !authHeader) {
     return {
-      errorResponse: new Response(JSON.stringify({ error: "Sync is not configured." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
-      }),
+      errorResponse: jsonError("Sync is not configured.", 500),
       serviceClient: null,
+      user: null,
     };
   }
 
@@ -1106,44 +1206,170 @@ async function validateSyncEventRequest(
 
   const {
     data: { user },
+    error: userError,
   } = await userClient.auth.getUser();
 
-  if (!user) {
+  if (userError || !user) {
     return {
-      errorResponse: new Response(JSON.stringify({ error: "Authentication is required." }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
-      }),
+      errorResponse: jsonError("Authentication is required.", 401),
       serviceClient: null,
+      user: null,
     };
   }
 
-  const { data: accessibleEvent, error } = await userClient
-    .from("cater_events")
-    .select("id")
+  const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
+  });
+
+  return { errorResponse: null, serviceClient, user: { id: user.id, email: user.email } };
+}
+
+async function userCanSyncWorkspace(
+  serviceClient: ReturnType<typeof createClient>,
+  user: { id: string; email?: string | null },
+  workspaceId: string,
+) {
+  const { data: membership } = await serviceClient
+    .from("beoflow_workspace_members")
+    .select("role,status")
     .eq("workspace_id", workspaceId)
-    .eq("id", eventId)
+    .eq("user_id", user.id)
     .maybeSingle();
 
-  if (error || !accessibleEvent) {
+  if (membership && isActiveStatus(membership.status) && isSyncManagerRole(membership.role)) return true;
+
+  const { data: profile } = await serviceClient
+    .from("cater_profiles")
+    .select("role,workspace_id,email")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profile?.workspace_id === workspaceId && isSyncManagerRole(profileRoleToWorkspaceRole(profile.role))) {
+    return true;
+  }
+
+  const email = String(user.email || profile?.email || "").trim().toLowerCase();
+  return CATER_OWNER_EMAILS.has(email);
+}
+
+async function validateAuthenticatedWorkspaceRequest(request: Request, workspaceId: string) {
+  const context = await buildAuthenticatedServiceContext(request);
+  if (context.errorResponse || !context.serviceClient || !context.user) return context;
+
+  const allowed = await userCanSyncWorkspace(context.serviceClient, context.user, workspaceId);
+  if (!allowed) {
     return {
-      errorResponse: new Response(JSON.stringify({ error: "Event is not accessible." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
-      }),
+      errorResponse: jsonError("Workspace admin access is required.", 403),
       serviceClient: null,
+      user: null,
     };
   }
 
-  return {
-    errorResponse: null,
-    serviceClient: createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }),
+  return context;
+}
+
+async function assertWorkspaceRecordExists(
+  serviceClient: ReturnType<typeof createClient>,
+  tableName: string,
+  recordId: number,
+  workspaceId: string,
+  label: string,
+) {
+  const { data, error } = await serviceClient
+    .from(tableName)
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("id", recordId)
+    .maybeSingle();
+
+  if (error) return { errorResponse: jsonError(`${label} could not be checked.`, 400, error.message) };
+  if (!data) return { errorResponse: jsonError(`${label} was not found.`, 404) };
+  return { errorResponse: null };
+}
+
+async function insertCaterEventWithService(
+  serviceClient: ReturnType<typeof createClient>,
+  payload: Record<string, unknown>,
+  userId: string,
+  workspaceId: string,
+) {
+  const safePayload = pickKnownPayload(payload, EVENT_SAVE_COLUMNS);
+  safePayload.workspace_id = workspaceId;
+  if (!safePayload.created_by) safePayload.created_by = userId;
+  if (!safePayload.status) safePayload.status = "draft";
+
+  const { data, error } = await serviceClient
+    .from("cater_events")
+    .insert(safePayload)
+    .select("*")
+    .single();
+
+  return { data, error };
+}
+
+async function saveCaterProviderWithService(
+  serviceClient: ReturnType<typeof createClient>,
+  payload: Record<string, unknown>,
+  userId: string,
+  workspaceId: string,
+  providerRecordId: number | null,
+) {
+  const safePayload = pickKnownPayload(payload, PROVIDER_SAVE_COLUMNS);
+  safePayload.workspace_id = workspaceId;
+  if (!safePayload.created_by) safePayload.created_by = userId;
+  if (!safePayload.status) safePayload.status = "active";
+  if (!safePayload.source) safePayload.source = "cater_vegas_admin";
+
+  const runSave = async (nextPayload: Record<string, unknown>) => {
+    if (providerRecordId) {
+      return serviceClient
+        .from("cater_providers")
+        .update(nextPayload)
+        .eq("workspace_id", workspaceId)
+        .eq("id", providerRecordId)
+        .select("*")
+        .single();
+    }
+
+    return serviceClient
+      .from("cater_providers")
+      .insert(nextPayload)
+      .select("*")
+      .single();
   };
+
+  let result = await runSave(safePayload);
+
+  if (result.error && isSchemaCacheError(result.error)) {
+    result = await runSave(pickKnownPayload(safePayload, PROVIDER_BASE_COLUMNS));
+  }
+
+  return { data: result.data, error: result.error };
+}
+
+async function validateSyncEventRequest(
+  request: Request,
+  eventId: number,
+  workspaceId: string,
+) {
+  const context = await validateAuthenticatedWorkspaceRequest(request, workspaceId);
+  if (context.errorResponse || !context.serviceClient) {
+    return { errorResponse: context.errorResponse, serviceClient: null };
+  }
+
+  const record = await assertWorkspaceRecordExists(
+    context.serviceClient,
+    "cater_events",
+    eventId,
+    workspaceId,
+    "Event",
+  );
+  if (record.errorResponse) return { errorResponse: record.errorResponse, serviceClient: null };
+
+  return { errorResponse: null, serviceClient: context.serviceClient };
 }
 
 async function validateSyncProviderRequest(
@@ -1151,69 +1377,21 @@ async function validateSyncProviderRequest(
   providerRecordId: number,
   workspaceId: string,
 ) {
-  const supabaseUrl = Deno.env.get("SUPABASE_URL");
-  const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-  const authHeader = request.headers.get("Authorization");
-
-  if (!supabaseUrl || !anonKey || !serviceRoleKey || !authHeader) {
-    return {
-      errorResponse: new Response(JSON.stringify({ error: "Sync is not configured." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
-      }),
-      serviceClient: null,
-    };
+  const context = await validateAuthenticatedWorkspaceRequest(request, workspaceId);
+  if (context.errorResponse || !context.serviceClient) {
+    return { errorResponse: context.errorResponse, serviceClient: null };
   }
 
-  const userClient = createClient(supabaseUrl, anonKey, {
-    global: {
-      headers: {
-        Authorization: authHeader,
-      },
-    },
-  });
+  const record = await assertWorkspaceRecordExists(
+    context.serviceClient,
+    "cater_providers",
+    providerRecordId,
+    workspaceId,
+    "Provider",
+  );
+  if (record.errorResponse) return { errorResponse: record.errorResponse, serviceClient: null };
 
-  const {
-    data: { user },
-  } = await userClient.auth.getUser();
-
-  if (!user) {
-    return {
-      errorResponse: new Response(JSON.stringify({ error: "Authentication is required." }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
-      }),
-      serviceClient: null,
-    };
-  }
-
-  const { data: accessibleProvider, error } = await userClient
-    .from("cater_providers")
-    .select("id")
-    .eq("workspace_id", workspaceId)
-    .eq("id", providerRecordId)
-    .maybeSingle();
-
-  if (error || !accessibleProvider) {
-    return {
-      errorResponse: new Response(JSON.stringify({ error: "Provider is not accessible." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json; charset=utf-8" },
-      }),
-      serviceClient: null,
-    };
-  }
-
-  return {
-    errorResponse: null,
-    serviceClient: createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    }),
-  };
+  return { errorResponse: null, serviceClient: context.serviceClient };
 }
 
 async function persistBeoflowRun(
@@ -1393,6 +1571,59 @@ Deno.serve(async (request) => {
     const eventId = body.eventId ? Number(body.eventId) : null;
     const providerRecordId = body.providerId ? Number(body.providerId) : null;
     const workspaceId = String(body.workspaceId || body.workspace_id || DEFAULT_WORKSPACE_ID);
+    const payload =
+      body.payload && typeof body.payload === "object"
+        ? (body.payload as Record<string, unknown>)
+        : {};
+
+    if (action === "save-event") {
+      const context = await validateAuthenticatedWorkspaceRequest(request, workspaceId);
+      if (context.errorResponse || !context.serviceClient || !context.user) return context.errorResponse!;
+
+      const { data: record, error } = await insertCaterEventWithService(
+        context.serviceClient,
+        payload,
+        context.user.id,
+        workspaceId,
+      );
+
+      if (error || !record?.id) {
+        return jsonError("Event could not be saved.", 400, error?.message || "Missing event id.");
+      }
+
+      const beoflowSync = await syncCaterEventToBeoflow(
+        context.serviceClient,
+        Number(record.id),
+        workspaceId,
+      );
+
+      return jsonResponse({ record, beoflowSync });
+    }
+
+    if (action === "save-provider") {
+      const context = await validateAuthenticatedWorkspaceRequest(request, workspaceId);
+      if (context.errorResponse || !context.serviceClient || !context.user) return context.errorResponse!;
+
+      const { data: record, error } = await saveCaterProviderWithService(
+        context.serviceClient,
+        payload,
+        context.user.id,
+        workspaceId,
+        providerRecordId,
+      );
+
+      if (error || !record?.id) {
+        return jsonError("Provider could not be saved.", 400, error?.message || "Missing provider id.");
+      }
+
+      const beoflowSync = await syncCaterProviderToBeoflow(
+        context.serviceClient,
+        Number(record.id),
+        workspaceId,
+      );
+
+      return jsonResponse({ record, beoflowSync });
+    }
 
     if (action === "sync-event") {
       if (!eventId) {

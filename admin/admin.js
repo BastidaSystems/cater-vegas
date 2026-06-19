@@ -7,7 +7,7 @@ import {
   isSupabaseConfigured,
   requireSupabase,
   subscribeToEvents,
-} from "../lib/supabaseClient.js?v=save-debug-20260618";
+} from "../lib/supabaseClient.js?v=admin-save-sync-20260619";
 
 const WORKSPACE_ID = DEFAULT_WORKSPACE_ID;
 const PENDING_PROFILE_ROLES = [
@@ -37,6 +37,35 @@ function keepDashboardPinned() {
 }
 
 keepDashboardPinned();
+
+function clearAdminHash() {
+  if (window.location.hash) {
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+  }
+}
+
+function setActiveSidebarTarget(targetSelector) {
+  document.querySelectorAll(".sidebar-link").forEach((link) => {
+    link.classList.toggle("is-active", link.dataset.scrollTarget === targetSelector);
+  });
+}
+
+function scrollToAdminTarget(targetSelector) {
+  const target = document.querySelector(targetSelector);
+  if (!target) return;
+
+  const parentDetails = target.closest("details");
+  if (parentDetails && !parentDetails.open) {
+    parentDetails.open = true;
+  }
+
+  clearAdminHash();
+  window.requestAnimationFrame(() => {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.classList.add("is-pulsing");
+    window.setTimeout(() => target.classList.remove("is-pulsing"), 700);
+  });
+}
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const signoutButton = document.querySelector("#signoutButton");
@@ -293,6 +322,47 @@ function logSupabaseInsertResult(result) {
   }
 }
 
+function functionInvokeError(data, error) {
+  if (error) return error;
+  if (data?.error) return { message: data.error, details: data.details };
+  return null;
+}
+
+async function saveEventThroughFunction(basePayload) {
+  try {
+    const { data, error } = await supabase.functions.invoke("beoflow", {
+      body: {
+        action: "save-event",
+        workspaceId: WORKSPACE_ID,
+        payload: basePayload,
+      },
+    });
+    const invokeError = functionInvokeError(data, error);
+    if (invokeError) return { data: null, error: invokeError };
+    return { data: data?.record || null, error: null, beoflowSync: data?.beoflowSync || null };
+  } catch (error) {
+    return { data: null, error: { message: error instanceof Error ? error.message : String(error) } };
+  }
+}
+
+async function saveProviderThroughFunction(basePayload, providerId = null) {
+  try {
+    const { data, error } = await supabase.functions.invoke("beoflow", {
+      body: {
+        action: "save-provider",
+        workspaceId: WORKSPACE_ID,
+        providerId: providerId ? Number(providerId) : null,
+        payload: basePayload,
+      },
+    });
+    const invokeError = functionInvokeError(data, error);
+    if (invokeError) return { data: null, error: invokeError };
+    return { data: data?.record || null, error: null, beoflowSync: data?.beoflowSync || null };
+  } catch (error) {
+    return { data: null, error: { message: error instanceof Error ? error.message : String(error) } };
+  }
+}
+
 function profileRoleForMembershipRole(role) {
   const roleMap = {
     owner: "admin",
@@ -349,12 +419,14 @@ async function insertEventPayload(basePayload, session) {
     logSaveContext("event", EVENT_INSERT_TABLE, payload, session);
     const result = await supabase.from(EVENT_INSERT_TABLE).insert(payload).select("*").single();
     logSupabaseInsertResult(result);
+    if (isPermissionError(result.error)) return saveEventThroughFunction(basePayload);
     if (!isMissingSchemaColumnError(result.error)) return result;
   }
 
   logSaveContext("event", EVENT_INSERT_TABLE, basePayload, session);
   const fallbackResult = await supabase.from(EVENT_INSERT_TABLE).insert(basePayload).select("*").single();
   logSupabaseInsertResult(fallbackResult);
+  if (isPermissionError(fallbackResult.error)) return saveEventThroughFunction(basePayload);
   return fallbackResult;
 }
 
@@ -980,9 +1052,10 @@ function isMissingSchemaColumnError(error) {
 
 async function insertProviderPayload(basePayload, session) {
   const detailPayload = providerDetailPayload();
+  const fullPayload = { ...basePayload, ...detailPayload };
   const payloads = [
-    session?.user?.id ? { ...basePayload, ...detailPayload, created_by: session.user.id } : null,
-    { ...basePayload, ...detailPayload },
+    session?.user?.id ? { ...fullPayload, created_by: session.user.id } : null,
+    fullPayload,
     basePayload,
   ].filter(Boolean);
 
@@ -990,12 +1063,14 @@ async function insertProviderPayload(basePayload, session) {
     logSaveContext("provider", PROVIDER_INSERT_TABLE, payload, session);
     const result = await supabase.from(PROVIDER_INSERT_TABLE).insert(payload).select("*").single();
     logSupabaseInsertResult(result);
+    if (isPermissionError(result.error)) return saveProviderThroughFunction(fullPayload);
     if (!isMissingSchemaColumnError(result.error)) return result;
   }
 
   logSaveContext("provider", PROVIDER_INSERT_TABLE, basePayload, session);
   const fallbackResult = await supabase.from(PROVIDER_INSERT_TABLE).insert(basePayload).select("*").single();
   logSupabaseInsertResult(fallbackResult);
+  if (isPermissionError(fallbackResult.error)) return saveProviderThroughFunction(fullPayload);
   return fallbackResult;
 }
 
@@ -1012,6 +1087,7 @@ async function updateProviderPayload(id, basePayload, session) {
     .single();
   logSupabaseInsertResult(firstResult);
 
+  if (isPermissionError(firstResult.error)) return saveProviderThroughFunction(fullPayload, id);
   if (!isMissingSchemaColumnError(firstResult.error)) return firstResult;
 
   logSaveContext("provider", PROVIDER_INSERT_TABLE, basePayload, session);
@@ -1023,6 +1099,7 @@ async function updateProviderPayload(id, basePayload, session) {
     .select("*")
     .single();
   logSupabaseInsertResult(fallbackResult);
+  if (isPermissionError(fallbackResult.error)) return saveProviderThroughFunction(fullPayload, id);
   return fallbackResult;
 }
 
@@ -1327,13 +1404,31 @@ function syncAdminPermissionsUi() {
   assignmentForm.hidden = !canManageEvents();
 }
 
-async function ensureAdminReady(setStatus) {
-  if (currentUser && hasAnyRole(WORKSPACE_MANAGER_ROLES)) {
-    authReady = true;
-    syncAdminPermissionsUi();
-    return true;
+async function refreshAdminContext() {
+  supabase = supabase || requireSupabase();
+  const { user, profile, membership, workspace } = await getWorkspaceContext();
+  currentUser = user;
+  currentProfile = profile;
+  currentMembership = membership;
+  currentWorkspace = workspace;
+  currentRole = getEffectiveWorkspaceRole(profile, membership, user);
+
+  if (!currentUser) {
+    authReady = false;
+    return { ok: false, reason: "missing-user" };
   }
 
+  if (currentMembership?.status === "disabled" || isPendingWorkspaceAccess(currentProfile, currentMembership, currentUser)) {
+    authReady = false;
+    return { ok: false, reason: "pending" };
+  }
+
+  authReady = true;
+  syncAdminPermissionsUi();
+  return { ok: true };
+}
+
+async function ensureAdminReady(setStatus) {
   setStatus("Verificando permisos...");
 
   if (adminBootPromise) {
@@ -1343,35 +1438,36 @@ async function ensureAdminReady(setStatus) {
     ]);
   }
 
-  if (authReady && currentUser) return true;
-
   try {
-    supabase = supabase || requireSupabase();
-    const { user, profile, membership, workspace } = await getWorkspaceContext();
-    currentUser = user;
-    currentProfile = profile;
-    currentMembership = membership;
-    currentWorkspace = workspace;
-    currentRole = getEffectiveWorkspaceRole(profile, membership, user);
+    const context = await refreshAdminContext();
 
-    if (!currentUser) {
+    if (context.reason === "missing-user") {
       navigateWithLoopGuard("../login.html", "admin-missing-user");
       return false;
     }
 
-    if (currentMembership?.status === "disabled" || isPendingWorkspaceAccess(currentProfile, currentMembership, currentUser)) {
+    if (context.reason === "pending") {
       navigateWithLoopGuard("../pending.html", "admin-pending");
       return false;
     }
 
-    authReady = true;
-    syncAdminPermissionsUi();
-    return canManageEvents() || canManageCollaborators();
+    if (!context.ok || (!canManageEvents() && !canManageCollaborators())) {
+      const detectedRole = currentRole || currentUserRoles()[0] || "sin rol";
+      setStatus(`No tienes permisos para este admin. Rol detectado: ${detectedRole}.`);
+      return false;
+    }
+
+    return true;
   } catch (error) {
     console.error("Admin permission check failed:", error);
     setStatus("No se pudo verificar permisos. Revisa la conexion o las politicas de Supabase.");
     return false;
   }
+}
+
+async function loadAdminData() {
+  await Promise.all([loadWorkspace(), loadEvents(), loadCollaborators(), loadCustomers(), loadUserRequests()]);
+  await loadAssignments();
 }
 
 async function bootAdmin() {
@@ -1381,35 +1477,24 @@ async function bootAdmin() {
   }
 
   supabase = requireSupabase();
-  const { user, profile, membership, workspace } = await getWorkspaceContext();
-  currentUser = user;
-  currentProfile = profile;
-  currentMembership = membership;
-  currentWorkspace = workspace;
-  currentRole = getEffectiveWorkspaceRole(profile, membership, user);
+  const context = await refreshAdminContext();
 
-  if (!currentUser) {
+  if (context.reason === "missing-user") {
     navigateWithLoopGuard("../login.html", "admin-boot-missing-user");
     return;
   }
 
-  if (currentMembership?.status === "disabled" || isPendingWorkspaceAccess(currentProfile, currentMembership, currentUser)) {
+  if (context.reason === "pending") {
     navigateWithLoopGuard("../pending.html", "admin-boot-pending");
     return;
   }
 
-  if (!canManageEvents()) {
-    authReady = true;
-    syncAdminPermissionsUi();
+  if (!canManageEvents() && !canManageCollaborators()) {
     setSessionStatus("Sesion activa, pero Supabase no devolvio rol admin/owner para este workspace.");
     return;
   }
 
-  authReady = true;
-  syncAdminPermissionsUi();
-
-  await Promise.all([loadWorkspace(), loadEvents(), loadCollaborators(), loadCustomers(), loadUserRequests()]);
-  await loadAssignments();
+  await loadAdminData();
 
   eventsChannel = subscribeToEvents(
     () => {
@@ -1475,16 +1560,15 @@ eventForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (!authReady) {
-    const ready = await ensureAdminReady(setEventStatus);
-    if (!ready) return;
-  }
-
   const session = await readActiveSession(setEventStatus);
   if (!session) return;
 
+  const ready = await ensureAdminReady(setEventStatus);
+  if (!ready) return;
+
   if (!canWriteWorkspaceData()) {
-    setEventStatus("No tienes permisos para administrar eventos.");
+    const detectedRole = currentRole || currentUserRoles()[0] || "sin rol";
+    setEventStatus(`No tienes permisos para administrar eventos. Rol detectado: ${detectedRole}.`);
     return;
   }
 
@@ -1496,14 +1580,15 @@ eventForm.addEventListener("submit", async (event) => {
   }
 
   setEventStatus("Guardando evento...");
-  const { data, error } = await insertEventPayload(payload, session);
+  const saveResult = await insertEventPayload(payload, session);
+  const { data, error } = saveResult;
 
   if (error) {
     setEventStatus(eventSaveErrorMessage(error));
     return;
   }
 
-  const syncResult = await syncEventToBeoflow(data?.id);
+  const syncResult = saveResult.beoflowSync || (await syncEventToBeoflow(data?.id));
   eventForm.reset();
   eventBudget.value = "$5K - $10K";
   setEventStatus(
@@ -1522,16 +1607,15 @@ collaboratorForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  if (!authReady) {
-    const ready = await ensureAdminReady(setCollaboratorStatus);
-    if (!ready) return;
-  }
-
   const session = await readActiveSession(setCollaboratorStatus);
   if (!session) return;
 
+  const ready = await ensureAdminReady(setCollaboratorStatus);
+  if (!ready) return;
+
   if (!canWriteWorkspaceData()) {
-    setCollaboratorStatus("No tienes permisos para administrar proveedores.");
+    const detectedRole = currentRole || currentUserRoles()[0] || "sin rol";
+    setCollaboratorStatus(`No tienes permisos para administrar proveedores. Rol detectado: ${detectedRole}.`);
     console.warn("Provider permission denied", {
       currentRole,
       currentProfileRole: currentProfile?.role,
@@ -1565,15 +1649,18 @@ collaboratorForm.addEventListener("submit", async (event) => {
 
   let data = null;
   let error = null;
+  let beoflowSync = null;
 
   if (isEditing) {
     const result = await updateProviderPayload(collaboratorId.value, payload, session);
     data = result.data;
     error = result.error;
+    beoflowSync = result.beoflowSync || null;
   } else {
     const result = await insertProviderPayload(payload, session);
     data = result.data;
     error = result.error;
+    beoflowSync = result.beoflowSync || null;
   }
 
   if (error) {
@@ -1581,7 +1668,7 @@ collaboratorForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  const syncResult = await syncProviderToBeoflow(data?.id || collaboratorId.value);
+  const syncResult = beoflowSync || (await syncProviderToBeoflow(data?.id || collaboratorId.value));
   setCollaboratorStatus(
     syncResult.status === "synced"
       ? "Proveedor guardado y sincronizado."
@@ -1593,7 +1680,10 @@ collaboratorForm.addEventListener("submit", async (event) => {
 
 assignmentForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  if (!supabase || !canManageEvents()) return;
+  if (!supabase) return;
+
+  const ready = await ensureAdminReady(setAssignmentStatus);
+  if (!ready || !canManageEvents()) return;
 
   const eventId = Number(assignmentEvent.value);
   const collaboratorIdValue = Number(assignmentCollaborator.value);
@@ -1631,6 +1721,11 @@ adminBeoflowForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!supabase) return;
 
+  const ready = await ensureAdminReady((message) => {
+    beoflowResult.textContent = message;
+  });
+  if (!ready) return;
+
   const prompt = adminBeoflowPrompt.value.trim();
   if (!prompt) {
     beoflowResult.textContent = "Escribe una instruccion para BEOFlow.";
@@ -1660,7 +1755,8 @@ adminBeoflowForm.addEventListener("submit", async (event) => {
 async function updateCollaboratorStatus(id, status) {
   if (!supabase) return;
 
-  if (!canManageCollaborators()) {
+  const ready = await ensureAdminReady(setCollaboratorStatus);
+  if (!ready || !canManageCollaborators()) {
     setCollaboratorStatus("No tienes permisos para administrar proveedores.");
     return;
   }
@@ -1685,7 +1781,13 @@ async function updateCollaboratorStatus(id, status) {
   await refreshCollaboratorModule();
 }
 
-refreshWorkspaceButton.addEventListener("click", loadWorkspace);
+refreshWorkspaceButton.addEventListener("click", async () => {
+  setSessionStatus("Actualizando admin y conexion con BEOFlow...");
+  const ready = await ensureAdminReady(setSessionStatus);
+  if (!ready) return;
+  await loadAdminData();
+  scrollToAdminTarget("#beoflow");
+});
 refreshEventsButton.addEventListener("click", () => {
   loadEvents().then(loadAssignments);
 });
@@ -1697,26 +1799,22 @@ refreshRequestsButton.addEventListener("click", () => {
 refreshCollaboratorsButton.addEventListener("click", refreshCollaboratorModule);
 resetCollaboratorButton.addEventListener("click", resetCollaboratorForm);
 
-document.querySelectorAll("[data-scroll-target]").forEach((button) => {
+document.querySelectorAll("[data-scroll-target]:not(.sidebar-link)").forEach((button) => {
   button.addEventListener("click", () => {
-    const target = document.querySelector(button.dataset.scrollTarget);
-    if (!target) return;
-    target.classList.add("is-pulsing");
-    window.setTimeout(() => target.classList.remove("is-pulsing"), 700);
-    keepDashboardPinned();
+    scrollToAdminTarget(button.dataset.scrollTarget);
   });
 });
 
 document.querySelectorAll(".sidebar-link").forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
-    document.querySelectorAll(".sidebar-link").forEach((item) => item.classList.remove("is-active"));
-    link.classList.add("is-active");
-    keepDashboardPinned();
+    const targetSelector = link.dataset.scrollTarget || "#overview";
+    setActiveSidebarTarget(targetSelector);
+    scrollToAdminTarget(targetSelector);
   });
 });
 
-window.addEventListener("hashchange", keepDashboardPinned);
+window.addEventListener("hashchange", clearAdminHash);
 
 signoutButton.addEventListener("click", async () => {
   if (!supabase) return;
