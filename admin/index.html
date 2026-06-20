@@ -11,7 +11,7 @@
         window.addEventListener("load", () => window.scrollTo(0, 0), { once: true });
       }
     </script>
-    <link rel="stylesheet" href="admin.css?v=admin-dashboard-fix-20260619" />
+    <link rel="stylesheet" href="admin.css?v=admin-visual-redesign-20260620" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple">
@@ -22,18 +22,19 @@
         </a>
 
         <nav class="sidebar-nav">
-          <button class="sidebar-link is-active" type="button" data-scroll-target="#overview"><span>🏠</span>Dashboard</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#event-tools"><span>📅</span>Eventos</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#requestsSection"><span>🧾</span>Solicitudes</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#team-tools"><span>🏢</span>Proveedores</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#beoflow"><span>🌊</span>BEOFlow</button>
+          <button class="sidebar-link is-active" type="button" data-scroll-target="#overview"><span>⌂</span>Dashboard</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#events"><span>□</span>Eventos</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#requestsSection"><span>○</span>Clientes</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#team-tools"><span>○</span>Equipo</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#requestsSection"><span>▤</span>Cotizaciones</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#settings"><span>⚙</span>Ajustes</button>
         </nav>
 
         <div class="sidebar-mini">
           <span class="status-dot"></span>
           <div>
-            <strong>Active</strong>
-            <small>cater-vegas</small>
+            <strong>David</strong>
+            <small>Administrador</small>
           </div>
         </div>
       </aside>
@@ -41,15 +42,15 @@
       <main class="admin-main simple-main">
         <header class="admin-header">
           <div class="header-title">
-            <p class="eyebrow">Admin</p>
-            <h1>Dashboard Admin</h1>
-            <p>Control visual de eventos, proveedores y operacion.</p>
+            <h1>Hola, David</h1>
+            <p>Aquí tienes un resumen de tu operación.</p>
           </div>
 
           <div class="header-actions">
             <a class="home-button" href="../index.html" aria-label="Regresar al inicio"><span>🏠</span> Home</a>
+            <span class="workspace-badge-inline"><span class="status-dot"></span>Workspace activo</span>
             <div class="user-pill" aria-label="Usuario activo">
-              <span class="avatar">EX</span>
+              <span class="avatar">DV</span>
               <div>
                 <strong id="dashboardEmail">exmarquesado@gmail.com</strong>
                 <small id="dashboardRole">Owner</small>
@@ -62,22 +63,21 @@
         <section class="simple-hero" id="overview">
           <article class="command-card simple-command">
             <div>
-              <p class="eyebrow">Cater Vegas</p>
-              <h2>Operacion clara.</h2>
+              <h2>Acciones rápidas</h2>
             </div>
             <p id="sessionStatus" class="session-status">Verificando sesion...</p>
             <div class="quick-actions" aria-label="Acciones rapidas">
-              <button type="button" data-scroll-target="#event-tools">Eventos</button>
-              <button type="button" data-scroll-target="#requestsSection">Solicitudes</button>
-              <button type="button" data-scroll-target="#team-tools">Proveedores</button>
-              <button type="button" data-scroll-target="#beoflow">BEOFlow</button>
+              <button type="button" data-scroll-target="#event-tools">Nuevo evento</button>
+              <button type="button" data-scroll-target="#requestsSection">Nueva solicitud</button>
+              <button type="button" data-scroll-target="#team-tools">Nuevo proveedor</button>
+              <button type="button" data-scroll-target="#team-tools">Asignar staff</button>
             </div>
           </article>
 
           <article class="ai-card simple-ai" aria-label="AI Admin Assistant">
             <div class="ai-card-copy">
-              <p class="eyebrow">Cater AI Concierge</p>
-              <h2>Cater AI listo</h2>
+              <p class="eyebrow">Workspace</p>
+              <h2>Enfocado en lo importante</h2>
             </div>
             <div class="ai-avatar" aria-hidden="true">
               <div class="ai-halo"></div>
@@ -92,8 +92,79 @@
               <div class="ai-activity"></div>
             </div>
             <div class="ai-actions">
-              <button type="button">Analizar</button>
-              <button type="button">Alertas</button>
+              <button type="button" data-scroll-target="#overview">Resumen</button>
+              <button type="button" data-scroll-target="#event-tools">Nuevo</button>
+            </div>
+          </article>
+        </section>
+
+        <section class="dashboard-state-shell" aria-label="Estado del dashboard">
+          <article class="dashboard-state-card dashboard-empty-card" data-dashboard-state="empty" hidden>
+            <div class="state-copy">
+              <p class="eyebrow">Inicio</p>
+              <h2>Bienvenido a Cater Vegas</h2>
+              <p>Todavía no tienes información en este workspace.</p>
+              <button class="primary-button" type="button" data-scroll-target="#event-tools">Crear primer evento</button>
+            </div>
+            <div class="onboarding-panel" aria-label="Checklist inicial">
+              <p class="eyebrow">Checklist</p>
+              <ol class="onboarding-checklist">
+                <li>Configurar perfil</li>
+                <li>Crear primer cliente</li>
+                <li>Crear primer evento</li>
+                <li>Invitar colaborador</li>
+                <li>Generar primera cotización</li>
+              </ol>
+            </div>
+          </article>
+
+          <article class="dashboard-state-card dashboard-growing-card" data-dashboard-state="growing" hidden>
+            <div class="state-heading">
+              <div>
+                <p class="eyebrow">Workspace en crecimiento</p>
+                <h2>Lo reciente, sin tablas complejas.</h2>
+              </div>
+              <button class="primary-button" type="button" data-scroll-target="#event-tools">Crear cotización</button>
+            </div>
+            <div class="state-columns">
+              <section class="state-mini-panel">
+                <h3>Eventos recientes</h3>
+                <div class="state-list" data-state-list="recent-events"></div>
+              </section>
+              <section class="state-mini-panel">
+                <h3>Clientes</h3>
+                <div class="state-list" data-state-list="recent-clients"></div>
+              </section>
+              <section class="state-mini-panel">
+                <h3>Cotizaciones</h3>
+                <div class="state-list" data-state-list="recent-quotes"></div>
+              </section>
+            </div>
+          </article>
+
+          <article class="dashboard-state-card dashboard-active-card" data-dashboard-state="active" hidden>
+            <div class="state-heading">
+              <div>
+                <p class="eyebrow">Negocio activo</p>
+                <h2>Resumen operativo</h2>
+              </div>
+              <button class="primary-button" type="button" data-scroll-target="#event-tools">Crear evento</button>
+            </div>
+            <div class="state-summary-grid" aria-label="Resumen del negocio activo">
+              <div><strong data-state-value="month-events">0</strong><span>Eventos este mes</span></div>
+              <div><strong data-state-value="active-clients">0</strong><span>Clientes activos</span></div>
+              <div><strong data-state-value="pending-quotes">0</strong><span>Cotizaciones pendientes</span></div>
+              <div><strong data-state-value="team-members">0</strong><span>Miembros del equipo</span></div>
+            </div>
+            <div class="state-columns state-columns-two">
+              <section class="state-mini-panel">
+                <h3>Próximos eventos</h3>
+                <div class="state-list" data-state-list="active-events"></div>
+              </section>
+              <section class="state-mini-panel">
+                <h3>Solicitudes recientes</h3>
+                <div class="state-list" data-state-list="active-requests"></div>
+              </section>
             </div>
           </article>
         </section>
@@ -101,26 +172,26 @@
         <section class="metric-grid metric-grid-simple" aria-label="Resumen principal">
           <article class="metric-card">
             <span class="metric-icon">📅</span>
-            <div><strong id="statActiveEvents">0</strong><small>Eventos</small></div>
+            <div><strong id="statActiveEvents">0</strong><small>Eventos este mes</small></div>
           </article>
           <article class="metric-card">
-            <span class="metric-icon">🕒</span>
-            <div><strong id="statPending">0</strong><small>Pendientes</small></div>
+            <span class="metric-icon">👤</span>
+            <div><strong id="statPending">0</strong><small>Clientes activos</small></div>
           </article>
           <article class="metric-card" id="providers">
-            <span class="metric-icon">🏢</span>
-            <div><strong id="statProviders">0</strong><small>Proveedores</small></div>
+            <span class="metric-icon">🧾</span>
+            <div><strong id="statProviders">0</strong><small>Cotizaciones pendientes</small></div>
           </article>
           <article class="metric-card" id="finance">
-            <span class="metric-icon">💰</span>
-            <div><strong id="statRevenue">$0</strong><small>Revenue</small></div>
+            <span class="metric-icon">🏢</span>
+            <div><strong id="statRevenue">0</strong><small>Miembros del equipo</small></div>
           </article>
         </section>
 
         <section class="simple-dashboard-grid">
           <article class="panel simple-panel" id="events">
             <div class="panel-heading">
-              <div><span>📅</span><h2>Proximos eventos</h2></div>
+              <div><span>📅</span><h2>Próximos eventos</h2></div>
               <button id="refreshEventsButton" type="button">Actualizar</button>
             </div>
             <div class="event-list-mini" id="upcomingEventsList" aria-live="polite"></div>
@@ -128,14 +199,19 @@
 
           <section class="panel simple-panel requests-admin" id="requestsSection">
             <div class="panel-heading">
-              <div><span>🧾</span><h2>Solicitudes</h2></div>
+              <div><span>🧾</span><h2>Solicitudes recientes</h2></div>
               <button id="refreshRequestsButton" type="button">Actualizar</button>
             </div>
             <div class="request-preview-list" id="pendingRequestsPreview" aria-live="polite"></div>
             <p class="admin-status" id="requestsStatus" aria-live="polite"></p>
           </section>
 
-          <section class="panel simple-panel beoflow-workspace-card" id="beoflow">
+        </section>
+
+        <details class="admin-tools-accordion" id="settings">
+          <summary>Herramientas avanzadas</summary>
+
+          <section class="panel simple-panel beoflow-workspace-card admin-workspace-strip" id="beoflow">
             <div class="workspace-topline">
               <div>
                 <p class="eyebrow">Workspace</p>
@@ -146,10 +222,6 @@
             <div class="workspace-summary" id="workspaceSummary" aria-live="polite"></div>
             <button id="refreshWorkspaceButton" class="primary-button" type="button">Administrar</button>
           </section>
-        </section>
-
-        <details class="admin-tools-accordion" id="settings">
-          <summary>Herramientas avanzadas</summary>
 
           <section class="admin-tools-grid provider-tools-grid">
             <section class="panel event-admin" id="event-tools">
@@ -329,6 +401,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=supabase-auth-loader-20260619"></script>
+    <script type="module" src="admin.js?v=admin-visual-redesign-20260620"></script>
   </body>
 </html>

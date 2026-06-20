@@ -152,6 +152,13 @@ const categoryLegend = document.querySelector("#categoryLegend");
 const requestProgress = document.querySelector("#requestProgress");
 const upcomingEventsList = document.querySelector("#upcomingEventsList");
 const activityTimeline = document.querySelector("#activityTimeline");
+const dashboardStateCards = Array.from(document.querySelectorAll("[data-dashboard-state]"));
+const dashboardStateLists = new Map(
+  Array.from(document.querySelectorAll("[data-state-list]")).map((element) => [element.dataset.stateList, element])
+);
+const dashboardStateValues = new Map(
+  Array.from(document.querySelectorAll("[data-state-value]")).map((element) => [element.dataset.stateValue, element])
+);
 
 let supabase = null;
 let currentUser = null;
@@ -602,19 +609,158 @@ function renderWorkspaceSummary(stats = {}, syncStatus = null) {
 }
 
 function renderMetricCards() {
-  const activeEvents = allEvents.filter((event) => !["completed", "done", "cancelled"].includes(normalizedStatus(event.status))).length;
-  const pendingEvents = allEvents.filter((event) => ["draft", "pending", "proposal", "review"].includes(normalizedStatus(event.status))).length;
+  const monthEvents = currentMonthEvents().length;
+  const pendingQuotes = pendingQuoteRows().length;
   const completedEvents = allEvents.filter((event) => ["completed", "done"].includes(normalizedStatus(event.status))).length;
   const revenue = allEvents.reduce((sum, event) => sum + eventAmount(event), 0);
-  const activeProviders = allCollaborators.filter((collaborator) => normalizedStatus(collaborator.status) !== "inactive").length;
-  const users = activeProviders + allCustomers.length;
+  const teamMembers = teamMemberRows().length;
+  const activeClients = allCustomers.length;
+  const users = teamMembers + activeClients;
 
-  statActiveEvents.textContent = String(activeEvents);
-  statPending.textContent = String(pendingEvents + allRequests.length);
-  statProviders.textContent = String(activeProviders);
+  statActiveEvents.textContent = String(monthEvents);
+  statPending.textContent = String(activeClients);
+  statProviders.textContent = String(pendingQuotes);
   statUsers.textContent = String(users);
-  statRevenue.textContent = formatCurrency(revenue);
+  statRevenue.textContent = String(teamMembers);
   statCompleted.textContent = String(completedEvents);
+  statRevenue.dataset.revenueValue = formatCurrency(revenue);
+}
+
+function isActiveRecord(row) {
+  const status = normalizedStatus(row?.status || "active");
+  return status !== "archived" && status !== "deleted";
+}
+
+function currentMonthEvents() {
+  const now = new Date();
+  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  return allEvents.filter((event) => monthKey(event.event_date || event.created_at || event.updated_at) === currentKey);
+}
+
+function pendingQuoteRows() {
+  return allEvents.filter((event) => ["draft", "pending", "proposal", "review"].includes(normalizedStatus(event.status)));
+}
+
+function teamMemberRows() {
+  return allCollaborators.filter((collaborator) => isActiveRecord(collaborator) && normalizedStatus(collaborator.status) !== "inactive");
+}
+
+function dashboardRecordTotal() {
+  return allEvents.length + allCustomers.length + pendingQuoteRows().length + teamMemberRows().length + allRequests.length;
+}
+
+function dashboardStateName() {
+  const total = dashboardRecordTotal();
+  if (!total) return "empty";
+  if (total < 8 && allEvents.length < 4 && allCustomers.length < 4 && teamMemberRows().length < 4) return "growing";
+  return "active";
+}
+
+function setDashboardStateValue(name, value) {
+  const element = dashboardStateValues.get(name);
+  if (element) element.textContent = String(value);
+}
+
+function stateItemActions(actions = []) {
+  return `
+    <div class="state-actions">
+      ${actions
+        .map(
+          (action) =>
+            `<button class="tiny-button" type="button" data-state-scroll="${escapeHtml(action.target)}">${escapeHtml(action.label)}</button>`
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderStateList(name, rows, emptyText, renderer) {
+  const container = dashboardStateLists.get(name);
+  if (!container) return;
+
+  container.innerHTML = rows.length
+    ? rows.map(renderer).join("")
+    : `<div class="empty-state">${escapeHtml(emptyText)}</div>`;
+}
+
+function renderStateEventItem(event) {
+  return `
+    <article class="state-item-card">
+      <div>
+        <strong>${escapeHtml(event.title || "Evento sin nombre")}</strong>
+        <span>${formatShortDate(event.event_date || event.updated_at)} · ${statusBadge(event.status)}</span>
+      </div>
+      ${stateItemActions([
+        { label: "Ver", target: "#events" },
+        { label: "Editar", target: "#event-tools" },
+        { label: "Crear cotización", target: "#event-tools" },
+      ])}
+    </article>
+  `;
+}
+
+function renderStateClientItem(customer) {
+  return `
+    <article class="state-item-card">
+      <div>
+        <strong>${escapeHtml(customer.full_name || "Cliente sin nombre")}</strong>
+        <span>${escapeHtml(customer.email || customer.phone || "Sin contacto")}</span>
+      </div>
+      ${stateItemActions([{ label: "Ver", target: "#requestsSection" }])}
+    </article>
+  `;
+}
+
+function renderStateQuoteItem(event) {
+  return `
+    <article class="state-item-card">
+      <div>
+        <strong>${escapeHtml(event.title || "Cotización pendiente")}</strong>
+        <span>${escapeHtml(event.budget_label || "Sin presupuesto")} · ${statusBadge(event.status)}</span>
+      </div>
+      ${stateItemActions([
+        { label: "Ver", target: "#events" },
+        { label: "Editar", target: "#event-tools" },
+      ])}
+    </article>
+  `;
+}
+
+function renderStateRequestItem(request) {
+  const profile = request.profile || {};
+  const membership = request.membership || {};
+  const name = profile.full_name || profile.email || request.userId || "Solicitud";
+
+  return `
+    <article class="state-item-card">
+      <div>
+        <strong>${escapeHtml(name)}</strong>
+        <span>${escapeHtml(membership.role || profile.role || "pending")} · ${statusBadge(membership.status || profile.role || "pending")}</span>
+      </div>
+      ${stateItemActions([{ label: "Ver", target: "#requestsSection" }])}
+    </article>
+  `;
+}
+
+function renderDashboardState() {
+  const stateName = dashboardStateName();
+  const quotes = pendingQuoteRows();
+  const teamMembers = teamMemberRows();
+
+  dashboardStateCards.forEach((card) => {
+    card.hidden = card.dataset.dashboardState !== stateName;
+  });
+
+  setDashboardStateValue("month-events", currentMonthEvents().length);
+  setDashboardStateValue("active-clients", allCustomers.length);
+  setDashboardStateValue("pending-quotes", quotes.length);
+  setDashboardStateValue("team-members", teamMembers.length);
+
+  renderStateList("recent-events", allEvents.slice(0, 3), "Sin eventos recientes.", renderStateEventItem);
+  renderStateList("recent-clients", allCustomers.slice(0, 3), "Sin clientes todavia.", renderStateClientItem);
+  renderStateList("recent-quotes", quotes.slice(0, 3), "Sin cotizaciones pendientes.", renderStateQuoteItem);
+  renderStateList("active-events", allEvents.slice(0, 4), "Sin eventos programados.", renderStateEventItem);
+  renderStateList("active-requests", allRequests.slice(0, 4), "Sin solicitudes recientes.", renderStateRequestItem);
 }
 
 function renderLineChart() {
@@ -707,6 +853,7 @@ function renderRequestProgress() {
 
 function renderAnalytics() {
   renderMetricCards();
+  renderDashboardState();
   renderLineChart();
   renderBarChart();
   renderCategoryDonut();
@@ -1912,6 +2059,13 @@ document.querySelectorAll("[data-scroll-target]:not(.sidebar-link)").forEach((bu
   button.addEventListener("click", () => {
     scrollToAdminTarget(button.dataset.scrollTarget);
   });
+});
+
+document.addEventListener("click", (event) => {
+  if (!(event.target instanceof Element)) return;
+  const action = event.target.closest("[data-state-scroll]");
+  if (!action) return;
+  scrollToAdminTarget(action.dataset.stateScroll);
 });
 
 document.querySelectorAll(".sidebar-link").forEach((link) => {
