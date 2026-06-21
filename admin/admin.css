@@ -2064,6 +2064,10 @@ body {
   display: none !important;
 }
 
+.dashboard-growing-card {
+  display: none !important;
+}
+
 .dashboard-state-card {
   display: grid;
   gap: 1rem;
