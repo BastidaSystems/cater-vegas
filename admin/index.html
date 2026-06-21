@@ -11,7 +11,7 @@
         window.addEventListener("load", () => window.scrollTo(0, 0), { once: true });
       }
     </script>
-    <link rel="stylesheet" href="admin.css?v=admin-visual-redesign-20260620" />
+    <link rel="stylesheet" href="admin.css?v=admin-kpi-premium-20260621" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple">
@@ -23,7 +23,7 @@
 
         <nav class="sidebar-nav">
           <button class="sidebar-link is-active" type="button" data-scroll-target="#overview"><span>⌂</span>Dashboard</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#events"><span>□</span>Eventos</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#event-tools"><span>□</span>Eventos</button>
           <button class="sidebar-link" type="button" data-scroll-target="#requestsSection"><span>○</span>Clientes</button>
           <button class="sidebar-link" type="button" data-scroll-target="#team-tools"><span>○</span>Equipo</button>
           <button class="sidebar-link" type="button" data-scroll-target="#requestsSection"><span>▤</span>Cotizaciones</button>
@@ -161,7 +161,7 @@
                 <h3>Próximos eventos</h3>
                 <div class="state-list" data-state-list="active-events"></div>
               </section>
-              <section class="state-mini-panel">
+              <section class="state-mini-panel state-requests-panel">
                 <h3>Solicitudes recientes</h3>
                 <div class="state-list" data-state-list="active-requests"></div>
               </section>
@@ -170,25 +170,78 @@
         </section>
 
         <section class="metric-grid metric-grid-simple" aria-label="Resumen principal">
-          <article class="metric-card">
-            <span class="metric-icon">📅</span>
-            <div><strong id="statActiveEvents">0</strong><small>Eventos este mes</small></div>
+          <article class="metric-card metric-card-premium">
+            <button class="kpi-card-action" type="button" data-scroll-target="#event-tools" aria-label="Ver eventos este mes">
+              <span class="metric-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <rect x="4" y="5" width="16" height="15" rx="3"></rect>
+                  <path d="M8 3v4M16 3v4M4 10h16M9 15h3M14 15h1"></path>
+                </svg>
+              </span>
+              <span class="kpi-copy">
+                <span class="kpi-topline"><strong id="statActiveEvents">0</strong><span class="kpi-arrow" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M7 4l6 6-6 6"></path></svg></span></span>
+                <small>Eventos este mes</small>
+                <span class="kpi-status kpi-status-positive"><span aria-hidden="true">↗</span> +1 vs mes pasado</span>
+              </span>
+            </button>
           </article>
-          <article class="metric-card">
-            <span class="metric-icon">👤</span>
-            <div><strong id="statPending">0</strong><small>Clientes activos</small></div>
+          <article class="metric-card metric-card-premium">
+            <button class="kpi-card-action" type="button" data-scroll-target="#settings" aria-label="Ver clientes activos">
+              <span class="metric-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path>
+                  <path d="M3 21a6 6 0 0 1 12 0"></path>
+                  <path d="M17 11a3 3 0 1 0 0-6M16 16a5 5 0 0 1 5 5"></path>
+                </svg>
+              </span>
+              <span class="kpi-copy">
+                <span class="kpi-topline"><strong id="statPending">0</strong><span class="kpi-arrow" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M7 4l6 6-6 6"></path></svg></span></span>
+                <small>Clientes activos</small>
+                <span class="kpi-status kpi-status-positive"><span aria-hidden="true">↗</span> +2 vs mes pasado</span>
+              </span>
+            </button>
           </article>
-          <article class="metric-card" id="providers">
-            <span class="metric-icon">🧾</span>
-            <div><strong id="statProviders">0</strong><small>Cotizaciones pendientes</small></div>
+          <article class="metric-card metric-card-premium" id="providers">
+            <button class="kpi-card-action" type="button" data-scroll-target="#event-tools" aria-label="Ver cotizaciones pendientes">
+              <span class="metric-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M7 3h7l4 4v14H7z"></path>
+                  <path d="M14 3v5h5M10 12h6M10 16h6M12 19v-9"></path>
+                </svg>
+              </span>
+              <span class="kpi-copy">
+                <span class="kpi-topline"><strong id="statProviders">0</strong><span class="kpi-arrow" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M7 4l6 6-6 6"></path></svg></span></span>
+                <small>Cotizaciones pendientes</small>
+                <span class="kpi-status kpi-status-pending"><span aria-hidden="true">○</span> Pendiente de respuesta</span>
+              </span>
+            </button>
           </article>
-          <article class="metric-card" id="finance">
-            <span class="metric-icon">🏢</span>
-            <div><strong id="statRevenue">0</strong><small>Miembros del equipo</small></div>
+          <article class="metric-card metric-card-premium" id="finance">
+            <button class="kpi-card-action" type="button" data-scroll-target="#team-tools" aria-label="Ver miembros del equipo">
+              <span class="metric-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path>
+                  <path d="M5 21a7 7 0 0 1 14 0"></path>
+                </svg>
+              </span>
+              <span class="kpi-copy">
+                <span class="kpi-topline"><strong id="statRevenue">0</strong><span class="kpi-arrow" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M7 4l6 6-6 6"></path></svg></span></span>
+                <small>Miembros del equipo</small>
+                <span class="kpi-status kpi-status-neutral"><span aria-hidden="true">•</span> Equipo actualizado</span>
+              </span>
+            </button>
           </article>
         </section>
 
         <section class="simple-dashboard-grid">
+          <section class="panel simple-panel calendar-panel" aria-label="Calendario de eventos">
+            <div class="panel-heading">
+              <div><span>📆</span><h2>Calendario</h2></div>
+              <span class="calendar-month-label" id="calendarMonthLabel">Este mes</span>
+            </div>
+            <div class="dashboard-calendar" id="dashboardCalendar" aria-live="polite"></div>
+          </section>
+
           <article class="panel simple-panel" id="events">
             <div class="panel-heading">
               <div><span>📅</span><h2>Próximos eventos</h2></div>

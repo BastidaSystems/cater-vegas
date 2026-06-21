@@ -151,6 +151,8 @@ const categoryDonut = document.querySelector("#categoryDonut");
 const categoryLegend = document.querySelector("#categoryLegend");
 const requestProgress = document.querySelector("#requestProgress");
 const upcomingEventsList = document.querySelector("#upcomingEventsList");
+const dashboardCalendar = document.querySelector("#dashboardCalendar");
+const calendarMonthLabel = document.querySelector("#calendarMonthLabel");
 const activityTimeline = document.querySelector("#activityTimeline");
 const dashboardStateCards = Array.from(document.querySelectorAll("[data-dashboard-state]"));
 const dashboardStateLists = new Map(
@@ -637,6 +639,25 @@ function currentMonthEvents() {
   return allEvents.filter((event) => monthKey(event.event_date || event.created_at || event.updated_at) === currentKey);
 }
 
+function scheduledEventDate(event) {
+  const value = event?.event_date || event?.updated_at || event?.created_at;
+  const date = value ? new Date(value) : null;
+  return date && !Number.isNaN(date.getTime()) ? date : null;
+}
+
+function dashboardCalendarBaseDate() {
+  const today = new Date();
+  const todayKey = monthKey(today);
+  const eventDates = allEvents
+    .map(scheduledEventDate)
+    .filter(Boolean)
+    .sort((a, b) => a - b);
+
+  if (!eventDates.length || eventDates.some((date) => monthKey(date) === todayKey)) return today;
+
+  return eventDates.find((date) => date >= today) || eventDates[0] || today;
+}
+
 function pendingQuoteRows() {
   return allEvents.filter((event) => ["draft", "pending", "proposal", "review"].includes(normalizedStatus(event.status)));
 }
@@ -691,7 +712,7 @@ function renderStateEventItem(event) {
         <span>${formatShortDate(event.event_date || event.updated_at)} · ${statusBadge(event.status)}</span>
       </div>
       ${stateItemActions([
-        { label: "Ver", target: "#events" },
+        { label: "Ver", target: "#event-tools" },
         { label: "Editar", target: "#event-tools" },
         { label: "Crear cotización", target: "#event-tools" },
       ])}
@@ -719,7 +740,7 @@ function renderStateQuoteItem(event) {
         <span>${escapeHtml(event.budget_label || "Sin presupuesto")} · ${statusBadge(event.status)}</span>
       </div>
       ${stateItemActions([
-        { label: "Ver", target: "#events" },
+        { label: "Ver", target: "#event-tools" },
         { label: "Editar", target: "#event-tools" },
       ])}
     </article>
@@ -851,6 +872,86 @@ function renderRequestProgress() {
   requestProgress.querySelector("strong").textContent = `${resolved}%`;
 }
 
+function renderDashboardCalendar() {
+  if (!dashboardCalendar) return;
+
+  const baseDate = dashboardCalendarBaseDate();
+  const year = baseDate.getFullYear();
+  const month = baseDate.getMonth();
+  const monthStart = new Date(year, month, 1);
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const firstWeekday = (monthStart.getDay() + 6) % 7;
+  const today = new Date();
+  const currentMonthKey = monthKey(monthStart);
+  const monthEvents = allEvents
+    .map((event) => ({ event, date: scheduledEventDate(event) }))
+    .filter((item) => item.date && monthKey(item.date) === currentMonthKey)
+    .sort((a, b) => a.date - b.date);
+  const eventsByDay = new Map();
+
+  monthEvents.forEach((item) => {
+    const day = item.date.getDate();
+    const rows = eventsByDay.get(day) || [];
+    rows.push(item.event);
+    eventsByDay.set(day, rows);
+  });
+
+  if (calendarMonthLabel) {
+    const formattedMonth = new Intl.DateTimeFormat("es-US", {
+      month: "long",
+      year: "numeric",
+    }).format(monthStart);
+    calendarMonthLabel.textContent = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
+  }
+
+  const weekdays = ["L", "M", "M", "J", "V", "S", "D"];
+  const cells = [];
+
+  for (let index = 0; index < firstWeekday; index += 1) {
+    cells.push('<span class="calendar-day is-empty" aria-hidden="true"></span>');
+  }
+
+  for (let day = 1; day <= daysInMonth; day += 1) {
+    const dayEvents = eventsByDay.get(day) || [];
+    const isToday = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
+    const eventCopy = dayEvents.length
+      ? `<span class="calendar-dot" aria-label="${dayEvents.length} evento${dayEvents.length === 1 ? "" : "s"}"></span>`
+      : "";
+    cells.push(`
+      <span class="calendar-day${isToday ? " is-today" : ""}${dayEvents.length ? " has-event" : ""}">
+        <span>${day}</span>
+        ${eventCopy}
+      </span>
+    `);
+  }
+
+  const featuredEvents = monthEvents.slice(0, 4);
+
+  dashboardCalendar.innerHTML = `
+    <div class="calendar-grid" aria-label="Mes de ${escapeHtml(calendarMonthLabel?.textContent || "calendario")}">
+      ${weekdays.map((day) => `<span class="calendar-weekday">${day}</span>`).join("")}
+      ${cells.join("")}
+    </div>
+    <div class="calendar-agenda">
+      <strong>Fechas próximas</strong>
+      ${
+        featuredEvents.length
+          ? featuredEvents
+              .map(
+                ({ event, date }) => `
+                  <button class="calendar-agenda-row" type="button" data-state-scroll="#event-tools">
+                    <span>${date.getDate()}</span>
+                    <small>${escapeHtml(event.title || "Evento sin nombre")}</small>
+                  </button>
+                `
+              )
+              .join("")
+          : '<p>No hay eventos con fecha en este mes.</p>'
+      }
+    </div>
+  `;
+}
+
 function renderAnalytics() {
   renderMetricCards();
   renderDashboardState();
@@ -858,6 +959,7 @@ function renderAnalytics() {
   renderBarChart();
   renderCategoryDonut();
   renderRequestProgress();
+  renderDashboardCalendar();
   renderUpcomingEvents();
   renderActivityTimeline();
 }
