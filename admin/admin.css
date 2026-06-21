@@ -3891,3 +3891,91 @@ textarea:focus {
     min-height: 11.65rem;
   }
 }
+
+/* Sectioned admin views: sidebar switches surfaces instead of stacking one long scroll. */
+.admin-layout-simple[data-admin-view="dashboard"] .admin-tools-accordion,
+.admin-layout-simple[data-admin-view="clients"] .admin-tools-accordion {
+  display: none !important;
+}
+
+.admin-layout-simple[data-admin-view]:not([data-admin-view="dashboard"]) #overview,
+.admin-layout-simple[data-admin-view]:not([data-admin-view="dashboard"]) .calendar-panel,
+.admin-layout-simple[data-admin-view]:not([data-admin-view="clients"]) .simple-dashboard-grid > .requests-admin {
+  display: none !important;
+}
+
+.admin-layout-simple[data-admin-view="clients"] .simple-dashboard-grid {
+  display: block !important;
+}
+
+.admin-layout-simple[data-admin-view="clients"] .simple-dashboard-grid > .requests-admin:not([hidden]) {
+  display: block !important;
+  min-height: 24rem;
+}
+
+.admin-layout-simple[data-admin-view="events"] .simple-dashboard-grid,
+.admin-layout-simple[data-admin-view="team"] .simple-dashboard-grid,
+.admin-layout-simple[data-admin-view="quotes"] .simple-dashboard-grid,
+.admin-layout-simple[data-admin-view="settings"] .simple-dashboard-grid {
+  display: none !important;
+}
+
+.admin-layout-simple[data-admin-view="events"] .admin-tools-accordion,
+.admin-layout-simple[data-admin-view="team"] .admin-tools-accordion,
+.admin-layout-simple[data-admin-view="quotes"] .admin-tools-accordion,
+.admin-layout-simple[data-admin-view="settings"] .admin-tools-accordion {
+  display: block !important;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.admin-layout-simple[data-admin-view="events"] .admin-tools-accordion > summary,
+.admin-layout-simple[data-admin-view="team"] .admin-tools-accordion > summary,
+.admin-layout-simple[data-admin-view="quotes"] .admin-tools-accordion > summary,
+.admin-layout-simple[data-admin-view="settings"] .admin-tools-accordion > summary {
+  display: none !important;
+}
+
+.admin-layout-simple[data-admin-view="events"] .admin-tools-grid,
+.admin-layout-simple[data-admin-view="team"] .admin-tools-grid,
+.admin-layout-simple[data-admin-view="quotes"] .admin-tools-grid,
+.admin-layout-simple[data-admin-view="settings"] .admin-tools-grid {
+  display: grid !important;
+  grid-template-columns: 1fr;
+}
+
+.admin-layout-simple[data-admin-view="events"] #beoflow,
+.admin-layout-simple[data-admin-view="events"] #team-tools,
+.admin-layout-simple[data-admin-view="events"] #beoflow-command,
+.admin-layout-simple[data-admin-view="team"] #beoflow,
+.admin-layout-simple[data-admin-view="team"] #event-tools,
+.admin-layout-simple[data-admin-view="team"] #beoflow-command,
+.admin-layout-simple[data-admin-view="quotes"] #beoflow,
+.admin-layout-simple[data-admin-view="quotes"] #team-tools,
+.admin-layout-simple[data-admin-view="quotes"] #beoflow-command,
+.admin-layout-simple[data-admin-view="settings"] #event-tools,
+.admin-layout-simple[data-admin-view="settings"] #team-tools {
+  display: none !important;
+}
+
+.admin-layout-simple[data-admin-view="events"] #event-tools,
+.admin-layout-simple[data-admin-view="quotes"] #event-tools,
+.admin-layout-simple[data-admin-view="team"] #team-tools,
+.admin-layout-simple[data-admin-view="settings"] #beoflow-command {
+  display: block !important;
+  grid-column: 1 / -1;
+}
+
+.admin-layout-simple[data-admin-view="settings"] #beoflow {
+  display: grid !important;
+}
+
+.admin-layout-simple[data-admin-view="clients"] .requests-admin .request-row strong {
+  color: var(--cv-light-text);
+}
+
+.admin-layout-simple[data-admin-view="clients"] .requests-admin .request-meta {
+  color: var(--cv-light-muted);
+}

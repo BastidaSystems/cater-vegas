@@ -58,17 +58,37 @@ function syncAdminStickyOffset() {
   document.documentElement.style.setProperty("--admin-sticky-offset", `${offset}px`);
 }
 
-function setActiveSidebarTarget(targetSelector) {
+const adminLayout = document.querySelector(".admin-layout-simple");
+
+function adminViewForTarget(targetSelector, requestedView) {
+  if (requestedView) return requestedView;
+  if (targetSelector === "#overview") return "dashboard";
+  if (targetSelector === "#event-tools" || targetSelector === "#events") return "events";
+  if (targetSelector === "#team-tools") return "team";
+  if (targetSelector === "#requestsSection") return "clients";
+  if (targetSelector === "#settings" || targetSelector === "#beoflow" || targetSelector === "#beoflow-command") return "settings";
+  return "dashboard";
+}
+
+function setAdminView(targetSelector, requestedView) {
+  if (!adminLayout) return;
+  adminLayout.dataset.adminView = adminViewForTarget(targetSelector, requestedView);
+}
+
+function setActiveSidebarTarget(targetSelector, activeLink = null, activeView = "") {
   document.querySelectorAll(".sidebar-link").forEach((link) => {
-    link.classList.toggle("is-active", link.dataset.scrollTarget === targetSelector);
+    const sameTarget = link.dataset.scrollTarget === targetSelector;
+    const sameView = !activeView || link.dataset.adminView === activeView;
+    link.classList.toggle("is-active", activeLink ? link === activeLink : sameTarget && sameView);
   });
 }
 
-function scrollToAdminTarget(targetSelector) {
+function scrollToAdminTarget(targetSelector, requestedView = "") {
+  setAdminView(targetSelector, requestedView);
   const target = document.querySelector(targetSelector);
   if (!target) return;
 
-  const parentDetails = target.closest("details");
+  const parentDetails = target.matches("details") ? target : target.closest("details");
   if (parentDetails && !parentDetails.open) {
     parentDetails.open = true;
   }
@@ -2159,7 +2179,7 @@ resetCollaboratorButton.addEventListener("click", resetCollaboratorForm);
 
 document.querySelectorAll("[data-scroll-target]:not(.sidebar-link)").forEach((button) => {
   button.addEventListener("click", () => {
-    scrollToAdminTarget(button.dataset.scrollTarget);
+    scrollToAdminTarget(button.dataset.scrollTarget, button.dataset.adminView);
   });
 });
 
@@ -2167,15 +2187,16 @@ document.addEventListener("click", (event) => {
   if (!(event.target instanceof Element)) return;
   const action = event.target.closest("[data-state-scroll]");
   if (!action) return;
-  scrollToAdminTarget(action.dataset.stateScroll);
+  scrollToAdminTarget(action.dataset.stateScroll, action.dataset.adminView);
 });
 
 document.querySelectorAll(".sidebar-link").forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
     const targetSelector = link.dataset.scrollTarget || "#overview";
-    setActiveSidebarTarget(targetSelector);
-    scrollToAdminTarget(targetSelector);
+    const requestedView = link.dataset.adminView || "";
+    setActiveSidebarTarget(targetSelector, link, requestedView);
+    scrollToAdminTarget(targetSelector, requestedView);
   });
 });
 

@@ -11,10 +11,10 @@
         window.addEventListener("load", () => window.scrollTo(0, 0), { once: true });
       }
     </script>
-    <link rel="stylesheet" href="admin.css?v=admin-kpi-premium-20260621" />
+    <link rel="stylesheet" href="admin.css?v=admin-section-views-20260621" />
   </head>
   <body>
-    <div class="admin-layout admin-layout-simple">
+    <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
       <aside class="admin-sidebar" aria-label="Menu de administrador">
         <a class="admin-logo" href="../index.html" aria-label="Cater Vegas home">
           <span>CV</span>
@@ -22,12 +22,12 @@
         </a>
 
         <nav class="sidebar-nav">
-          <button class="sidebar-link is-active" type="button" data-scroll-target="#overview"><span>⌂</span>Dashboard</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#event-tools"><span>□</span>Eventos</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#requestsSection"><span>○</span>Clientes</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#team-tools"><span>○</span>Equipo</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#requestsSection"><span>▤</span>Cotizaciones</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#settings"><span>⚙</span>Ajustes</button>
+          <button class="sidebar-link is-active" type="button" data-scroll-target="#overview" data-admin-view="dashboard"><span>⌂</span>Dashboard</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#event-tools" data-admin-view="events"><span>□</span>Eventos</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#requestsSection" data-admin-view="clients"><span>○</span>Clientes</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#team-tools" data-admin-view="team"><span>○</span>Equipo</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#event-tools" data-admin-view="quotes"><span>▤</span>Cotizaciones</button>
+          <button class="sidebar-link" type="button" data-scroll-target="#settings" data-admin-view="settings"><span>⚙</span>Ajustes</button>
         </nav>
 
         <div class="sidebar-mini">
@@ -167,7 +167,7 @@
 
         <section class="metric-grid metric-grid-simple" id="overview" aria-label="Resumen principal">
           <article class="metric-card metric-card-premium">
-            <button class="kpi-card-action" type="button" data-scroll-target="#event-tools" aria-label="Ver eventos este mes">
+            <button class="kpi-card-action" type="button" data-scroll-target="#event-tools" data-admin-view="events" aria-label="Ver eventos este mes">
               <span class="metric-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <rect x="4" y="5" width="16" height="15" rx="3"></rect>
@@ -182,7 +182,7 @@
             </button>
           </article>
           <article class="metric-card metric-card-premium">
-            <button class="kpi-card-action" type="button" data-scroll-target="#settings" aria-label="Ver clientes activos">
+            <button class="kpi-card-action" type="button" data-scroll-target="#requestsSection" data-admin-view="clients" aria-label="Ver clientes activos">
               <span class="metric-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path>
@@ -198,7 +198,7 @@
             </button>
           </article>
           <article class="metric-card metric-card-premium" id="providers">
-            <button class="kpi-card-action" type="button" data-scroll-target="#event-tools" aria-label="Ver cotizaciones pendientes">
+            <button class="kpi-card-action" type="button" data-scroll-target="#event-tools" data-admin-view="quotes" aria-label="Ver cotizaciones pendientes">
               <span class="metric-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <path d="M7 3h7l4 4v14H7z"></path>
@@ -213,7 +213,7 @@
             </button>
           </article>
           <article class="metric-card metric-card-premium" id="finance">
-            <button class="kpi-card-action" type="button" data-scroll-target="#team-tools" aria-label="Ver miembros del equipo">
+            <button class="kpi-card-action" type="button" data-scroll-target="#team-tools" data-admin-view="team" aria-label="Ver miembros del equipo">
               <span class="metric-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path>
@@ -450,6 +450,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=admin-visual-redesign-20260620"></script>
+    <script type="module" src="admin.js?v=admin-section-views-20260621"></script>
   </body>
 </html>
