@@ -1,374 +1,398 @@
-import {
-  DEFAULT_WORKSPACE_ID,
-  isSupabaseConfigured,
-  requireSupabase,
-  subscribeToEvents,
-} from "./lib/supabaseClient.js?v=supabase-auth-loader-20260619";
+const stageOrder = ["event", "guests", "style", "services", "summary", "proposal"];
 
-const WORKSPACE_ID = DEFAULT_WORKSPACE_ID;
-const supabase = isSupabaseConfigured ? requireSupabase() : null;
-const hero = document.querySelector(".hero");
-const panels = document.querySelectorAll("[data-panel]");
-const generateButton = document.querySelector("#generateButton");
-const budgetCards = [...document.querySelectorAll(".budget-card")];
-const budgetInsight = document.querySelector("#budgetInsight");
-const budgetContinue = document.querySelector("#budgetContinue");
-const eventCards = [...document.querySelectorAll(".event-card")];
-const eventDescription = document.querySelector("#eventDescription");
-const eventInsight = document.querySelector("#eventInsight");
-const eventContinue = document.querySelector("#eventContinue");
-const carouselButtons = document.querySelectorAll("[data-carousel]");
-const summaryBudget = document.querySelector("#summaryBudget");
-const summaryEvent = document.querySelector("#summaryEvent");
-const summaryMenu = document.querySelector("#summaryMenu");
-const summaryServices = document.querySelector("#summaryServices");
-const editButtons = document.querySelectorAll("[data-edit-step]");
-const progressSteps = document.querySelectorAll("[data-progress-step]");
-const planSummary = document.querySelector(".plan-summary");
-const beoflowPromptForm = document.querySelector("#beoflowPromptForm");
-const beoflowPrompt = document.querySelector("#beoflowPrompt");
-const beoflowStatus = document.querySelector("#beoflowStatus");
-
-const caterPlan = {
-  budget: "5k-10k",
-  budgetLabel: "$5K - $10K",
-  eventType: "Boda",
-  menuStyle: null,
+const eventState = {
+  eventType: null,
+  guests: null,
+  style: null,
   services: [],
+  date: null,
+  location: null,
+  budget: null,
+  estimatedTotal: 0
 };
 
-const budgets = [
+const stages = [
   {
-    value: "2k-5k",
-    label: "$2K - $5K",
-    insight: "BEOFlow priorizará proveedores esenciales y una logística compacta.",
-    eventInsight: "Con este rango conviene crear un evento íntimo, eficiente y bien producido.",
+    id: "event",
+    question: "¿Qué estás organizando?",
+    helperText: "Explora las opciones y construyamos tu evento perfecto.",
+    remainingCount: "200+",
+    options: [
+      { id: "wedding", label: "Boda", icon: "∞", note: "Elegante", theme: "wedding", value: "wedding" },
+      { id: "birthday", label: "Cumpleaños", icon: "✦", note: "Lujo social", theme: "birthday", value: "birthday" },
+      { id: "corporate", label: "Corporativo", icon: "□", note: "Ejecutivo", theme: "corporate", value: "corporate" },
+      { id: "baby-shower", label: "Baby Shower", icon: "◇", note: "Suave", theme: "baby", value: "baby-shower" },
+      { id: "anniversary", label: "Aniversario", icon: "◎", note: "Íntimo", theme: "anniversary", value: "anniversary" },
+      { id: "graduation", label: "Graduación", icon: "△", note: "Celebración", theme: "graduation", value: "graduation" },
+      { id: "farewell", label: "Despedida", icon: "♪", note: "Fiesta", theme: "party", value: "farewell" },
+      { id: "private-party", label: "Fiesta privada", icon: "◆", note: "VIP", theme: "private", value: "private-party" },
+      { id: "other", label: "Otro evento", icon: "+", note: "Personal", theme: "default", value: "other" }
+    ]
   },
   {
-    value: "5k-10k",
-    label: "$5K - $10K",
-    insight: "BEOFlow priorizará catering premium y proveedores flexibles para eventos medianos.",
-    eventInsight: "Con este presupuesto podemos balancear experiencia, catering y servicios clave.",
+    id: "guests",
+    question: "¿Cuántos invitados esperas?",
+    helperText: "El tamaño del evento ajusta logística, cocina, equipo y producción.",
+    remainingCount: "150",
+    options: [
+      { id: "under-50", label: "50 o menos", icon: "●", note: "Íntimo", min: 35, max: 50, value: 50 },
+      { id: "51-100", label: "51 - 100", icon: "●", note: "Social", min: 51, max: 100, value: 85 },
+      { id: "101-150", label: "101 - 150", icon: "●", note: "Premium", min: 101, max: 150, value: 125 },
+      { id: "151-200", label: "151 - 200", icon: "●", note: "Producción", min: 151, max: 200, value: 180 },
+      { id: "200-plus", label: "200+", icon: "●", note: "Gran escala", min: 200, max: 300, value: 225 }
+    ]
   },
   {
-    value: "10k-25k",
-    label: "$10K - $25K",
-    insight: "BEOFlow abrirá opciones completas con transporte, staff y hospedaje sugerido.",
-    eventInsight: "Este rango permite diseñar una experiencia completa con logística más robusta.",
+    id: "style",
+    question: "¿Qué estilo de experiencia buscas?",
+    helperText: "Selecciona el nivel de hospitalidad que debe sentirse en tu evento.",
+    remainingCount: "95",
+    options: [
+      { id: "essential", label: "Esencial", icon: "◇", note: "Cuidado y limpio", multiplier: 0.92, budget: "$2K - $5K" },
+      { id: "premium", label: "Premium", icon: "◆", note: "Más solicitado", multiplier: 1.15, budget: "$5K - $10K" },
+      { id: "luxury", label: "Luxury", icon: "✦", note: "Alta producción", multiplier: 1.5, budget: "$10K - $25K+" },
+      { id: "custom", label: "Personalizado", icon: "+", note: "A medida", multiplier: 1.32, budget: "Por definir" }
+    ]
   },
   {
-    value: "25k-plus",
-    label: "$25K+",
-    insight: "BEOFlow buscará proveedores luxury, concierge y coordinación integral.",
-    eventInsight: "Con este presupuesto podemos pensar en una experiencia VIP de alto nivel.",
+    id: "services",
+    question: "¿Qué servicios te gustaría incluir?",
+    helperText: "Puedes elegir varios. BEOFlow reducirá la propuesta a una experiencia clara.",
+    remainingCount: "45",
+    multi: true,
+    options: [
+      { id: "catering", label: "Catering", icon: "◒", note: "+ menú", price: 0 },
+      { id: "premium-bar", label: "Barra Premium", icon: "◧", note: "+ mixología", price: 1800 },
+      { id: "decor", label: "Decoración", icon: "✦", note: "+ ambiente", price: 2200 },
+      { id: "music", label: "Música y DJ", icon: "♪", note: "+ energía", price: 1600 },
+      { id: "photo", label: "Fotografía", icon: "□", note: "+ memoria", price: 1400 },
+      { id: "coordination", label: "Coordinación", icon: "◎", note: "+ control", price: 2500 },
+      { id: "transport", label: "Transporte", icon: "△", note: "+ movilidad", price: 1200 },
+      { id: "hotel", label: "Hospedaje", icon: "◇", note: "+ concierge", price: 3200 }
+    ]
   },
+  {
+    id: "summary",
+    question: "Tu resumen está tomando forma.",
+    helperText: "Revisa lo seleccionado y avanza a una propuesta visual con depósito sugerido.",
+    remainingCount: "12",
+    options: [
+      { id: "view-proposal", label: "Ver propuesta", icon: "→", note: "Siguiente paso" }
+    ]
+  },
+  {
+    id: "proposal",
+    question: "Tu propuesta está lista.",
+    helperText: "Este es un estimado local. El pago real se conectará cuando exista integración aprobada.",
+    remainingCount: "1 propuesta",
+    options: [
+      { id: "reserve", label: "Reservar ahora", icon: "✓", note: "Solicitar fecha" },
+      { id: "pay", label: "Realizar pago", icon: "$", note: "Próximamente", disabled: true }
+    ]
+  }
 ];
 
-const events = [
-  {
-    name: "Boda",
-    description: "Bodas privadas, cenas elegantes y experiencias completas.",
-  },
-  {
-    name: "Corporativo",
-    description: "Reuniones ejecutivas, lanzamientos y eventos empresariales.",
-  },
-  {
-    name: "VIP",
-    description: "Experiencias exclusivas con catering, transporte y hospedaje.",
-  },
-];
+const orbThemes = {
+  default: "radial-gradient(circle at 48% 28%, #f7dfaa, #76552f 38%, #15100d 100%)",
+  wedding: "radial-gradient(circle at 46% 30%, #fff1d0, #c6a16b 34%, #342114 64%, #090705 100%)",
+  birthday: "radial-gradient(circle at 48% 26%, #ffd27a, #a04724 42%, #150806 100%)",
+  corporate: "radial-gradient(circle at 52% 28%, #8dc6ff, #1c4f88 42%, #07101c 100%)",
+  baby: "radial-gradient(circle at 48% 28%, #ffe1ec, #b9849a 45%, #1d1113 100%)",
+  anniversary: "radial-gradient(circle at 48% 28%, #f5d08c, #7a3726 44%, #100706 100%)",
+  graduation: "radial-gradient(circle at 48% 24%, #eeeeee, #454854 46%, #08080b 100%)",
+  party: "radial-gradient(circle at 45% 24%, #f5c067, #6d1c5a 42%, #0b0610 100%)",
+  private: "radial-gradient(circle at 48% 25%, #f1c86d, #2d4b6e 46%, #050608 100%)"
+};
 
-let selectedEvent = 0;
-let selectedBudget = 1;
-let loadingTimer;
-let dragState = null;
-let eventsRealtimeChannel = null;
+let currentStageIndex = 0;
 
-function showPanel(name) {
-  hero.dataset.screen = name;
+function getElement(id) {
+  return document.getElementById(id);
+}
 
-  panels.forEach((panel) => {
-    panel.classList.toggle("is-active", panel.dataset.panel === name);
-  });
+function currentStage() {
+  return stages[currentStageIndex];
+}
 
-  progressSteps.forEach((step) => {
-    step.classList.toggle("is-active", step.dataset.progressStep === name);
-  });
+function formatMoney(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0
+  }).format(value || 0);
+}
+
+function selectedOption(stageId) {
+  const stage = stages.find((item) => item.id === stageId);
+  if (!stage) return null;
+
+  if (stageId === "event") return stage.options.find((option) => option.id === eventState.eventType);
+  if (stageId === "guests") return stage.options.find((option) => option.id === eventState.guests);
+  if (stageId === "style") return stage.options.find((option) => option.id === eventState.style);
+  return null;
+}
+
+function selectedServices() {
+  const serviceStage = stages.find((stage) => stage.id === "services");
+  return serviceStage.options.filter((option) => eventState.services.includes(option.id));
+}
+
+function calculateEstimate() {
+  const guests = selectedOption("guests");
+  const style = selectedOption("style");
+  const guestCount = guests?.value || 0;
+  const base = guestCount ? guestCount * 78 : 0;
+  const styleMultiplier = style?.multiplier || 1;
+  const servicesTotal = selectedServices().reduce((sum, service) => sum + service.price, 0);
+  const eventPremium = eventState.eventType === "wedding" ? 1800 : eventState.eventType === "corporate" ? 1200 : 0;
+
+  eventState.estimatedTotal = Math.round((base * styleMultiplier) + servicesTotal + eventPremium);
+  return eventState.estimatedTotal;
+}
+
+function syncLegacyFields() {
+  const eventOption = selectedOption("event");
+  const guestOption = selectedOption("guests");
+  const styleOption = selectedOption("style");
+  const services = selectedServices();
+  const primaryService = services[0];
+
+  getElement("eventType").value = eventOption?.value || "";
+  getElement("guestCount").value = guestOption?.value || 0;
+  getElement("menuStyle").value = styleOption?.id || "";
+  getElement("budgetTier").value = styleOption?.id || "";
+  getElement("serviceLevel").value = primaryService?.id === "catering" ? "delivery" : services.length ? "full" : "";
+  getElement("addonPackage").value = services.some((service) => service.id === "premium-bar")
+    ? "bar"
+    : services.length > 3
+      ? "production"
+      : services.length
+        ? "standard"
+        : "";
+
+  getElement("planBudget").textContent = styleOption?.budget || "Pendiente";
+  getElement("planEvent").textContent = eventOption ? `${eventOption.label}${guestOption ? ` · ${guestOption.label}` : ""}` : "Pendiente";
+  getElement("planMenu").textContent = styleOption?.label || "Pendiente";
+  getElement("planServices").textContent = services.length ? services.map((service) => service.label).join(", ") : "Pendiente";
+  getElement("menuRecommendation").textContent = styleOption?.label || "Pendiente";
+  getElement("quoteTotal").textContent = formatMoney(eventState.estimatedTotal);
+  getElement("depositDue").textContent = formatMoney(eventState.estimatedTotal * 0.3);
+  getElement("profitMargin").textContent = "Estimado local";
+  getElement("beoflowForecast").textContent = "Estimado local sin integraciones externas ni pago real.";
 }
 
 function updateSummary() {
-  summaryBudget.textContent = caterPlan.budgetLabel || "Pendiente";
-  summaryEvent.textContent = caterPlan.eventType || "Pendiente";
-  summaryMenu.textContent = caterPlan.menuStyle || "Pendiente";
-  summaryServices.textContent = caterPlan.services.length
-    ? caterPlan.services.join(", ")
-    : "Pendiente";
+  calculateEstimate();
+
+  const eventOption = selectedOption("event");
+  const guestOption = selectedOption("guests");
+  const styleOption = selectedOption("style");
+  const services = selectedServices();
+  const total = eventState.estimatedTotal;
+
+  getElement("cv-summary-event").textContent = eventOption?.label || "Pendiente";
+  getElement("cv-summary-guests").textContent = guestOption?.label || "Pendiente";
+  getElement("cv-summary-style").textContent = styleOption?.label || "Pendiente";
+  getElement("cv-summary-date").textContent = eventState.date || "Por definir";
+  getElement("cv-summary-location").textContent = eventState.location || "Por definir";
+  getElement("cv-summary-budget").textContent = styleOption?.budget || eventState.budget || "Por definir";
+  getElement("cv-summary-services").textContent = services.length ? services.map((service) => service.label).join(", ") : "Pendiente";
+  getElement("cv-estimated-total").textContent = total ? formatMoney(total) : "$0";
+  getElement("cv-orb-estimate").textContent = total ? `Estimado actual: ${formatMoney(total)}` : "Estimado actual: pendiente";
+
+  syncLegacyFields();
 }
 
-function addService(service) {
-  if (!caterPlan.services.includes(service)) {
-    caterPlan.services.push(service);
-  }
+function updateOrb() {
+  const eventOption = selectedOption("event");
+  const stage = currentStage();
+  const title = eventOption?.label || "Evento inolvidable";
+  const theme = eventOption?.theme || "default";
+
+  getElement("cv-orb").style.setProperty("--cv-orb-scene", orbThemes[theme] || orbThemes.default);
+  getElement("cv-orb-label").textContent = stage.id === "proposal" ? "Propuesta Cater Vegas" : "BEOFlow";
+  getElement("cv-orb-title").textContent = stage.id === "proposal" ? "Lista para reservar" : title;
 }
 
-function applyBeoflowPrompt(prompt) {
-  const text = prompt.toLowerCase();
-  let changed = false;
+function nodePosition(index, total) {
+  const angle = (-90 + (360 / total) * index) * (Math.PI / 180);
+  const radiusX = total <= 4 ? 220 : 270;
+  const radiusY = total <= 4 ? 160 : 210;
 
-  if (text.includes("boda")) {
-    updateEvent(events.findIndex((event) => event.name === "Boda"));
-    changed = true;
-  }
-
-  if (text.includes("corporativo") || text.includes("empresa")) {
-    updateEvent(events.findIndex((event) => event.name === "Corporativo"));
-    changed = true;
-  }
-
-  if (text.includes("vip") || text.includes("lujo") || text.includes("luxury")) {
-    updateEvent(events.findIndex((event) => event.name === "VIP"));
-    changed = true;
-  }
-
-  if (text.includes("transporte") || text.includes("chofer") || text.includes("shuttle")) {
-    addService("Transporte");
-    changed = true;
-  }
-
-  if (text.includes("hotel") || text.includes("hospedaje") || text.includes("habitaciones")) {
-    addService("Hospedaje");
-    changed = true;
-  }
-
-  if (text.includes("staff") || text.includes("meseros")) {
-    addService("Staff");
-    changed = true;
-  }
-
-  if (text.includes("decoración") || text.includes("decoracion")) {
-    addService("Decoración");
-    changed = true;
-  }
-
-  updateSummary();
   return {
-    reply: changed ? "BEOFlow ajustó el plan con lo que escribiste." : "Idea guardada para BEOFlow.",
-    updates: { ...caterPlan },
-    source: "local",
+    x: Math.round(Math.cos(angle) * radiusX),
+    y: Math.round(Math.sin(angle) * radiusY)
   };
 }
 
-function mergeBeoflowUpdates(updates = {}) {
-  if (updates.budget) caterPlan.budget = updates.budget;
-  if (updates.budgetLabel) caterPlan.budgetLabel = updates.budgetLabel;
-  if (updates.eventType) {
-    const eventIndex = events.findIndex((event) => event.name === updates.eventType);
-    if (eventIndex >= 0) updateEvent(eventIndex);
-    else caterPlan.eventType = updates.eventType;
-  }
-  if (updates.menuStyle) caterPlan.menuStyle = updates.menuStyle;
-  if (Array.isArray(updates.services)) {
-    caterPlan.services = [...new Set(updates.services.filter(Boolean))];
-  }
+function isOptionSelected(stage, option) {
+  if (stage.id === "event") return eventState.eventType === option.id;
+  if (stage.id === "guests") return eventState.guests === option.id;
+  if (stage.id === "style") return eventState.style === option.id;
+  if (stage.id === "services") return eventState.services.includes(option.id);
+  return false;
+}
 
+function renderNodes() {
+  const stage = currentStage();
+  const layer = getElement("cv-node-layer");
+  layer.innerHTML = "";
+
+  stage.options.forEach((option, index) => {
+    const position = nodePosition(index, stage.options.length);
+    const node = document.createElement("button");
+    node.className = "cv-node";
+    node.type = "button";
+    node.style.setProperty("--node-x", `${position.x}px`);
+    node.style.setProperty("--node-y", `${position.y}px`);
+    node.dataset.optionId = option.id;
+    node.disabled = Boolean(option.disabled);
+    node.classList.toggle("is-selected", isOptionSelected(stage, option));
+
+    node.innerHTML = `
+      ${option.badge || option.id === "pay" ? `<span class="cv-node-badge">${option.id === "pay" ? "TODO" : option.badge}</span>` : ""}
+      <span class="cv-node-icon" aria-hidden="true">${option.icon}</span>
+      <strong>${option.label}</strong>
+      <small>${stage.multi ? "Toca para incluir" : option.note || "Seleccionar"}</small>
+    `;
+
+    node.addEventListener("click", () => selectOption(stage.id, option));
+    layer.appendChild(node);
+  });
+}
+
+function updateStageText() {
+  const stage = currentStage();
+  getElement("cv-stage-question").textContent = stage.question;
+  getElement("cv-stage-helper").textContent = stage.helperText;
+  getElement("cv-remaining-count").textContent = stage.remainingCount;
+  getElement("cv-back-button").disabled = currentStageIndex === 0;
+  getElement("cv-services-continue").hidden = stage.id !== "services";
+  getElement("cv-summary-action").hidden = !["summary", "proposal"].includes(stage.id);
+  getElement("cv-summary-action").textContent = stage.id === "proposal" ? "Reservar ahora" : "Ver propuesta";
+}
+
+function updateTimeline() {
+  document.querySelectorAll("[data-stage-target]").forEach((button) => {
+    const index = stageOrder.indexOf(button.dataset.stageTarget);
+    button.classList.toggle("is-active", index === currentStageIndex);
+    button.classList.toggle("is-complete", index > -1 && index < currentStageIndex);
+  });
+}
+
+function renderStage() {
+  updateStageText();
+  updateTimeline();
+  updateOrb();
+  renderNodes();
   updateSummary();
 }
 
-async function sendToBeoflowAI(prompt) {
-  if (!supabase) {
-    throw new Error("Supabase is not configured.");
-  }
-
-  const { data, error } = await supabase.functions.invoke("beoflow", {
-    body: {
-      message: prompt,
-      currentPlan: { ...caterPlan },
-      workspaceId: WORKSPACE_ID,
-    },
-  });
-
-  if (error) {
-    throw error;
-  }
-
-  return data;
+function goToStage(stageId) {
+  const index = stageOrder.indexOf(stageId);
+  if (index < 0) return;
+  currentStageIndex = index;
+  renderStage();
 }
 
-function syncPlanFromRealtime(payload) {
-  const nextEvent = payload.new;
-  if (!nextEvent || !nextEvent.plan) return;
-
-  mergeBeoflowUpdates({
-    budget: nextEvent.budget,
-    budgetLabel: nextEvent.budget_label,
-    eventType: nextEvent.event_type,
-    menuStyle: nextEvent.menu_style,
-    services: nextEvent.services,
-    ...nextEvent.plan,
-  });
-
-  if (beoflowStatus) {
-    beoflowStatus.textContent = "Plan sincronizado desde Supabase.";
-  }
+function goToNextStage() {
+  currentStageIndex = Math.min(stages.length - 1, currentStageIndex + 1);
+  renderStage();
 }
 
-function initEventsRealtime() {
-  if (!supabase) return;
-
-  try {
-    eventsRealtimeChannel = subscribeToEvents(syncPlanFromRealtime, {
-      channelName: "cater-vegas-home-events",
-      workspaceId: WORKSPACE_ID,
-    });
-  } catch (error) {
-    console.warn("Supabase Realtime unavailable", error);
-  }
+function goBack() {
+  currentStageIndex = Math.max(0, currentStageIndex - 1);
+  renderStage();
 }
 
-function movePlanSummary(clientX, clientY) {
-  if (!dragState) return;
+function selectOption(stageId, option) {
+  if (option.disabled) return;
 
-  const nextLeft = clientX - dragState.offsetX;
-  const nextTop = clientY - dragState.offsetY;
-  const maxLeft = window.innerWidth - dragState.width - 12;
-  const maxTop = window.innerHeight - dragState.height - 12;
-  const left = Math.min(Math.max(12, nextLeft), maxLeft);
-  const top = Math.min(Math.max(12, nextTop), maxTop);
-
-  planSummary.style.left = `${left}px`;
-  planSummary.style.top = `${top}px`;
-  planSummary.style.right = "auto";
-  planSummary.style.bottom = "auto";
-  planSummary.style.transform = "none";
-}
-
-function updateEvent(index) {
-  selectedEvent = (index + events.length) % events.length;
-  const selected = events[selectedEvent];
-  caterPlan.eventType = selected.name;
-
-  eventCards.forEach((card) => {
-    card.classList.toggle("is-selected", card.dataset.event === selected.name);
-  });
-
-  eventDescription.textContent = selected.description;
-  updateSummary();
-}
-
-function updateBudget(index) {
-  selectedBudget = (index + budgets.length) % budgets.length;
-  const selected = budgets[selectedBudget];
-  caterPlan.budget = selected.value;
-  caterPlan.budgetLabel = selected.label;
-
-  budgetCards.forEach((card) => {
-    card.classList.toggle("is-selected", card.dataset.budget === selected.value);
-  });
-
-  budgetInsight.textContent = selected.insight;
-  eventInsight.textContent = selected.eventInsight;
-  updateSummary();
-}
-
-generateButton.addEventListener("click", () => {
-  window.clearTimeout(loadingTimer);
-  showPanel("loading");
-
-  loadingTimer = window.setTimeout(() => {
-    showPanel("budget");
-  }, 1800);
-});
-
-budgetCards.forEach((card, index) => {
-  card.addEventListener("click", () => updateBudget(index));
-});
-
-budgetContinue.addEventListener("click", () => {
-  showPanel("event");
-});
-
-eventCards.forEach((card, index) => {
-  card.addEventListener("click", () => updateEvent(index));
-});
-
-carouselButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const direction = button.dataset.carousel === "next" ? 1 : -1;
-    updateEvent(selectedEvent + direction);
-  });
-});
-
-editButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    showPanel(button.dataset.editStep);
-  });
-});
-
-planSummary.addEventListener("pointerdown", (event) => {
-  if (event.target.closest("button, textarea, input, label")) return;
-
-  const rect = planSummary.getBoundingClientRect();
-  dragState = {
-    offsetX: event.clientX - rect.left,
-    offsetY: event.clientY - rect.top,
-    width: rect.width,
-    height: rect.height,
-  };
-
-  planSummary.classList.add("is-dragging");
-  planSummary.setPointerCapture(event.pointerId);
-  movePlanSummary(event.clientX, event.clientY);
-});
-
-planSummary.addEventListener("pointermove", (event) => {
-  movePlanSummary(event.clientX, event.clientY);
-});
-
-planSummary.addEventListener("pointerup", (event) => {
-  dragState = null;
-  planSummary.classList.remove("is-dragging");
-  planSummary.releasePointerCapture(event.pointerId);
-});
-
-planSummary.addEventListener("pointercancel", () => {
-  dragState = null;
-  planSummary.classList.remove("is-dragging");
-});
-
-beoflowPromptForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const prompt = beoflowPrompt.value.trim();
-
-  if (!prompt) {
-    beoflowStatus.textContent = "Escribe una idea primero.";
+  if (stageId === "event") {
+    eventState.eventType = option.id;
+    renderStage();
+    setTimeout(goToNextStage, 260);
     return;
   }
 
-  beoflowStatus.textContent = "BEOFlow ajustando...";
-
-  sendToBeoflowAI(prompt)
-    .then((result) => {
-      mergeBeoflowUpdates(result.updates);
-      beoflowStatus.textContent = result.reply || "Plan actualizado.";
-    })
-    .catch(() => {
-      const result = applyBeoflowPrompt(prompt);
-      beoflowStatus.textContent = result.reply;
-    });
-});
-
-eventContinue.addEventListener("click", () => {
-  console.log("Cater plan", caterPlan);
-});
-
-window.addEventListener("beforeunload", () => {
-  if (eventsRealtimeChannel && supabase) {
-    supabase.removeChannel(eventsRealtimeChannel);
+  if (stageId === "guests") {
+    eventState.guests = option.id;
+    renderStage();
+    setTimeout(goToNextStage, 260);
+    return;
   }
-});
 
-updateBudget(selectedBudget);
-updateEvent(selectedEvent);
-updateSummary();
-initEventsRealtime();
+  if (stageId === "style") {
+    eventState.style = option.id;
+    eventState.budget = option.budget;
+    renderStage();
+    setTimeout(goToNextStage, 260);
+    return;
+  }
+
+  if (stageId === "services") {
+    if (eventState.services.includes(option.id)) {
+      eventState.services = eventState.services.filter((serviceId) => serviceId !== option.id);
+    } else {
+      eventState.services = [...eventState.services, option.id];
+    }
+    renderStage();
+    return;
+  }
+
+  if (stageId === "summary") {
+    goToStage("proposal");
+  }
+}
+
+function resetFlow() {
+  eventState.eventType = null;
+  eventState.guests = null;
+  eventState.style = null;
+  eventState.services = [];
+  eventState.date = null;
+  eventState.location = null;
+  eventState.budget = null;
+  eventState.estimatedTotal = 0;
+  currentStageIndex = 0;
+  renderStage();
+}
+
+function initGalaxy() {
+  getElement("cv-back-button").addEventListener("click", goBack);
+  getElement("cv-reset-button").addEventListener("click", resetFlow);
+  getElement("cv-services-continue").addEventListener("click", goToNextStage);
+  getElement("cv-summary-action").addEventListener("click", () => {
+    if (currentStage().id === "summary") {
+      goToStage("proposal");
+      return;
+    }
+    getElement("quoteForm").requestSubmit();
+  });
+  getElement("cv-summary-detail").addEventListener("click", () => goToStage("summary"));
+
+  document.querySelectorAll("[data-stage-target]").forEach((button) => {
+    button.addEventListener("click", () => goToStage(button.dataset.stageTarget));
+  });
+
+  document.querySelectorAll("[data-inspiration]").forEach((button) => {
+    button.addEventListener("click", () => {
+      eventState.eventType = button.dataset.inspiration;
+      goToStage("guests");
+    });
+  });
+
+  getElement("quoteForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const action = getElement("cv-summary-action");
+    const original = action.textContent;
+    action.textContent = "Solicitud lista";
+    setTimeout(() => {
+      action.textContent = original;
+    }, 1600);
+  });
+
+  renderStage();
+}
+
+initGalaxy();
