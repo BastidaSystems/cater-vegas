@@ -8,7 +8,8 @@
   <meta name="theme-color" content="#050505">
   <title>Cater Vegas | BEOFlow Event Galaxy</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23050505'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Georgia,serif' font-size='24' fill='%23f4cf83'%3ECV%3C/text%3E%3C/svg%3E">
-  <link rel="stylesheet" href="style.css?v=fit-5050f8a">
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="stylesheet" href="style.css?v=luxury-galaxy-2518150">
 </head>
 <body>
   <header class="cv-header" id="top">
@@ -47,10 +48,22 @@
 
           <div class="cv-guide-grid">
             <article class="cv-guide-card">
+              <span class="cv-guide-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 2l1.9 5.9L20 10l-6.1 2.1L12 18l-1.9-5.9L4 10l6.1-2.1L12 2z"></path>
+                  <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"></path>
+                </svg>
+              </span>
               <span>Asistente inteligente</span>
               <strong>Te guiaré paso a paso para crear el evento ideal.</strong>
             </article>
             <article class="cv-guide-card">
+              <span class="cv-guide-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M4 7h16M4 12h16M4 17h10"></path>
+                  <circle cx="18" cy="17" r="2"></circle>
+                </svg>
+              </span>
               <span>Respuestas posibles</span>
               <strong id="cv-remaining-count">200+</strong>
             </article>
@@ -64,7 +77,6 @@
 
         <section class="cv-orb-stage" aria-label="Constructor visual de evento">
           <div class="cv-orb-field" id="cv-orb-field">
-            <!-- TODO: Replace these CSS gradient placeholders with real Cater Vegas event images when approved assets are available. -->
             <div class="cv-orb" id="cv-orb" data-orb-theme="default">
               <div class="cv-orb-image" aria-hidden="true"></div>
               <div class="cv-orb-ring" aria-hidden="true"></div>
@@ -92,31 +104,31 @@
 
           <dl class="cv-summary-list">
             <div>
-              <dt>Tipo de evento</dt>
+              <dt data-icon="event">Tipo de evento</dt>
               <dd id="cv-summary-event">Pendiente</dd>
             </div>
             <div>
-              <dt>Invitados</dt>
+              <dt data-icon="guests">Invitados</dt>
               <dd id="cv-summary-guests">Pendiente</dd>
             </div>
             <div>
-              <dt>Estilo</dt>
+              <dt data-icon="style">Estilo</dt>
               <dd id="cv-summary-style">Pendiente</dd>
             </div>
             <div>
-              <dt>Fecha</dt>
+              <dt data-icon="date">Fecha</dt>
               <dd id="cv-summary-date">Pendiente</dd>
             </div>
             <div>
-              <dt>Lugar</dt>
+              <dt data-icon="location">Lugar</dt>
               <dd id="cv-summary-location">Pendiente</dd>
             </div>
             <div>
-              <dt>Presupuesto</dt>
+              <dt data-icon="budget">Presupuesto</dt>
               <dd id="cv-summary-budget">Pendiente</dd>
             </div>
             <div>
-              <dt>Servicios</dt>
+              <dt data-icon="services">Servicios</dt>
               <dd id="cv-summary-services">Pendiente</dd>
             </div>
           </dl>
@@ -137,26 +149,46 @@
       </div>
 
       <div class="cv-bottom-bar">
+        <div class="cv-progress-meter" aria-label="Porcentaje de progreso">
+          <span>Tu progreso</span>
+          <div class="cv-progress-track" aria-hidden="true">
+            <i id="cv-progress-fill"></i>
+          </div>
+          <strong id="cv-progress-value">0%</strong>
+        </div>
+
         <nav class="cv-timeline" aria-label="Progreso del evento">
-          <button type="button" data-stage-target="event" class="is-active">Evento</button>
-          <button type="button" data-stage-target="guests">Invitados</button>
-          <button type="button" data-stage-target="style">Estilo</button>
-          <button type="button" data-stage-target="services">Servicios</button>
-          <button type="button" data-stage-target="summary">Resumen</button>
-          <button type="button" data-stage-target="proposal">Propuesta / Pago</button>
+          <button type="button" data-stage-target="event" data-step="01" class="is-active">Evento</button>
+          <button type="button" data-stage-target="guests" data-step="02">Invitados</button>
+          <button type="button" data-stage-target="style" data-step="03">Estilo</button>
+          <button type="button" data-stage-target="services" data-step="04">Servicios</button>
+          <button type="button" data-stage-target="summary" data-step="05">Resumen</button>
+          <button type="button" data-stage-target="proposal" data-step="06">Propuesta / Pago</button>
         </nav>
 
         <div class="cv-inspiration" aria-label="Inspiración de eventos">
+          <button class="cv-inspiration-arrow cv-inspiration-arrow-prev" type="button" data-inspiration-scroll="prev" aria-label="Ver inspiración anterior">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7"></path>
+            </svg>
+          </button>
           <div class="cv-inspiration-copy">
             <strong>¿Necesitas inspiración?</strong>
             <span>Explora ideas reales de eventos en Las Vegas.</span>
           </div>
-          <button type="button" data-inspiration="wedding">Bodas elegantes</button>
-          <button type="button" data-inspiration="birthday">Cumpleaños de lujo</button>
-          <button type="button" data-inspiration="corporate">Eventos corporativos</button>
-          <button type="button" data-inspiration="private-party">Fiestas privadas</button>
-          <button type="button" data-inspiration="baby-shower">Baby showers</button>
-          <button type="button" data-inspiration="graduation">Graduaciones</button>
+          <div class="cv-inspiration-track" id="cv-inspiration-track">
+            <button class="cv-inspiration-card" type="button" data-inspiration="wedding"><span>Bodas elegantes</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="birthday"><span>Cumpleaños de lujo</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="corporate"><span>Eventos corporativos</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="private-party"><span>Fiestas privadas</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="baby-shower"><span>Baby showers</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="graduation"><span>Graduaciones</span></button>
+          </div>
+          <button class="cv-inspiration-arrow cv-inspiration-arrow-next" type="button" data-inspiration-scroll="next" aria-label="Ver más inspiración">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
         </div>
       </div>
 
@@ -209,6 +241,6 @@
     </section>
   </main>
 
-  <script src="script.js?v=fit-5050f8a"></script>
+  <script src="script.js?v=luxury-galaxy-2518150"></script>
 </body>
 </html>

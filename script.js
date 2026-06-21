@@ -18,15 +18,15 @@ const stages = [
     helperText: "Explora las opciones y construyamos tu evento perfecto.",
     remainingCount: "200+",
     options: [
-      { id: "wedding", label: "Boda", icon: "∞", note: "Elegante", theme: "wedding", value: "wedding" },
-      { id: "birthday", label: "Cumpleaños", icon: "✦", note: "Lujo social", theme: "birthday", value: "birthday" },
-      { id: "corporate", label: "Corporativo", icon: "□", note: "Ejecutivo", theme: "corporate", value: "corporate" },
-      { id: "baby-shower", label: "Baby Shower", icon: "◇", note: "Suave", theme: "baby", value: "baby-shower" },
-      { id: "anniversary", label: "Aniversario", icon: "◎", note: "Íntimo", theme: "anniversary", value: "anniversary" },
-      { id: "graduation", label: "Graduación", icon: "△", note: "Celebración", theme: "graduation", value: "graduation" },
-      { id: "farewell", label: "Despedida", icon: "♪", note: "Fiesta", theme: "party", value: "farewell" },
-      { id: "private-party", label: "Fiesta privada", icon: "◆", note: "VIP", theme: "private", value: "private-party" },
-      { id: "other", label: "Otro evento", icon: "+", note: "Personal", theme: "default", value: "other" }
+      { id: "wedding", label: "Boda", icon: "∞", note: "Elegante", theme: "wedding", value: "wedding", badge: "24" },
+      { id: "birthday", label: "Cumpleaños", icon: "✦", note: "Lujo social", theme: "birthday", value: "birthday", badge: "18" },
+      { id: "corporate", label: "Corporativo", icon: "□", note: "Ejecutivo", theme: "corporate", value: "corporate", badge: "21" },
+      { id: "baby-shower", label: "Baby Shower", icon: "◇", note: "Suave", theme: "baby", value: "baby-shower", badge: "12" },
+      { id: "anniversary", label: "Aniversario", icon: "◎", note: "Íntimo", theme: "anniversary", value: "anniversary", badge: "14" },
+      { id: "graduation", label: "Graduación", icon: "△", note: "Celebración", theme: "graduation", value: "graduation", badge: "16" },
+      { id: "farewell", label: "Despedida", icon: "♪", note: "Fiesta", theme: "party", value: "farewell", badge: "10" },
+      { id: "private-party", label: "Fiesta privada", icon: "◆", note: "VIP", theme: "private", value: "private-party", badge: "22" },
+      { id: "other", label: "Otro evento", icon: "+", note: "Personal", theme: "default", value: "other", badge: "∞" }
     ]
   },
   {
@@ -61,14 +61,14 @@ const stages = [
     remainingCount: "45",
     multi: true,
     options: [
-      { id: "catering", label: "Catering", icon: "◒", note: "+ menú", price: 0 },
-      { id: "premium-bar", label: "Barra Premium", icon: "◧", note: "+ mixología", price: 1800 },
-      { id: "decor", label: "Decoración", icon: "✦", note: "+ ambiente", price: 2200 },
-      { id: "music", label: "Música y DJ", icon: "♪", note: "+ energía", price: 1600 },
-      { id: "photo", label: "Fotografía", icon: "□", note: "+ memoria", price: 1400 },
-      { id: "coordination", label: "Coordinación", icon: "◎", note: "+ control", price: 2500 },
-      { id: "transport", label: "Transporte", icon: "△", note: "+ movilidad", price: 1200 },
-      { id: "hotel", label: "Hospedaje", icon: "◇", note: "+ concierge", price: 3200 }
+      { id: "catering", label: "Catering", icon: "◒", note: "+ menú", price: 0, badge: "Base" },
+      { id: "premium-bar", label: "Barra Premium", icon: "◧", note: "+ mixología", price: 1800, badge: "+1" },
+      { id: "decor", label: "Decoración", icon: "✦", note: "+ ambiente", price: 2200, badge: "+2" },
+      { id: "music", label: "Música y DJ", icon: "♪", note: "+ energía", price: 1600, badge: "+3" },
+      { id: "photo", label: "Fotografía", icon: "□", note: "+ memoria", price: 1400, badge: "+4" },
+      { id: "coordination", label: "Coordinación", icon: "◎", note: "+ control", price: 2500, badge: "+5" },
+      { id: "transport", label: "Transporte", icon: "△", note: "+ movilidad", price: 1200, badge: "+6" },
+      { id: "hotel", label: "Hospedaje", icon: "◇", note: "+ concierge", price: 3200, badge: "+7" }
     ]
   },
   {
@@ -93,15 +93,15 @@ const stages = [
 ];
 
 const orbThemes = {
-  default: "radial-gradient(circle at 48% 28%, #f7dfaa, #76552f 38%, #15100d 100%)",
-  wedding: "radial-gradient(circle at 46% 30%, #fff1d0, #c6a16b 34%, #342114 64%, #090705 100%)",
-  birthday: "radial-gradient(circle at 48% 26%, #ffd27a, #a04724 42%, #150806 100%)",
-  corporate: "radial-gradient(circle at 52% 28%, #8dc6ff, #1c4f88 42%, #07101c 100%)",
-  baby: "radial-gradient(circle at 48% 28%, #ffe1ec, #b9849a 45%, #1d1113 100%)",
-  anniversary: "radial-gradient(circle at 48% 28%, #f5d08c, #7a3726 44%, #100706 100%)",
-  graduation: "radial-gradient(circle at 48% 24%, #eeeeee, #454854 46%, #08080b 100%)",
-  party: "radial-gradient(circle at 45% 24%, #f5c067, #6d1c5a 42%, #0b0610 100%)",
-  private: "radial-gradient(circle at 48% 25%, #f1c86d, #2d4b6e 46%, #050608 100%)"
+  default: "linear-gradient(180deg, rgba(4, 4, 4, 0.08), rgba(2, 2, 2, 0.6)), url('https://images.unsplash.com/photo-1511795409834-ef04bbd61622?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat",
+  wedding: "linear-gradient(180deg, rgba(4, 4, 4, 0.04), rgba(2, 2, 2, 0.62)), url('https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat",
+  birthday: "linear-gradient(180deg, rgba(4, 4, 4, 0.04), rgba(2, 2, 2, 0.62)), url('https://images.unsplash.com/photo-1530103862676-de8c9debad1d?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat",
+  corporate: "linear-gradient(180deg, rgba(4, 4, 4, 0.08), rgba(2, 2, 2, 0.66)), url('https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat",
+  baby: "linear-gradient(180deg, rgba(4, 4, 4, 0.08), rgba(2, 2, 2, 0.66)), url('https://images.unsplash.com/photo-1529636798458-92182e662485?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat",
+  anniversary: "linear-gradient(180deg, rgba(4, 4, 4, 0.08), rgba(2, 2, 2, 0.66)), url('https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat",
+  graduation: "linear-gradient(180deg, rgba(4, 4, 4, 0.08), rgba(2, 2, 2, 0.66)), url('https://images.unsplash.com/photo-1523580494863-6f3031224c94?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat",
+  party: "linear-gradient(180deg, rgba(4, 4, 4, 0.08), rgba(2, 2, 2, 0.66)), url('https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat",
+  private: "linear-gradient(180deg, rgba(4, 4, 4, 0.08), rgba(2, 2, 2, 0.66)), url('https://images.unsplash.com/photo-1470337458703-46ad1756a187?auto=format&fit=crop&w=1200&q=80') center / cover no-repeat"
 };
 
 let currentStageIndex = 0;
@@ -199,7 +199,7 @@ function updateSummary() {
   getElement("cv-summary-budget").textContent = styleOption?.budget || eventState.budget || "Por definir";
   getElement("cv-summary-services").textContent = services.length ? services.map((service) => service.label).join(", ") : "Pendiente";
   getElement("cv-estimated-total").textContent = total ? formatMoney(total) : "$0";
-  getElement("cv-orb-estimate").textContent = total ? `Estimado actual: ${formatMoney(total)}` : "Estimado actual: pendiente";
+  getElement("cv-orb-estimate").textContent = total ? `Estimado actual: ${formatMoney(total)}` : "Toca para seleccionar";
 
   syncLegacyFields();
 }
@@ -209,8 +209,10 @@ function updateOrb() {
   const stage = currentStage();
   const title = eventOption?.label || "Evento inolvidable";
   const theme = eventOption?.theme || "default";
+  const orb = getElement("cv-orb");
 
-  getElement("cv-orb").style.setProperty("--cv-orb-scene", orbThemes[theme] || orbThemes.default);
+  orb.dataset.orbTheme = theme;
+  orb.style.setProperty("--cv-orb-scene", orbThemes[theme] || orbThemes.default);
   getElement("cv-orb-label").textContent = stage.id === "proposal" ? "Propuesta Cater Vegas" : "BEOFlow";
   getElement("cv-orb-title").textContent = stage.id === "proposal" ? "Lista para reservar" : title;
 }
@@ -253,6 +255,7 @@ function renderNodes() {
     node.style.setProperty("--node-y", `${position.y}px`);
     node.dataset.optionId = option.id;
     node.disabled = Boolean(option.disabled);
+    node.setAttribute("aria-pressed", String(isOptionSelected(stage, option)));
     node.classList.toggle("is-selected", isOptionSelected(stage, option));
 
     node.innerHTML = `
@@ -284,6 +287,10 @@ function updateTimeline() {
     button.classList.toggle("is-active", index === currentStageIndex);
     button.classList.toggle("is-complete", index > -1 && index < currentStageIndex);
   });
+
+  const progress = Math.round((currentStageIndex / (stageOrder.length - 1)) * 100);
+  getElement("cv-progress-value").textContent = `${progress}%`;
+  getElement("cv-progress-fill").style.width = `${progress}%`;
 }
 
 function renderStage() {
@@ -385,6 +392,16 @@ function initGalaxy() {
     button.addEventListener("click", () => {
       eventState.eventType = button.dataset.inspiration;
       goToStage("guests");
+    });
+  });
+
+  document.querySelectorAll("[data-inspiration-scroll]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const direction = button.dataset.inspirationScroll === "next" ? 1 : -1;
+      getElement("cv-inspiration-track").scrollBy({
+        left: direction * 260,
+        behavior: "smooth"
+      });
     });
   });
 
