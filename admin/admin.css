@@ -3626,6 +3626,7 @@ textarea:focus {
 }
 
 /* Hide secondary dashboard lists while keeping JS targets intact. */
+.dashboard-state-shell,
 .state-requests-panel,
 .simple-dashboard-grid > .requests-admin,
 .simple-dashboard-grid > #events {
