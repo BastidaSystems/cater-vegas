@@ -3979,3 +3979,159 @@ textarea:focus {
 .admin-layout-simple[data-admin-view="clients"] .requests-admin .request-meta {
   color: var(--cv-light-muted);
 }
+
+/* Quote assistant: local draft workflow only; existing event/auth/Supabase hooks stay untouched. */
+#quoteAssistant {
+  scroll-margin-top: var(--admin-sticky-offset);
+}
+
+.admin-layout-simple[data-admin-view="events"] #event-tools,
+.admin-layout-simple[data-admin-view="quotes"] #event-tools {
+  display: grid !important;
+  gap: clamp(1rem, 1.5vw, 1.35rem);
+}
+
+.quote-assistant-panel {
+  display: grid;
+  gap: 1rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid var(--cv-light-line);
+  padding-top: clamp(1rem, 1.5vw, 1.35rem);
+}
+
+.quote-assistant-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.quote-assistant-header h3 {
+  margin: 0;
+  color: var(--cv-light-text);
+  font-size: clamp(1.35rem, 2vw, 1.8rem);
+  line-height: 1.1;
+}
+
+.quote-assistant-note {
+  max-width: 24rem;
+  color: var(--cv-light-muted);
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: right;
+}
+
+.quote-assistant-controls {
+  display: grid;
+  grid-template-columns: minmax(16rem, 1fr) auto auto;
+  gap: 0.8rem;
+  align-items: end;
+}
+
+.quote-event-picker,
+.quote-draft-message {
+  display: grid;
+  gap: 0.55rem;
+  color: var(--cv-light-muted);
+  font-size: 0.8rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quote-draft-preview[hidden] {
+  display: none !important;
+}
+
+.quote-draft-preview {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.85fr) minmax(20rem, 1.15fr);
+  gap: clamp(1rem, 1.6vw, 1.4rem);
+  align-items: stretch;
+  border: 1px solid var(--cv-light-line);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255, 253, 249, 0.96), rgba(251, 246, 238, 0.92)),
+    radial-gradient(circle at 90% 0%, rgba(213, 162, 74, 0.12), transparent 12rem);
+  padding: clamp(1rem, 1.6vw, 1.35rem);
+}
+
+.quote-draft-brief {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+}
+
+.quote-draft-brief > div {
+  display: grid;
+  gap: 0.45rem;
+  border-bottom: 1px solid rgba(227, 219, 207, 0.82);
+  padding-bottom: 0.95rem;
+}
+
+.quote-draft-brief > div:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.quote-draft-brief p:not(.eyebrow),
+.quote-draft-brief li {
+  margin: 0;
+  color: var(--cv-light-text);
+  font-size: 0.98rem;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.quote-draft-brief ul {
+  display: grid;
+  gap: 0.4rem;
+  margin: 0;
+  padding-left: 1.15rem;
+}
+
+.quote-draft-message {
+  min-width: 0;
+}
+
+.quote-draft-message textarea {
+  min-height: 17rem;
+  line-height: 1.5;
+}
+
+.quote-draft-actions {
+  display: flex;
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.admin-layout-simple[data-admin-view="quotes"] #event-tools > .panel-heading,
+.admin-layout-simple[data-admin-view="quotes"] #eventForm {
+  display: none !important;
+}
+
+.admin-layout-simple[data-admin-view="quotes"] .quote-assistant-panel {
+  margin-top: 0;
+  border-top: 0;
+  padding-top: 0;
+}
+
+@media (max-width: 860px) {
+  .quote-assistant-header,
+  .quote-draft-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .quote-assistant-note {
+    max-width: none;
+    text-align: left;
+  }
+
+  .quote-assistant-controls,
+  .quote-draft-preview {
+    grid-template-columns: 1fr;
+  }
+}

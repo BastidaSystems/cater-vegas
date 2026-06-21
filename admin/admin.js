@@ -64,6 +64,7 @@ function adminViewForTarget(targetSelector, requestedView) {
   if (requestedView) return requestedView;
   if (targetSelector === "#overview") return "dashboard";
   if (targetSelector === "#event-tools" || targetSelector === "#events") return "events";
+  if (targetSelector === "#quoteAssistant") return "quotes";
   if (targetSelector === "#team-tools") return "team";
   if (targetSelector === "#requestsSection") return "clients";
   if (targetSelector === "#settings" || targetSelector === "#beoflow" || targetSelector === "#beoflow-command") return "settings";
@@ -125,6 +126,17 @@ const eventFormStatus = document.querySelector("#eventFormStatus");
 const eventsList = document.querySelector("#eventsList");
 const refreshEventsButton = document.querySelector("#refreshEventsButton");
 const selectedEventLabel = document.querySelector("#selectedEventLabel");
+const quoteDraftEventSelect = document.querySelector("#quoteDraftEventSelect");
+const quoteDraftUseCurrentButton = document.querySelector("#quoteDraftUseCurrentButton");
+const quoteDraftGenerateButton = document.querySelector("#quoteDraftGenerateButton");
+const quoteDraftStatus = document.querySelector("#quoteDraftStatus");
+const quoteDraftPreview = document.querySelector("#quoteDraftPreview");
+const quoteDraftSummary = document.querySelector("#quoteDraftSummary");
+const quoteDraftServices = document.querySelector("#quoteDraftServices");
+const quoteDraftQuestions = document.querySelector("#quoteDraftQuestions");
+const quoteDraftMessage = document.querySelector("#quoteDraftMessage");
+const quoteDraftCopyButton = document.querySelector("#quoteDraftCopyButton");
+const quoteDraftResetButton = document.querySelector("#quoteDraftResetButton");
 const adminBeoflowForm = document.querySelector("#adminBeoflowForm");
 const adminBeoflowPrompt = document.querySelector("#adminBeoflowPrompt");
 const beoflowResult = document.querySelector("#beoflowResult");
@@ -199,6 +211,7 @@ let allCollaborators = [];
 let allAssignments = [];
 let allCustomers = [];
 let allRequests = [];
+let currentQuoteDraft = null;
 
 function setSessionStatus(message) {
   sessionStatus.textContent = message;
@@ -510,6 +523,228 @@ function statusBadge(status) {
   const pending = ["draft", "pending", "invited", "proposal", "review"].includes(value);
   const className = danger ? " is-danger" : pending ? " is-pending" : "";
   return `<span class="status-badge${className}">${escapeHtml(value)}</span>`;
+}
+
+function setQuoteDraftStatus(message) {
+  if (quoteDraftStatus) quoteDraftStatus.textContent = message;
+}
+
+function servicesFromValue(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === "string") {
+    return value
+      .split(/[,;\n]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+  return [];
+}
+
+function quoteSourceFromForm() {
+  const budgetLabel = eventBudget?.value || "$5K - $10K";
+  const eventTypeValue = eventType?.value || "VIP";
+
+  return {
+    id: "__current_form",
+    title: eventTitle?.value.trim() || "Evento sin nombre",
+    event_type: eventTypeValue,
+    budget_label: budgetLabel,
+    status: "draft",
+    event_date: eventDate?.value || null,
+    guest_count: guestCount?.value ? Number(guestCount.value) : null,
+    services: [],
+    plan: {
+      budgetLabel,
+      eventType: eventTypeValue,
+      menuStyle: null,
+      services: [],
+    },
+  };
+}
+
+function selectedQuoteEvent() {
+  if (!quoteDraftEventSelect || quoteDraftEventSelect.value === "__current_form") {
+    return quoteSourceFromForm();
+  }
+
+  return allEvents.find((event) => String(event.id) === quoteDraftEventSelect.value) || selectedEvent || quoteSourceFromForm();
+}
+
+function quoteEventOptionLabel(event) {
+  const title = event.title || `Evento #${event.id}`;
+  const date = formatQuoteShortDate(event.event_date || event.updated_at);
+  const budget = event.budget_label || event.plan?.budgetLabel || "Sin presupuesto";
+  return `${title} · ${date} · ${budget}`;
+}
+
+function renderQuoteDraftEventOptions() {
+  if (!quoteDraftEventSelect) return;
+
+  const previousValue = quoteDraftEventSelect.value;
+  const eventOptions = allEvents
+    .map((event) => `<option value="${escapeHtml(event.id)}">${escapeHtml(quoteEventOptionLabel(event))}</option>`)
+    .join("");
+
+  quoteDraftEventSelect.innerHTML = `
+    <option value="__current_form">Usar formulario actual</option>
+    ${eventOptions}
+  `;
+
+  const hasPreviousEvent = previousValue !== "__current_form" && allEvents.some((event) => String(event.id) === previousValue);
+  const selectedEventId = selectedEvent?.id ? String(selectedEvent.id) : "";
+  const hasSelectedEvent = selectedEventId && allEvents.some((event) => String(event.id) === selectedEventId);
+  const preferredEvent = pendingQuoteRows()[0] || allEvents[0];
+  const preferredEventId = preferredEvent?.id ? String(preferredEvent.id) : "";
+
+  quoteDraftEventSelect.value = hasPreviousEvent
+    ? previousValue
+    : hasSelectedEvent
+      ? selectedEventId
+      : preferredEventId || "__current_form";
+}
+
+function quoteBudgetLabel(event) {
+  if (event?.budget_label) return event.budget_label;
+  if (event?.plan?.budgetLabel) return event.plan.budgetLabel;
+  if (Number.isFinite(Number(event?.budget))) return formatCurrency(event.budget);
+  return "Presupuesto por definir";
+}
+
+function quoteGuestLabel(event) {
+  return event?.guest_count ? `${event.guest_count} personas` : "Invitados por confirmar";
+}
+
+function quoteDateLabel(event) {
+  return event?.event_date ? formatQuoteShortDate(event.event_date) : "Fecha por confirmar";
+}
+
+function formatQuoteShortDate(value) {
+  if (!value) return "Sin fecha";
+  const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value);
+  if (Number.isNaN(date.getTime())) return "Sin fecha";
+  return new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric" }).format(date);
+}
+
+function quoteCustomerName(event) {
+  const customerId = Number(event?.customer_id);
+  const customer = allCustomers.find((item) => Number(item.id) === customerId);
+  return customer?.full_name || customer?.name || customer?.email || "";
+}
+
+function suggestedServicesForEvent(event) {
+  const type = String(event?.event_type || event?.plan?.eventType || "VIP").toLowerCase();
+  const budget = String(quoteBudgetLabel(event)).toLowerCase();
+  const existingServices = [
+    ...servicesFromValue(event?.services),
+    ...servicesFromValue(event?.plan?.services),
+  ];
+  const serviceMap = {
+    boda: ["Menú de recepción y cena", "Coordinación de timeline", "Staff de servicio", "Montaje y desmontaje"],
+    corporativo: ["Menú ejecutivo", "Bebidas y coffee station", "Staff de atención", "Logística de montaje"],
+    social: ["Menú familiar premium", "Servicio de bebidas", "Staff de apoyo", "Renta básica sugerida"],
+    vip: ["Chef privado", "Servicio personalizado", "Bebidas premium", "Coordinación onsite"],
+  };
+  const base = serviceMap[type] || serviceMap.vip;
+  const premium = budget.includes("25k") || budget.includes("10k")
+    ? ["Degustación previa", "Coordinador dedicado", "Detalle de hospitalidad premium"]
+    : ["Confirmación de menú", "Checklist operativo"];
+
+  return [...new Set([...existingServices, ...base, ...premium])].slice(0, 6);
+}
+
+function missingQuestionsForQuote(event) {
+  const existingServices = [
+    ...servicesFromValue(event?.services),
+    ...servicesFromValue(event?.plan?.services),
+  ];
+  const questions = [];
+
+  if (!event?.event_date) questions.push("Confirmar fecha y horario exacto.");
+  if (!event?.guest_count) questions.push("Confirmar número final de invitados.");
+  if (!event?.customer_id) questions.push("Confirmar nombre y contacto del cliente.");
+  questions.push("Confirmar venue, dirección y acceso de carga.");
+  if (!existingServices.length) questions.push("Definir menú, bebidas, staff y rentas necesarias.");
+  questions.push("Confirmar restricciones alimentarias y nivel de servicio esperado.");
+
+  return questions.slice(0, 5);
+}
+
+function buildQuoteDraft(event) {
+  const eventTypeLabel = event?.event_type || event?.plan?.eventType || "Evento";
+  const clientName = quoteCustomerName(event);
+  const title = event?.title || "Evento sin nombre";
+  const budget = quoteBudgetLabel(event);
+  const services = suggestedServicesForEvent(event);
+  const questions = missingQuestionsForQuote(event);
+  const summary = `${title} · ${eventTypeLabel} · ${quoteGuestLabel(event)} · ${quoteDateLabel(event)} · ${budget}`;
+  const serviceLines = services.map((service) => `- ${service}`).join("\n");
+  const questionLines = questions.map((question) => `- ${question}`).join("\n");
+  const greeting = clientName ? `Hola ${clientName},` : "Hola,";
+  const message = `${greeting}
+
+Gracias por compartir la información de tu evento. Con los datos actuales, puedo preparar una cotización preliminar para:
+
+${summary}
+
+Servicios sugeridos:
+${serviceLines}
+
+Para cerrar una propuesta más precisa, me ayudas a confirmar:
+${questionLines}
+
+Con eso te preparo una cotización clara con alcance, tiempos y siguientes pasos.`;
+
+  return {
+    title,
+    summary,
+    services,
+    questions,
+    message,
+  };
+}
+
+function renderQuoteDraft(draft) {
+  if (!quoteDraftPreview || !quoteDraftSummary || !quoteDraftServices || !quoteDraftQuestions || !quoteDraftMessage) return;
+
+  quoteDraftSummary.textContent = draft.summary;
+  quoteDraftServices.innerHTML = draft.services.map((service) => `<li>${escapeHtml(service)}</li>`).join("");
+  quoteDraftQuestions.innerHTML = draft.questions.map((question) => `<li>${escapeHtml(question)}</li>`).join("");
+  quoteDraftMessage.value = draft.message;
+  quoteDraftPreview.hidden = false;
+}
+
+function generateQuoteDraft() {
+  const quoteEvent = selectedQuoteEvent();
+  currentQuoteDraft = buildQuoteDraft(quoteEvent);
+  renderQuoteDraft(currentQuoteDraft);
+  setQuoteDraftStatus("Borrador generado. Revísalo antes de copiarlo o enviarlo.");
+}
+
+async function copyQuoteDraftMessage() {
+  if (!quoteDraftMessage?.value.trim()) {
+    setQuoteDraftStatus("Genera un borrador antes de copiar.");
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(quoteDraftMessage.value);
+    setQuoteDraftStatus("Mensaje copiado.");
+  } catch (error) {
+    quoteDraftMessage.focus();
+    quoteDraftMessage.select();
+    document.execCommand("copy");
+    setQuoteDraftStatus("Mensaje copiado.");
+  }
+}
+
+function resetQuoteDraft() {
+  currentQuoteDraft = null;
+  if (quoteDraftPreview) quoteDraftPreview.hidden = true;
+  if (quoteDraftMessage) quoteDraftMessage.value = "";
+  setQuoteDraftStatus("Borrador limpio.");
 }
 
 function providerRoleLabel(role) {
@@ -1058,6 +1293,8 @@ function renderEventOptions() {
   if (selectedEvent?.id) {
     assignmentEvent.value = String(selectedEvent.id);
   }
+
+  renderQuoteDraftEventOptions();
 }
 
 function renderCollaboratorOptions() {
@@ -1112,6 +1349,10 @@ function renderEvents(rows = []) {
       selectedEventLabel.textContent = selectedEvent
         ? `Evento seleccionado: ${selectedEvent.title || `#${selectedEvent.id}`}`
         : "Selecciona un evento para enviar instrucciones.";
+      if (quoteDraftEventSelect && selectedEvent?.id) {
+        quoteDraftEventSelect.value = String(selectedEvent.id);
+        setQuoteDraftStatus("Evento seleccionado para cotización asistida.");
+      }
       renderEvents(rows);
       renderEventOptions();
     });
@@ -2169,6 +2410,19 @@ refreshWorkspaceButton.addEventListener("click", async () => {
 refreshEventsButton.addEventListener("click", () => {
   loadEvents().then(loadAssignments);
 });
+
+quoteDraftEventSelect?.addEventListener("change", () => {
+  setQuoteDraftStatus("Evento listo. Genera un borrador cuando quieras.");
+});
+
+quoteDraftUseCurrentButton?.addEventListener("click", () => {
+  if (quoteDraftEventSelect) quoteDraftEventSelect.value = "__current_form";
+  generateQuoteDraft();
+});
+
+quoteDraftGenerateButton?.addEventListener("click", generateQuoteDraft);
+quoteDraftCopyButton?.addEventListener("click", copyQuoteDraftMessage);
+quoteDraftResetButton?.addEventListener("click", resetQuoteDraft);
 
 refreshRequestsButton.addEventListener("click", () => {
   Promise.all([loadUserRequests(), loadCustomers()]);
