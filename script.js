@@ -11,6 +11,17 @@ const eventState = {
   estimatedTotal: 0
 };
 
+const planningCategoryOptions = [
+  { id: "hub-guests", label: "Invitados", icon: "☷", note: "6 opciones", badge: "200+", kind: "planning-hub", targetStage: "guests" },
+  { id: "hub-location", label: "Lugar", icon: "⌖", note: "15 opciones", badge: "15", kind: "planning-hub", targetStage: "summary" },
+  { id: "hub-services", label: "Servicios", icon: "◒", note: "18 opciones", badge: "18", kind: "planning-hub", targetStage: "services" },
+  { id: "hub-food", label: "Gastronomía", icon: "◠", note: "24 opciones", badge: "24", kind: "planning-hub", targetStage: "style" },
+  { id: "hub-drinks", label: "Bebidas", icon: "◧", note: "12 opciones", badge: "12", kind: "planning-hub", targetStage: "services" },
+  { id: "hub-decor", label: "Decoración", icon: "✿", note: "22 opciones", badge: "22", kind: "planning-hub", targetStage: "services" },
+  { id: "hub-entertainment", label: "Entretenimiento", icon: "♪", note: "14 opciones", badge: "14", kind: "planning-hub", targetStage: "services" },
+  { id: "hub-style", label: "Estilo", icon: "◇", note: "6 opciones", badge: "6", kind: "planning-hub", targetStage: "style" }
+];
+
 const stages = [
   {
     id: "event",
@@ -33,7 +44,7 @@ const stages = [
     id: "guests",
     question: "¿Cuántos invitados esperas?",
     helperText: "El tamaño del evento ajusta logística, cocina, equipo y producción.",
-    remainingCount: "150",
+    remainingCount: "156",
     options: [
       { id: "under-50", label: "50 o menos", icon: "●", note: "Íntimo", min: 35, max: 50, value: 50 },
       { id: "51-100", label: "51 - 100", icon: "●", note: "Social", min: 51, max: 100, value: 85 },
@@ -46,7 +57,7 @@ const stages = [
     id: "style",
     question: "¿Qué estilo de experiencia buscas?",
     helperText: "Selecciona el nivel de hospitalidad que debe sentirse en tu evento.",
-    remainingCount: "95",
+    remainingCount: "84",
     options: [
       { id: "essential", label: "Esencial", icon: "◇", note: "Cuidado y limpio", multiplier: 0.92, budget: "$2K - $5K" },
       { id: "premium", label: "Premium", icon: "◆", note: "Más solicitado", multiplier: 1.15, budget: "$5K - $10K" },
@@ -58,7 +69,7 @@ const stages = [
     id: "services",
     question: "¿Qué servicios te gustaría incluir?",
     helperText: "Puedes elegir varios. BEOFlow reducirá la propuesta a una experiencia clara.",
-    remainingCount: "45",
+    remainingCount: "32",
     multi: true,
     options: [
       { id: "catering", label: "Catering", icon: "◒", note: "+ menú", price: 0, badge: "Base" },
@@ -106,6 +117,12 @@ const orbThemes = {
 
 let currentStageIndex = 0;
 let resizeTimer;
+let showingPlanningHub = false;
+let thinkingTimer;
+let remainingCountFrame;
+let progressFrame;
+let lastOrbTitle = "";
+let parallaxFrame;
 
 function getElement(id) {
   return document.getElementById(id);
@@ -145,7 +162,13 @@ function calculateEstimate() {
   const base = guestCount ? guestCount * 78 : 0;
   const styleMultiplier = style?.multiplier || 1;
   const servicesTotal = selectedServices().reduce((sum, service) => sum + service.price, 0);
-  const eventPremium = eventState.eventType === "wedding" ? 1800 : eventState.eventType === "corporate" ? 1200 : 0;
+  const eventPremium = guestCount
+    ? eventState.eventType === "wedding"
+      ? 1800
+      : eventState.eventType === "corporate"
+        ? 1200
+        : 0
+    : 0;
 
   eventState.estimatedTotal = Math.round((base * styleMultiplier) + servicesTotal + eventPremium);
   return eventState.estimatedTotal;
@@ -182,6 +205,22 @@ function syncLegacyFields() {
   getElement("beoflowForecast").textContent = "Estimado local sin integraciones externas ni pago real.";
 }
 
+function setSummaryValue(id, value) {
+  const element = getElement(id);
+  const nextValue = value || "-";
+  if (element.textContent === nextValue) return;
+
+  element.textContent = nextValue;
+  const row = element.closest("div");
+  if (!row) return;
+
+  row.classList.remove("is-updated");
+  window.requestAnimationFrame(() => {
+    row.classList.add("is-updated");
+    window.setTimeout(() => row.classList.remove("is-updated"), 720);
+  });
+}
+
 function updateSummary() {
   calculateEstimate();
 
@@ -191,13 +230,13 @@ function updateSummary() {
   const services = selectedServices();
   const total = eventState.estimatedTotal;
 
-  getElement("cv-summary-event").textContent = eventOption?.label || "Pendiente";
-  getElement("cv-summary-guests").textContent = guestOption?.label || "Pendiente";
-  getElement("cv-summary-style").textContent = styleOption?.label || "Pendiente";
-  getElement("cv-summary-date").textContent = eventState.date || "Por definir";
-  getElement("cv-summary-location").textContent = eventState.location || "Por definir";
-  getElement("cv-summary-budget").textContent = styleOption?.budget || eventState.budget || "Por definir";
-  getElement("cv-summary-services").textContent = services.length ? services.map((service) => service.label).join(", ") : "Pendiente";
+  setSummaryValue("cv-summary-event", eventOption?.label || "-");
+  setSummaryValue("cv-summary-guests", guestOption?.label || "-");
+  setSummaryValue("cv-summary-style", styleOption?.label || "-");
+  setSummaryValue("cv-summary-date", eventState.date || "-");
+  setSummaryValue("cv-summary-location", eventState.location || "-");
+  setSummaryValue("cv-summary-budget", styleOption?.budget || eventState.budget || "-");
+  setSummaryValue("cv-summary-services", services.length ? services.map((service) => service.label).join(", ") : "-");
   getElement("cv-estimated-total").textContent = total ? formatMoney(total) : "$0";
   getElement("cv-orb-estimate").textContent = total ? `Estimado actual: ${formatMoney(total)}` : "Toca para seleccionar";
 
@@ -214,18 +253,29 @@ function updateOrb() {
   orb.dataset.orbTheme = theme;
   orb.style.setProperty("--cv-orb-scene", orbThemes[theme] || orbThemes.default);
   getElement("cv-orb-label").textContent = stage.id === "proposal" ? "Propuesta Cater Vegas" : "BEOFlow";
-  getElement("cv-orb-title").textContent = stage.id === "proposal" ? "Lista para reservar" : title;
+  const titleElement = getElement("cv-orb-title");
+  const nextTitle = stage.id === "proposal" ? "Lista para reservar" : title;
+  titleElement.textContent = nextTitle;
+
+  if (lastOrbTitle && lastOrbTitle !== nextTitle) {
+    titleElement.classList.remove("is-updating");
+    window.requestAnimationFrame(() => titleElement.classList.add("is-updating"));
+  }
+
+  lastOrbTitle = nextTitle;
 }
 
-function nodePosition(index, total) {
+function nodePosition(index, total, options = {}) {
   const angle = (-90 + (360 / total) * index) * (Math.PI / 180);
   const field = getElement("cv-orb-field");
   const width = field?.clientWidth || 850;
   const height = field?.clientHeight || 520;
   const nodeGuard = Math.min(74, Math.max(48, Math.min(width, height) * 0.16));
   const compactMultiplier = total <= 4 ? 0.8 : 1;
-  const radiusX = Math.max(110, ((width / 2) - nodeGuard) * compactMultiplier);
-  const radiusY = Math.max(92, ((height / 2) - nodeGuard) * compactMultiplier);
+  const planningX = options.planning ? 0.96 : 1;
+  const planningY = options.planning ? 0.86 : 1;
+  const radiusX = Math.max(110, ((width / 2) - nodeGuard) * compactMultiplier * planningX);
+  const radiusY = Math.max(92, ((height / 2) - nodeGuard) * compactMultiplier * planningY);
 
   return {
     x: Math.round(Math.cos(angle) * radiusX),
@@ -234,6 +284,7 @@ function nodePosition(index, total) {
 }
 
 function isOptionSelected(stage, option) {
+  if (option.kind === "planning-hub") return option.targetStage === stage.id;
   if (stage.id === "event") return eventState.eventType === option.id;
   if (stage.id === "guests") return eventState.guests === option.id;
   if (stage.id === "style") return eventState.style === option.id;
@@ -241,19 +292,71 @@ function isOptionSelected(stage, option) {
   return false;
 }
 
+function shouldShowPlanningHub(stage) {
+  return stage.id === "guests" && eventState.eventType && !eventState.guests && showingPlanningHub;
+}
+
+function visibleOptions(stage) {
+  return shouldShowPlanningHub(stage) ? planningCategoryOptions : stage.options;
+}
+
+function showThinkingStatus(message = "BEOFlow ajustando opciones...") {
+  const status = getElement("cv-thinking-status");
+  status.textContent = message;
+  status.setAttribute("aria-hidden", "false");
+  status.classList.add("is-visible");
+
+  window.clearTimeout(thinkingTimer);
+  thinkingTimer = window.setTimeout(() => {
+    status.classList.remove("is-visible");
+    status.setAttribute("aria-hidden", "true");
+  }, 850);
+}
+
+function triggerNodeFeedback(node) {
+  const field = getElement("cv-orb-field");
+  const orb = getElement("cv-orb");
+  const fieldRect = field.getBoundingClientRect();
+  const nodeRect = node.getBoundingClientRect();
+  const ripple = document.createElement("span");
+  const rippleX = nodeRect.left + nodeRect.width / 2 - fieldRect.left - fieldRect.width / 2;
+  const rippleY = nodeRect.top + nodeRect.height / 2 - fieldRect.top - fieldRect.height / 2;
+
+  node.classList.add("is-clicked");
+  ripple.className = "cv-selection-ripple";
+  ripple.style.setProperty("--ripple-x", `${Math.round(rippleX)}px`);
+  ripple.style.setProperty("--ripple-y", `${Math.round(rippleY)}px`);
+  field.appendChild(ripple);
+
+  orb.classList.remove("is-pulsing");
+  window.requestAnimationFrame(() => orb.classList.add("is-pulsing"));
+
+  ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+  window.setTimeout(() => {
+    node.classList.remove("is-clicked");
+    orb.classList.remove("is-pulsing");
+  }, 740);
+}
+
 function renderNodes() {
   const stage = currentStage();
   const layer = getElement("cv-node-layer");
+  const options = visibleOptions(stage);
+  const planningMode = shouldShowPlanningHub(stage);
   layer.innerHTML = "";
 
-  stage.options.forEach((option, index) => {
-    const position = nodePosition(index, stage.options.length);
+  layer.dataset.mode = planningMode ? "planning" : stage.id;
+
+  options.forEach((option, index) => {
+    const position = nodePosition(index, options.length, { planning: planningMode });
     const node = document.createElement("button");
     node.className = "cv-node";
     node.type = "button";
     node.style.setProperty("--node-x", `${position.x}px`);
     node.style.setProperty("--node-y", `${position.y}px`);
+    node.style.setProperty("--node-delay", `${index * 34}ms`);
     node.dataset.optionId = option.id;
+    node.dataset.nodeKind = option.kind || stage.id;
     node.disabled = Boolean(option.disabled);
     node.setAttribute("aria-pressed", String(isOptionSelected(stage, option)));
     node.classList.toggle("is-selected", isOptionSelected(stage, option));
@@ -262,23 +365,98 @@ function renderNodes() {
       ${option.badge || option.id === "pay" ? `<span class="cv-node-badge">${option.id === "pay" ? "TODO" : option.badge}</span>` : ""}
       <span class="cv-node-icon" aria-hidden="true">${option.icon}</span>
       <strong>${option.label}</strong>
-      <small>${stage.multi ? "Toca para incluir" : option.note || "Seleccionar"}</small>
+      <small>${option.kind === "planning-hub" ? option.note : stage.multi ? "Toca para incluir" : option.note || "Seleccionar"}</small>
     `;
 
-    node.addEventListener("click", () => selectOption(stage.id, option));
+    node.addEventListener("click", () => {
+      triggerNodeFeedback(node);
+      selectOption(stage.id, option);
+    });
     layer.appendChild(node);
   });
+}
+
+function parseCountLabel(label) {
+  const match = String(label).match(/^(\d+)(.*)$/);
+  if (!match) return null;
+  return {
+    value: Number(match[1]),
+    suffix: match[2] || ""
+  };
+}
+
+function animateRemainingCount(nextLabel) {
+  const element = getElement("cv-remaining-count");
+  if (element.textContent === nextLabel) return;
+
+  const target = parseCountLabel(nextLabel);
+  const current = parseCountLabel(element.textContent) || target;
+
+  if (!target || !current) {
+    element.textContent = nextLabel;
+    return;
+  }
+
+  window.cancelAnimationFrame(remainingCountFrame);
+  const started = performance.now();
+  const duration = 560;
+  const startValue = current.value;
+  const delta = target.value - startValue;
+
+  element.classList.add("is-counting");
+
+  function tick(now) {
+    const progress = Math.min(1, (now - started) / duration);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    element.textContent = `${Math.round(startValue + delta * eased)}${target.suffix}`;
+
+    if (progress < 1) {
+      remainingCountFrame = window.requestAnimationFrame(tick);
+      return;
+    }
+
+    element.textContent = nextLabel;
+    window.setTimeout(() => element.classList.remove("is-counting"), 180);
+  }
+
+  remainingCountFrame = window.requestAnimationFrame(tick);
 }
 
 function updateStageText() {
   const stage = currentStage();
   getElement("cv-stage-question").textContent = stage.question;
   getElement("cv-stage-helper").textContent = stage.helperText;
-  getElement("cv-remaining-count").textContent = stage.remainingCount;
+  animateRemainingCount(shouldShowPlanningHub(stage) ? "200+" : stage.remainingCount);
   getElement("cv-back-button").disabled = currentStageIndex === 0;
   getElement("cv-services-continue").hidden = stage.id !== "services";
   getElement("cv-summary-action").hidden = !["summary", "proposal"].includes(stage.id);
   getElement("cv-summary-action").textContent = stage.id === "proposal" ? "Reservar ahora" : "Ver propuesta";
+}
+
+function animateProgressValue(progress) {
+  const element = getElement("cv-progress-value");
+  const current = parseInt(element.textContent, 10) || 0;
+  if (current === progress) return;
+
+  window.cancelAnimationFrame(progressFrame);
+  const started = performance.now();
+  const duration = 520;
+  const delta = progress - current;
+
+  function tick(now) {
+    const ratio = Math.min(1, (now - started) / duration);
+    const eased = 1 - Math.pow(1 - ratio, 3);
+    element.textContent = `${Math.round(current + delta * eased)}%`;
+
+    if (ratio < 1) {
+      progressFrame = window.requestAnimationFrame(tick);
+      return;
+    }
+
+    element.textContent = `${progress}%`;
+  }
+
+  progressFrame = window.requestAnimationFrame(tick);
 }
 
 function updateTimeline() {
@@ -289,8 +467,10 @@ function updateTimeline() {
   });
 
   const progress = Math.round((currentStageIndex / (stageOrder.length - 1)) * 100);
-  getElement("cv-progress-value").textContent = `${progress}%`;
+  animateProgressValue(progress);
   getElement("cv-progress-fill").style.width = `${progress}%`;
+  document.querySelector(".cv-timeline").style.setProperty("--timeline-progress", `${progress}%`);
+  document.querySelector(".cv-timeline").style.setProperty("--timeline-progress-track", `${Math.min(86, progress * 0.86)}%`);
 }
 
 function renderStage() {
@@ -304,6 +484,7 @@ function renderStage() {
 function goToStage(stageId) {
   const index = stageOrder.indexOf(stageId);
   if (index < 0) return;
+  if (stageId === "event") showingPlanningHub = false;
   currentStageIndex = index;
   renderStage();
 }
@@ -321,8 +502,22 @@ function goBack() {
 function selectOption(stageId, option) {
   if (option.disabled) return;
 
+  showThinkingStatus(option.kind === "planning-hub" ? "Calculando combinaciones ideales..." : "BEOFlow ajustando opciones...");
+
+  if (option.kind === "planning-hub") {
+    showingPlanningHub = false;
+    if (option.targetStage === stageId) {
+      renderStage();
+      return;
+    }
+
+    goToStage(option.targetStage);
+    return;
+  }
+
   if (stageId === "event") {
     eventState.eventType = option.id;
+    showingPlanningHub = true;
     renderStage();
     setTimeout(goToNextStage, 260);
     return;
@@ -330,6 +525,7 @@ function selectOption(stageId, option) {
 
   if (stageId === "guests") {
     eventState.guests = option.id;
+    showingPlanningHub = false;
     renderStage();
     setTimeout(goToNextStage, 260);
     return;
@@ -368,7 +564,32 @@ function resetFlow() {
   eventState.budget = null;
   eventState.estimatedTotal = 0;
   currentStageIndex = 0;
+  showingPlanningHub = false;
   renderStage();
+}
+
+function initParallax() {
+  const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const desktop = window.matchMedia("(min-width: 901px)");
+
+  if (reduceMotion.matches) return;
+
+  window.addEventListener("pointermove", (event) => {
+    if (!desktop.matches) return;
+
+    window.cancelAnimationFrame(parallaxFrame);
+    parallaxFrame = window.requestAnimationFrame(() => {
+      const x = ((event.clientX / window.innerWidth) - 0.5) * 18;
+      const y = ((event.clientY / window.innerHeight) - 0.5) * 14;
+      document.body.style.setProperty("--cv-parallax-x", `${x.toFixed(2)}px`);
+      document.body.style.setProperty("--cv-parallax-y", `${y.toFixed(2)}px`);
+    });
+  }, { passive: true });
+
+  window.addEventListener("pointerleave", () => {
+    document.body.style.setProperty("--cv-parallax-x", "0px");
+    document.body.style.setProperty("--cv-parallax-y", "0px");
+  });
 }
 
 function initGalaxy() {
@@ -391,6 +612,8 @@ function initGalaxy() {
   document.querySelectorAll("[data-inspiration]").forEach((button) => {
     button.addEventListener("click", () => {
       eventState.eventType = button.dataset.inspiration;
+      showingPlanningHub = true;
+      showThinkingStatus("BEOFlow ajustando opciones...");
       goToStage("guests");
     });
   });
@@ -420,6 +643,7 @@ function initGalaxy() {
     resizeTimer = window.setTimeout(renderStage, 120);
   });
 
+  initParallax();
   renderStage();
 }
 

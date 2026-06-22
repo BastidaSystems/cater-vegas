@@ -9,7 +9,7 @@
   <title>Cater Vegas | BEOFlow Event Galaxy</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23050505'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Georgia,serif' font-size='24' fill='%23f4cf83'%3ECV%3C/text%3E%3C/svg%3E">
   <link rel="preconnect" href="https://images.unsplash.com">
-  <link rel="stylesheet" href="style.css?v=luxury-galaxy-2518150">
+  <link rel="stylesheet" href="style.css?v=luxury-galaxy-orbit-polish-6">
 </head>
 <body>
   <header class="cv-header" id="top">
@@ -64,7 +64,7 @@
                   <circle cx="18" cy="17" r="2"></circle>
                 </svg>
               </span>
-              <span>Respuestas posibles</span>
+              <span>Combinaciones posibles</span>
               <strong id="cv-remaining-count">200+</strong>
             </article>
           </div>
@@ -88,6 +88,7 @@
             </div>
 
             <div class="cv-node-layer" id="cv-node-layer" aria-live="polite"></div>
+            <div class="cv-thinking-status" id="cv-thinking-status" aria-live="polite" aria-hidden="true">BEOFlow ajustando opciones...</div>
           </div>
 
           <div class="cv-center-actions">
@@ -105,38 +106,38 @@
           <dl class="cv-summary-list">
             <div>
               <dt data-icon="event">Tipo de evento</dt>
-              <dd id="cv-summary-event">Pendiente</dd>
+              <dd id="cv-summary-event">-</dd>
             </div>
             <div>
               <dt data-icon="guests">Invitados</dt>
-              <dd id="cv-summary-guests">Pendiente</dd>
+              <dd id="cv-summary-guests">-</dd>
             </div>
             <div>
               <dt data-icon="style">Estilo</dt>
-              <dd id="cv-summary-style">Pendiente</dd>
+              <dd id="cv-summary-style">-</dd>
             </div>
             <div>
               <dt data-icon="date">Fecha</dt>
-              <dd id="cv-summary-date">Pendiente</dd>
+              <dd id="cv-summary-date">-</dd>
             </div>
             <div>
               <dt data-icon="location">Lugar</dt>
-              <dd id="cv-summary-location">Pendiente</dd>
+              <dd id="cv-summary-location">-</dd>
             </div>
             <div>
               <dt data-icon="budget">Presupuesto</dt>
-              <dd id="cv-summary-budget">Pendiente</dd>
+              <dd id="cv-summary-budget">-</dd>
             </div>
             <div>
               <dt data-icon="services">Servicios</dt>
-              <dd id="cv-summary-services">Pendiente</dd>
+              <dd id="cv-summary-services">-</dd>
             </div>
           </dl>
 
           <div class="cv-estimate-card">
             <span>Estimado actual</span>
             <strong id="cv-estimated-total">$0</strong>
-            <p>Este cálculo es preliminar y se ajustará con fecha, lugar, menú y producción.</p>
+            <p>Se actualizará conforme respondes.</p>
           </div>
 
           <button class="cv-summary-detail" type="button" id="cv-summary-detail">
@@ -149,22 +150,24 @@
       </div>
 
       <div class="cv-bottom-bar">
-        <div class="cv-progress-meter" aria-label="Porcentaje de progreso">
-          <span>Tu progreso</span>
-          <div class="cv-progress-track" aria-hidden="true">
-            <i id="cv-progress-fill"></i>
+        <div class="cv-progress-panel">
+          <div class="cv-progress-meter" aria-label="Porcentaje de progreso">
+            <span>Tu progreso</span>
+            <div class="cv-progress-track" aria-hidden="true">
+              <i id="cv-progress-fill"></i>
+            </div>
+            <strong id="cv-progress-value">0%</strong>
           </div>
-          <strong id="cv-progress-value">0%</strong>
-        </div>
 
-        <nav class="cv-timeline" aria-label="Progreso del evento">
-          <button type="button" data-stage-target="event" data-step="01" class="is-active">Evento</button>
-          <button type="button" data-stage-target="guests" data-step="02">Invitados</button>
-          <button type="button" data-stage-target="style" data-step="03">Estilo</button>
-          <button type="button" data-stage-target="services" data-step="04">Servicios</button>
-          <button type="button" data-stage-target="summary" data-step="05">Resumen</button>
-          <button type="button" data-stage-target="proposal" data-step="06">Propuesta / Pago</button>
-        </nav>
+          <nav class="cv-timeline" aria-label="Progreso del evento">
+            <button type="button" data-stage-target="event" data-step="01" class="is-active">Evento</button>
+            <button type="button" data-stage-target="guests" data-step="02">Invitados</button>
+            <button type="button" data-stage-target="style" data-step="03">Estilo</button>
+            <button type="button" data-stage-target="services" data-step="04">Servicios</button>
+            <button type="button" data-stage-target="summary" data-step="05">Resumen</button>
+            <button type="button" data-stage-target="proposal" data-step="06">Propuesta</button>
+          </nav>
+        </div>
 
         <div class="cv-inspiration" aria-label="Inspiración de eventos">
           <button class="cv-inspiration-arrow cv-inspiration-arrow-prev" type="button" data-inspiration-scroll="prev" aria-label="Ver inspiración anterior">
@@ -241,6 +244,6 @@
     </section>
   </main>
 
-  <script src="script.js?v=luxury-galaxy-2518150"></script>
+  <script src="script.js?v=luxury-galaxy-orbit-polish-6"></script>
 </body>
 </html>
