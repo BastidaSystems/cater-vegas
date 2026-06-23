@@ -121,10 +121,10 @@ svg {
   min-height: var(--cv-header-height);
   padding: clamp(10px, 1.5vh, 18px) var(--cv-gutter);
   background:
-    radial-gradient(circle at 62% 12%, rgba(186, 218, 255, 0.34), transparent 30%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.02) 48%, rgba(0, 0, 0, 0.2)),
-    linear-gradient(180deg, rgba(8, 36, 66, 0), rgba(0, 0, 0, 0.2)),
-    url("assets/cater-vegas-navbar-scene.svg") center 24% / cover no-repeat,
+    radial-gradient(circle at 62% 12%, rgba(255, 239, 186, 0.22), transparent 30%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.28), rgba(0, 0, 0, 0.04) 48%, rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, rgba(4, 14, 26, 0.06), rgba(0, 0, 0, 0.22)),
+    url("assets/cater-vegas-navbar-photo.png") center 46% / cover no-repeat,
     rgba(3, 3, 3, 0.82);
   border-bottom: 1px solid rgba(241, 200, 109, 0.14);
   backdrop-filter: blur(20px);
