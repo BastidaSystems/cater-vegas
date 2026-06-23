@@ -1,259 +1,238 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta
-      name="description"
-      content="Cater Vegas, coordinación de eventos y servicios de catering premium."
-    />
-    <title>Cater Vegas</title>
-    <link rel="stylesheet" href="style.css?v=scale-2" />
-  </head>
-  <body>
-    <header class="site-header" aria-label="Encabezado principal">
-      <a class="logo" href="#" aria-label="Cater Vegas inicio">CATER VEGAS</a>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Cater Vegas ofrece una experiencia premium para planear eventos privados, corporativos, bodas y catering de lujo en Las Vegas.">
+  <meta name="keywords" content="Las Vegas catering, corporate catering Las Vegas, wedding catering Las Vegas, convention catering, hotel catering Las Vegas, private event catering">
+  <meta name="theme-color" content="#050505">
+  <title>Cater Vegas | BEOFlow Event Galaxy</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23050505'/%3E%3Ctext x='32' y='40' text-anchor='middle' font-family='Georgia,serif' font-size='24' fill='%23f4cf83'%3ECV%3C/text%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://images.unsplash.com">
+  <link rel="stylesheet" href="style.css?v=luxury-galaxy-desktop-zoom-11">
+</head>
+<body>
+  <header class="cv-header" id="top">
+    <a class="cv-brand" href="#top" aria-label="Cater Vegas home">
+      <span class="cv-brand-crown" aria-hidden="true">
+        <svg viewBox="0 0 54 28">
+          <path d="M6 23h42M11 22l4-15 10 10 8-14 8 14 10-10 4 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="15" cy="6" r="2" fill="currentColor"/>
+          <circle cx="33" cy="3" r="2" fill="currentColor"/>
+          <circle cx="51" cy="6" r="2" fill="currentColor"/>
+        </svg>
+      </span>
+      <span class="cv-brand-wordmark">CATER VEGAS</span>
+      <span class="cv-brand-subtitle">Events & Catering</span>
+    </a>
 
-      <nav class="header-actions" aria-label="Acceso">
-        <a class="header-link" href="login.html">Login</a>
-        <a class="header-link header-link-primary" href="create-account.html">Crear cuenta</a>
-      </nav>
-    </header>
+    <div class="cv-assistant-label" aria-label="BEOFlow assistant">
+      <span aria-hidden="true">✦</span>
+      <strong>BEOFlow</strong>
+      <p>Tu asistente inteligente para crear eventos inolvidables</p>
+    </div>
 
-    <main class="hero" data-screen="home">
-      <nav class="flow-progress" aria-label="Progreso del plan">
-        <ol class="flow-progress-list">
-          <li class="is-active" data-progress-step="budget">
-            <span>01</span>
-            <strong>Presupuesto</strong>
-          </li>
-          <li data-progress-step="event">
-            <span>02</span>
-            <strong>Evento</strong>
-          </li>
-          <li data-progress-step="menu">
-            <span>03</span>
-            <strong>Menú</strong>
-          </li>
-          <li data-progress-step="services">
-            <span>04</span>
-            <strong>Servicios</strong>
-          </li>
-          <li data-progress-step="done">
-            <span>05</span>
-            <strong>Listo</strong>
-          </li>
-        </ol>
-      </nav>
+    <div class="cv-header-actions">
+      <a class="cv-button cv-button-secondary" href="login.html">Iniciar sesión</a>
+      <a class="cv-button cv-button-primary" href="create-account.html">Crear cuenta</a>
+    </div>
+  </header>
 
-      <section class="hero-content screen-panel is-active" data-panel="home" aria-labelledby="hero-title">
-        <p class="hero-subtitle">
-          COORDINACIÓN DE EVENTOS Y SERVICIOS
-        </p>
+  <main>
+    <section class="cv-galaxy" id="event-galaxy" aria-labelledby="cv-stage-question">
+      <div class="cv-galaxy-shell">
+        <aside class="cv-intro-panel" aria-label="Guía BEOFlow">
+          <h1 id="cv-stage-question">¿Qué estás organizando?</h1>
+          <p id="cv-stage-helper">Elige el tipo de evento y reorganizaré las opciones para construir tu propuesta ideal.</p>
 
-        <h1 id="hero-title" class="hero-title">CATER VEGAS</h1>
-
-        <p class="hero-description">
-          Creamos experiencias inolvidables a través de una coordinación impecable,
-          gastronomía premium y servicios diseñados para superar expectativas.
-        </p>
-
-        <button class="generate-button" id="generateButton" type="button">
-          <span class="button-orbit" aria-hidden="true"></span>
-          <svg
-            class="cloche-icon"
-            viewBox="0 0 96 96"
-            fill="none"
-            aria-hidden="true"
-          >
-            <path
-              d="M48 25V18"
-              stroke="currentColor"
-              stroke-width="4"
-              stroke-linecap="round"
-            />
-            <path
-              d="M41 18H55"
-              stroke="currentColor"
-              stroke-width="4"
-              stroke-linecap="round"
-            />
-            <path
-              d="M22 62C24.5 42.5 35.5 31 48 31C60.5 31 71.5 42.5 74 62"
-              stroke="currentColor"
-              stroke-width="4"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-            <path
-              d="M16 67H80"
-              stroke="currentColor"
-              stroke-width="4"
-              stroke-linecap="round"
-            />
-            <path
-              d="M25 75H71"
-              stroke="currentColor"
-              stroke-width="4"
-              stroke-linecap="round"
-            />
-          </svg>
-          <span>GENERAR CATER</span>
-        </button>
-
-        <div class="process" aria-label="5 pasos">
-          <p class="process-label">5 PASOS</p>
-
-          <ol class="steps-track">
-            <li class="step-item">
-              <span class="step-number">01</span>
-              <span class="step-name">PRESUPUESTO</span>
-            </li>
-            <li class="step-item">
-              <span class="step-number">02</span>
-              <span class="step-name">EVENTO</span>
-            </li>
-            <li class="step-item">
-              <span class="step-number">03</span>
-              <span class="step-name">MENÚ</span>
-            </li>
-            <li class="step-item">
-              <span class="step-number">04</span>
-              <span class="step-name">SERVICIOS</span>
-            </li>
-            <li class="step-item">
-              <span class="step-number">05</span>
-              <span class="step-name">LISTO</span>
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      <section class="loading-panel screen-panel" data-panel="loading" aria-live="polite">
-        <div class="loading-ring" aria-hidden="true">
-          <span></span>
-        </div>
-        <p class="loading-title">Generando evento con BEOFlow</p>
-        <p class="loading-copy">
-          Analizando catering, logística, transporte y hospedaje.
-        </p>
-      </section>
-
-      <section class="budget-panel screen-panel" data-panel="budget" aria-labelledby="budget-title">
-        <p class="flow-step">01 / 05</p>
-        <h2 id="budget-title" class="flow-title">¿Cuál es tu presupuesto aproximado?</h2>
-        <p class="flow-copy">
-          BEOFlow usará este rango para filtrar proveedores, logística y nivel de servicio.
-        </p>
-
-        <div class="budget-grid" aria-label="Rangos de presupuesto">
-          <button class="budget-card" type="button" data-budget="2k-5k">
-            <span>$2K - $5K</span>
-            <small>Esencial</small>
-          </button>
-          <button class="budget-card is-selected" type="button" data-budget="5k-10k">
-            <span>$5K - $10K</span>
-            <small>Premium</small>
-          </button>
-          <button class="budget-card" type="button" data-budget="10k-25k">
-            <span>$10K - $25K</span>
-            <small>Completo</small>
-          </button>
-          <button class="budget-card" type="button" data-budget="25k-plus">
-            <span>$25K+</span>
-            <small>Luxury</small>
-          </button>
-        </div>
-
-        <p class="smart-note" id="budgetInsight">
-          BEOFlow priorizará catering premium y proveedores flexibles para eventos medianos.
-        </p>
-
-        <button class="continue-button" id="budgetContinue" type="button">Continuar</button>
-      </section>
-
-      <section class="event-panel screen-panel" data-panel="event" aria-labelledby="event-title">
-        <p class="flow-step">02 / 05</p>
-        <h2 id="event-title" class="flow-title">¿Qué tipo de evento quieres crear?</h2>
-        <p class="flow-copy" id="eventInsight">
-          Con tu presupuesto, BEOFlow ajustará el tipo de experiencia y proveedores recomendados.
-        </p>
-
-        <div class="event-carousel" aria-label="Tipos de evento">
-          <button class="carousel-arrow" type="button" data-carousel="prev" aria-label="Evento anterior">
-            ‹
-          </button>
-
-          <div class="event-cards">
-            <button class="event-card is-selected" type="button" data-event="Boda">
-              <span class="event-icon" aria-hidden="true">♢</span>
-              <span>Boda</span>
-            </button>
-            <button class="event-card" type="button" data-event="Corporativo">
-              <span class="event-icon" aria-hidden="true">□</span>
-              <span>Corporativo</span>
-            </button>
-            <button class="event-card" type="button" data-event="VIP">
-              <span class="event-icon" aria-hidden="true">☆</span>
-              <span>VIP</span>
-            </button>
+          <div class="cv-guide-grid">
+            <article class="cv-guide-card">
+              <span class="cv-guide-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 2l1.9 5.9L20 10l-6.1 2.1L12 18l-1.9-5.9L4 10l6.1-2.1L12 2z"></path>
+                  <path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15z"></path>
+                </svg>
+              </span>
+              <span>Asistente inteligente</span>
+              <strong>Te guiaré paso a paso para crear el evento ideal.</strong>
+            </article>
           </div>
 
-          <button class="carousel-arrow" type="button" data-carousel="next" aria-label="Siguiente evento">
-            ›
+          <div class="cv-stage-actions">
+            <button class="cv-text-button" type="button" id="cv-back-button">Volver</button>
+            <button class="cv-text-button" type="button" id="cv-reset-button">Reiniciar</button>
+          </div>
+        </aside>
+
+        <section class="cv-orb-stage" aria-label="Constructor visual de evento">
+          <div class="cv-orb-field" id="cv-orb-field">
+            <div class="cv-orb" id="cv-orb" data-orb-theme="default">
+              <div class="cv-orb-image" aria-hidden="true"></div>
+              <div class="cv-orb-ring" aria-hidden="true"></div>
+              <div class="cv-orb-copy">
+                <span id="cv-orb-label">Cater Vegas</span>
+                <strong id="cv-orb-title">Evento inolvidable</strong>
+                <em id="cv-orb-estimate">Estimado actual: pendiente</em>
+              </div>
+            </div>
+
+            <div class="cv-node-layer" id="cv-node-layer" aria-live="polite"></div>
+            <div class="cv-thinking-status" id="cv-thinking-status" aria-live="polite" aria-hidden="true">BEOFlow ajustando opciones...</div>
+          </div>
+
+          <div class="cv-center-actions">
+            <button class="cv-button cv-button-secondary" type="button" id="cv-services-continue" hidden>Continuar</button>
+            <button class="cv-button cv-button-primary" type="button" id="cv-summary-action" hidden>Ver propuesta</button>
+          </div>
+        </section>
+
+        <aside class="cv-summary" aria-label="Resumen en tiempo real">
+          <div class="cv-summary-header">
+            <span>Resumen en tiempo real</span>
+            <strong id="quoteTotal">Estimado actual</strong>
+          </div>
+
+          <dl class="cv-summary-list">
+            <div>
+              <dt data-icon="event">Tipo de evento</dt>
+              <dd id="cv-summary-event">-</dd>
+            </div>
+            <div>
+              <dt data-icon="guests">Invitados</dt>
+              <dd id="cv-summary-guests">-</dd>
+            </div>
+            <div>
+              <dt data-icon="style">Estilo</dt>
+              <dd id="cv-summary-style">-</dd>
+            </div>
+            <div>
+              <dt data-icon="date">Fecha</dt>
+              <dd id="cv-summary-date">-</dd>
+            </div>
+            <div>
+              <dt data-icon="location">Lugar</dt>
+              <dd id="cv-summary-location">-</dd>
+            </div>
+            <div>
+              <dt data-icon="budget">Presupuesto</dt>
+              <dd id="cv-summary-budget">-</dd>
+            </div>
+            <div>
+              <dt data-icon="services">Servicios</dt>
+              <dd id="cv-summary-services">-</dd>
+            </div>
+          </dl>
+
+          <div class="cv-estimate-card">
+            <span>Estimado actual</span>
+            <strong id="cv-estimated-total">$0</strong>
+            <p>Se actualizará conforme respondes.</p>
+          </div>
+
+          <button class="cv-summary-detail" type="button" id="cv-summary-detail">
+            <span>Ver resumen detallado</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 5l7 7-7 7"></path>
+            </svg>
+          </button>
+        </aside>
+      </div>
+
+      <div class="cv-bottom-bar">
+        <div class="cv-progress-panel">
+          <div class="cv-progress-meter" aria-label="Porcentaje de progreso">
+            <span>Tu progreso</span>
+            <div class="cv-progress-track" aria-hidden="true">
+              <i id="cv-progress-fill"></i>
+            </div>
+            <strong id="cv-progress-value">0%</strong>
+          </div>
+
+          <nav class="cv-timeline" aria-label="Progreso del evento">
+            <button type="button" data-stage-target="event" data-step="01" class="is-active">Evento</button>
+            <button type="button" data-stage-target="guests" data-step="02">Invitados</button>
+            <button type="button" data-stage-target="style" data-step="03">Estilo</button>
+            <button type="button" data-stage-target="services" data-step="04">Servicios</button>
+            <button type="button" data-stage-target="summary" data-step="05">Resumen</button>
+            <button type="button" data-stage-target="proposal" data-step="06">Propuesta</button>
+          </nav>
+        </div>
+
+        <div class="cv-inspiration" aria-label="Inspiración de eventos">
+          <button class="cv-inspiration-arrow cv-inspiration-arrow-prev" type="button" data-inspiration-scroll="prev" aria-label="Ver inspiración anterior">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 5l-7 7 7 7"></path>
+            </svg>
+          </button>
+          <div class="cv-inspiration-copy">
+            <strong>¿Necesitas inspiración?</strong>
+            <span>Explora ideas reales de eventos en Las Vegas.</span>
+          </div>
+          <div class="cv-inspiration-track" id="cv-inspiration-track">
+            <button class="cv-inspiration-card" type="button" data-inspiration="wedding"><span>Bodas elegantes</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="birthday"><span>Cumpleaños de lujo</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="corporate"><span>Eventos corporativos</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="private-party"><span>Fiestas privadas</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="baby-shower"><span>Baby showers</span></button>
+            <button class="cv-inspiration-card" type="button" data-inspiration="graduation"><span>Graduaciones</span></button>
+          </div>
+          <button class="cv-inspiration-arrow cv-inspiration-arrow-next" type="button" data-inspiration-scroll="next" aria-label="Ver más inspiración">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9 5l7 7-7 7"></path>
+            </svg>
           </button>
         </div>
+      </div>
 
-        <div class="event-preview" aria-live="polite">
-          <p id="eventDescription">Bodas privadas, cenas elegantes y experiencias completas.</p>
-        </div>
+      <form class="cv-legacy-state" id="quoteForm" aria-hidden="true">
+        <input type="hidden" id="budgetTier" value="">
+        <select id="eventType" tabindex="-1">
+          <option value="">Pendiente</option>
+          <option value="wedding">Boda</option>
+          <option value="birthday">Cumpleaños</option>
+          <option value="corporate">Corporativo</option>
+          <option value="baby-shower">Baby Shower</option>
+          <option value="anniversary">Aniversario</option>
+          <option value="graduation">Graduación</option>
+          <option value="farewell">Despedida</option>
+          <option value="private-party">Fiesta privada</option>
+          <option value="other">Otro evento</option>
+        </select>
+        <input type="number" id="guestCount" value="0" tabindex="-1">
+        <select id="menuStyle" tabindex="-1">
+          <option value="">Pendiente</option>
+          <option value="essential">Esencial</option>
+          <option value="premium">Premium</option>
+          <option value="luxury">Luxury</option>
+          <option value="custom">Personalizado</option>
+        </select>
+        <select id="serviceLevel" tabindex="-1">
+          <option value="">Pendiente</option>
+          <option value="delivery">Catering</option>
+          <option value="full">Servicio completo</option>
+          <option value="vip">Luxury VIP</option>
+        </select>
+        <select id="addonPackage" tabindex="-1">
+          <option value="">Pendiente</option>
+          <option value="standard">Servicios base</option>
+          <option value="bar">Barra Premium</option>
+          <option value="production">Producción completa</option>
+        </select>
+        <input type="date" id="eventDate" tabindex="-1">
+        <input type="time" id="eventTime" value="18:00" tabindex="-1">
+        <span id="depositDue"></span>
+        <span id="profitMargin"></span>
+        <span id="beoflowForecast"></span>
+        <span id="planBudget"></span>
+        <span id="planEvent"></span>
+        <span id="planMenu"></span>
+        <span id="planServices"></span>
+        <span id="menuRecommendation"></span>
+        <button type="submit" data-planner-submit tabindex="-1">Crear solicitud</button>
+      </form>
+    </section>
+  </main>
 
-        <button class="continue-button" id="eventContinue" type="button">Continuar</button>
-      </section>
-
-      <aside class="plan-summary" aria-label="Plan actual">
-        <p class="summary-kicker">Plan actual</p>
-
-        <dl class="summary-list">
-          <div class="summary-row">
-            <dt>Presupuesto</dt>
-            <dd id="summaryBudget">$5K - $10K</dd>
-            <button type="button" data-edit-step="budget">Editar</button>
-          </div>
-
-          <div class="summary-row">
-            <dt>Evento</dt>
-            <dd id="summaryEvent">Boda</dd>
-            <button type="button" data-edit-step="event">Editar</button>
-          </div>
-
-          <div class="summary-row">
-            <dt>Menú</dt>
-            <dd id="summaryMenu">Pendiente</dd>
-            <span></span>
-          </div>
-
-          <div class="summary-row">
-            <dt>Servicios</dt>
-            <dd id="summaryServices">Pendiente</dd>
-            <span></span>
-          </div>
-        </dl>
-
-        <form class="beoflow-prompt" id="beoflowPromptForm" aria-label="Asistente BEOFlow">
-          <div class="beoflow-orb" aria-hidden="true">BF</div>
-          <input
-            id="beoflowPrompt"
-            type="text"
-            autocomplete="off"
-            placeholder="Dile a BEOFlow qué necesitas..."
-          />
-          <button class="beoflow-submit" type="submit">Enviar</button>
-          <p class="beoflow-status" id="beoflowStatus" aria-live="polite"></p>
-        </form>
-      </aside>
-    </main>
-
-    <script type="module" src="script.js"></script>
-  </body>
+  <script src="script.js?v=luxury-galaxy-desktop-zoom-11"></script>
+</body>
 </html>
