@@ -739,6 +739,37 @@ svg {
   font-weight: 900;
 }
 
+.cv-node[data-node-kind="event"] {
+  align-content: center;
+  gap: 2px;
+}
+
+.cv-node[data-node-kind="event"] .cv-node-icon {
+  display: none;
+}
+
+.cv-node[data-node-kind="event"] strong {
+  order: 1;
+  max-width: 100%;
+  text-align: center;
+}
+
+.cv-node[data-node-kind="event"] .cv-node-badge {
+  position: static;
+  order: 2;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  line-height: 1;
+}
+
+.cv-node[data-node-kind="event"] small {
+  order: 3;
+}
+
 .cv-selection-ripple {
   position: absolute;
   left: 50%;
