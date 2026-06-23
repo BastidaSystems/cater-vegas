@@ -305,7 +305,7 @@ svg {
   margin: 0;
   color: #fffaf0;
   font-family: var(--cv-serif);
-  font-size: clamp(2.25rem, min(3.35vw, 6vh), 4.6rem);
+  font-size: clamp(2.35rem, min(3.42vw, 6.2vh), 4.7rem);
   font-weight: 500;
   letter-spacing: 0;
   line-height: 1.05;
@@ -322,7 +322,7 @@ svg {
 .cv-guide-grid {
   display: grid;
   gap: clamp(8px, 1.2vh, 16px);
-  margin-top: clamp(14px, 2vh, 28px);
+  margin-top: clamp(18px, 2.4vh, 32px);
 }
 
 .cv-guide-card,
@@ -343,6 +343,7 @@ svg {
   grid-template-columns: auto 1fr;
   gap: 7px 12px;
   align-items: center;
+  min-height: 104px;
   padding: clamp(12px, 1.3vw, 18px);
   overflow: hidden;
   border-color: rgba(241, 200, 109, 0.22);
@@ -647,10 +648,10 @@ svg {
   left: 50%;
   top: 50%;
   display: grid;
-  width: clamp(82px, min(8vw, 13vh), 128px);
+  width: clamp(58px, min(5.2vw, 8.4vh), 80px);
   aspect-ratio: 1;
   place-items: center;
-  padding: clamp(10px, 1.1vw, 16px) 10px;
+  padding: clamp(6px, 0.72vw, 10px) 7px;
   border: 1px solid rgba(241, 200, 109, 0.26);
   border-radius: 50%;
   background:
@@ -701,40 +702,40 @@ svg {
 
 .cv-node-icon {
   display: grid;
-  width: clamp(24px, 2.4vw, 36px);
-  height: clamp(24px, 2.4vw, 36px);
+  width: clamp(17px, 1.65vw, 24px);
+  height: clamp(17px, 1.65vw, 24px);
   place-items: center;
   color: var(--cv-gold-soft);
-  font-size: clamp(1.22rem, 1.8vw, 1.75rem);
+  font-size: clamp(0.88rem, 1.22vw, 1.16rem);
   line-height: 1;
 }
 
 .cv-node strong {
   color: var(--cv-gold-soft);
-  font-size: clamp(0.72rem, 0.9vw, 0.92rem);
-  line-height: 1.18;
+  font-size: clamp(0.54rem, 0.68vw, 0.7rem);
+  line-height: 1.08;
 }
 
 .cv-node small {
   color: var(--cv-muted);
-  font-size: clamp(0.62rem, 0.72vw, 0.74rem);
-  line-height: 1.2;
+  font-size: clamp(0.46rem, 0.55vw, 0.57rem);
+  line-height: 1.08;
 }
 
 .cv-node-badge {
   position: absolute;
-  top: 8px;
-  right: 6px;
+  top: 7px;
+  right: 5px;
   display: grid;
-  min-width: 30px;
-  min-height: 24px;
+  min-width: 20px;
+  min-height: 16px;
   place-items: center;
-  padding: 0 7px;
+  padding: 0 4px;
   border-radius: 999px;
   border: 1px solid rgba(255, 223, 154, 0.26);
   background: rgba(0, 0, 0, 0.38);
   color: var(--cv-gold-soft);
-  font-size: clamp(0.58rem, 0.68vw, 0.78rem);
+  font-size: clamp(0.44rem, 0.5vw, 0.56rem);
   font-weight: 900;
 }
 
@@ -1113,29 +1114,35 @@ svg {
 .cv-inspiration {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(148px, 210px) minmax(0, 1fr);
-  gap: clamp(6px, 0.75vw, 12px);
+  grid-template-columns: minmax(178px, 250px) minmax(0, 1fr);
+  gap: clamp(10px, 1vw, 16px);
   align-items: stretch;
-  padding: clamp(8px, 0.9vw, 14px);
+  padding: clamp(12px, 1.15vw, 18px);
 }
 
 .cv-inspiration-copy {
   display: grid;
   align-content: center;
-  gap: 5px;
-  padding: clamp(8px, 0.9vw, 14px);
+  gap: 7px;
+  padding: clamp(10px, 1vw, 18px);
   border-right: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .cv-inspiration-copy span {
   color: var(--cv-muted);
-  font-size: clamp(0.68rem, 0.78vw, 0.9rem);
+  font-size: clamp(0.76rem, 0.86vw, 0.96rem);
+  line-height: 1.35;
+}
+
+.cv-inspiration-copy strong {
+  font-size: clamp(0.82rem, 0.96vw, 1.08rem);
+  line-height: 1.22;
 }
 
 .cv-inspiration-track {
   display: grid;
-  grid-template-columns: repeat(6, minmax(92px, 1fr));
-  gap: clamp(6px, 0.75vw, 12px);
+  grid-template-columns: repeat(6, minmax(112px, 1fr));
+  gap: clamp(10px, 0.9vw, 16px);
   min-width: 0;
   overflow: hidden;
   scroll-behavior: smooth;
@@ -1146,12 +1153,12 @@ svg {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  min-height: clamp(62px, 7.8vh, 108px);
-  padding: clamp(7px, 0.8vw, 12px);
+  min-height: clamp(78px, 9.4vh, 128px);
+  padding: clamp(10px, 0.95vw, 14px);
   border: 1px solid rgba(241, 200, 109, 0.2);
   border-radius: var(--cv-radius);
   color: var(--cv-ivory);
-  font-size: clamp(0.62rem, 0.78vw, 0.84rem);
+  font-size: clamp(0.72rem, 0.86vw, 0.94rem);
   font-weight: 800;
   overflow: hidden;
   text-align: center;
@@ -1228,8 +1235,8 @@ svg {
   top: 50%;
   z-index: 4;
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   border: 1px solid rgba(241, 200, 109, 0.28);
   border-radius: 50%;
@@ -1240,7 +1247,7 @@ svg {
 }
 
 .cv-inspiration-arrow-prev {
-  left: calc(210px + 8px);
+  left: calc(250px + 10px);
 }
 
 .cv-inspiration-arrow-next {
@@ -1248,8 +1255,8 @@ svg {
 }
 
 .cv-inspiration-arrow svg {
-  width: 18px;
-  height: 18px;
+  width: 21px;
+  height: 21px;
   fill: none;
   stroke: currentColor;
   stroke-linecap: round;
@@ -1468,15 +1475,15 @@ svg {
   }
 
   .cv-inspiration {
-    grid-template-columns: minmax(120px, 170px) minmax(0, 1fr);
+    grid-template-columns: minmax(150px, 200px) minmax(0, 1fr);
   }
 
   .cv-inspiration-track {
-    grid-template-columns: repeat(6, minmax(76px, 1fr));
+    grid-template-columns: repeat(6, minmax(96px, 1fr));
   }
 
   .cv-inspiration-arrow-prev {
-    left: calc(170px + 8px);
+    left: calc(200px + 10px);
   }
 
 }
@@ -1602,7 +1609,61 @@ svg {
   }
 
   .cv-inspiration-card {
-    min-height: 54px;
+    min-height: 64px;
+  }
+}
+
+@media (min-width: 1500px) and (min-height: 760px) {
+  :root {
+    --cv-header-height: 96px;
+    --cv-gutter: clamp(24px, 2.6vw, 50px);
+  }
+
+  .cv-header {
+    min-height: var(--cv-header-height);
+    padding-block: 10px;
+  }
+
+  .cv-galaxy {
+    gap: 12px;
+    padding-block: 10px;
+  }
+
+  .cv-orb-field {
+    height: clamp(390px, calc(100dvh - var(--cv-header-height) - 330px), 440px);
+  }
+
+  .cv-orb {
+    width: clamp(285px, min(19vw, 37vh), 340px);
+  }
+
+  .cv-node {
+    width: clamp(64px, min(4.45vw, 8.6vh), 78px);
+  }
+
+  .cv-inspiration {
+    grid-template-columns: minmax(210px, 260px) minmax(0, 1fr);
+    padding: 8px;
+  }
+
+  .cv-inspiration-copy {
+    padding: 8px 16px;
+  }
+
+  .cv-inspiration-copy strong {
+    font-size: 1rem;
+  }
+
+  .cv-inspiration-copy span {
+    font-size: 0.72rem;
+  }
+
+  .cv-inspiration-track {
+    gap: 12px;
+  }
+
+  .cv-inspiration-card {
+    min-height: 78px;
   }
 }
 
@@ -1742,7 +1803,7 @@ svg {
   }
 
   .cv-inspiration-copy strong {
-    font-size: 0.66rem;
+    font-size: 0.78rem;
   }
 
   .cv-progress-meter span {
@@ -1750,7 +1811,7 @@ svg {
   }
 
   .cv-inspiration-card {
-    min-height: 48px;
+    min-height: 58px;
   }
 }
 

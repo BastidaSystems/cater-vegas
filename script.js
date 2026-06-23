@@ -266,16 +266,43 @@ function updateOrb() {
 }
 
 function nodePosition(index, total, options = {}) {
-  const angle = (-90 + (360 / total) * index) * (Math.PI / 180);
   const field = getElement("cv-orb-field");
   const width = field?.clientWidth || 850;
   const height = field?.clientHeight || 520;
-  const nodeGuard = Math.min(74, Math.max(48, Math.min(width, height) * 0.16));
+  const eventPositionMap = {
+    wedding: { x: 0, y: -0.4 },
+    other: { x: -0.28, y: -0.32 },
+    birthday: { x: 0.28, y: -0.32 },
+    "private-party": { x: -0.43, y: -0.05 },
+    corporate: { x: 0.43, y: -0.05 },
+    farewell: { x: -0.37, y: 0.2 },
+    "baby-shower": { x: 0.37, y: 0.2 },
+    graduation: { x: -0.15, y: 0.4 },
+    anniversary: { x: 0.15, y: 0.4 }
+  };
+
+  if (options.stageId === "event" && eventPositionMap[options.optionId]) {
+    const position = eventPositionMap[options.optionId];
+    return {
+      x: Math.round(position.x * width),
+      y: Math.round(position.y * height)
+    };
+  }
+
+  const eventAngles = [-104, -56, -10, 34, 76, 116, 158, 202, 246];
+  const angleDegrees = options.stageId === "event" && total === eventAngles.length
+    ? eventAngles[index]
+    : -90 + (360 / total) * index;
+  const angle = angleDegrees * (Math.PI / 180);
+  const isEventStage = options.stageId === "event";
+  const nodeGuard = isEventStage
+    ? Math.min(58, Math.max(42, Math.min(width, height) * 0.125))
+    : Math.min(74, Math.max(48, Math.min(width, height) * 0.16));
   const compactMultiplier = total <= 4 ? 0.8 : 1;
   const planningX = options.planning ? 0.96 : 1;
   const planningY = options.planning ? 0.86 : 1;
-  const radiusX = Math.max(110, ((width / 2) - nodeGuard) * compactMultiplier * planningX);
-  const radiusY = Math.max(92, ((height / 2) - nodeGuard) * compactMultiplier * planningY);
+  const radiusX = Math.max(110, ((width / 2) - nodeGuard) * compactMultiplier * planningX * (isEventStage ? 1.04 : 1));
+  const radiusY = Math.max(92, ((height / 2) - nodeGuard) * compactMultiplier * planningY * (isEventStage ? 1.07 : 1));
 
   return {
     x: Math.round(Math.cos(angle) * radiusX),
@@ -348,7 +375,7 @@ function renderNodes() {
   layer.dataset.mode = planningMode ? "planning" : stage.id;
 
   options.forEach((option, index) => {
-    const position = nodePosition(index, options.length, { planning: planningMode });
+    const position = nodePosition(index, options.length, { planning: planningMode, stageId: stage.id, optionId: option.id });
     const node = document.createElement("button");
     node.className = "cv-node";
     node.type = "button";
@@ -387,6 +414,7 @@ function parseCountLabel(label) {
 
 function animateRemainingCount(nextLabel) {
   const element = getElement("cv-remaining-count");
+  if (!element) return;
   if (element.textContent === nextLabel) return;
 
   const target = parseCountLabel(nextLabel);
