@@ -757,11 +757,11 @@ svg {
 .cv-node[data-node-kind="event"] .cv-node-badge {
   position: static;
   order: 2;
-  min-width: 0;
-  min-height: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
+  min-width: 20px;
+  min-height: 16px;
+  padding: 0 4px;
+  border: 1px solid rgba(255, 223, 154, 0.26);
+  background: rgba(0, 0, 0, 0.38);
   box-shadow: none;
   line-height: 1;
 }
