@@ -121,28 +121,21 @@ svg {
   min-height: var(--cv-header-height);
   padding: clamp(10px, 1.5vh, 18px) var(--cv-gutter);
   background:
-    radial-gradient(circle at 50% 0%, rgba(241, 200, 109, 0.1), transparent 34%),
-    linear-gradient(180deg, rgba(255, 221, 150, 0.055), transparent),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.46), rgba(0, 0, 0, 0.18) 45%, rgba(0, 0, 0, 0.5)),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.18), rgba(0, 0, 0, 0.6)),
+    url("assets/cater-vegas-navbar-scene.svg") center / cover no-repeat,
     rgba(3, 3, 3, 0.82);
   border-bottom: 1px solid rgba(241, 200, 109, 0.14);
   backdrop-filter: blur(20px);
 }
 
 .cv-brand {
-  display: block;
+  display: grid;
   width: fit-content;
   justify-self: start;
+  justify-items: center;
   color: var(--cv-gold);
-}
-
-.cv-brand-image {
-  display: block;
-  width: clamp(190px, 18vw, 285px);
-  height: clamp(52px, 5.6vh, 72px);
-  object-fit: cover;
-  object-position: center;
-  border-radius: 4px;
-  filter: drop-shadow(0 0 18px rgba(241, 200, 109, 0.18));
+  text-align: center;
 }
 
 .cv-brand-crown {
