@@ -495,7 +495,7 @@ svg {
   top: 50%;
   z-index: 4;
   display: grid;
-  width: clamp(190px, min(26vw, 34vh), 360px);
+  width: clamp(165px, min(22vw, 29vh), 315px);
   aspect-ratio: 1;
   place-items: center;
   overflow: hidden;
@@ -574,9 +574,9 @@ svg {
   z-index: 5;
   display: grid;
   justify-items: center;
-  width: 74%;
-  margin-top: 15%;
-  padding: clamp(8px, 0.82vw, 13px);
+  width: 72%;
+  margin-top: 12%;
+  padding: clamp(7px, 0.72vw, 11px);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.24);
@@ -587,7 +587,7 @@ svg {
 
 .cv-orb-copy span {
   color: var(--cv-gold-soft);
-  font-size: 0.68rem;
+  font-size: 0.58rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -597,7 +597,7 @@ svg {
   margin-top: 5px;
   color: #fff;
   font-family: var(--cv-serif);
-  font-size: clamp(1.18rem, min(1.9vw, 3.15vh), 2.35rem);
+  font-size: clamp(1rem, min(1.58vw, 2.62vh), 2rem);
   font-weight: 500;
   line-height: 1;
 }
@@ -607,9 +607,9 @@ svg {
 }
 
 .cv-orb-copy em {
-  margin-top: 8px;
+  margin-top: 6px;
   color: var(--cv-gold-soft);
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   font-style: normal;
 }
 
@@ -1669,7 +1669,7 @@ svg {
   }
 
   .cv-orb {
-    width: clamp(235px, min(16vw, 31vh), 300px);
+    width: clamp(205px, min(13.5vw, 27vh), 260px);
   }
 
   .cv-node {
@@ -1748,7 +1748,7 @@ svg {
   }
 
   .cv-orb {
-    width: clamp(180px, min(24vw, 32vh), 275px);
+    width: clamp(160px, min(21vw, 28vh), 235px);
   }
 
   .cv-bottom-bar {
