@@ -326,6 +326,15 @@ svg {
   background: var(--bone-light);
 }
 
+.industry-catering::before {
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.2), rgba(251, 248, 241, 0.82) 82%),
+    var(--panel-image);
+  background-position: center;
+  background-size: cover;
+  filter: saturate(0.82);
+}
+
 .industry-panel::after {
   z-index: -1;
   background:
@@ -349,7 +358,7 @@ svg {
 
 .industry-catering {
   --accent: var(--ink);
-  --panel-image: url("assets/cater-vegas-hero.png");
+  --panel-image: url("assets/portada-catering.jpeg");
 }
 
 .industry-fb {
