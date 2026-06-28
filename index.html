@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260627-simple-industry-cards">
+  <link rel="stylesheet" href="styles.css?v=20260627-catering-builder">
 </head>
 <body>
   <header class="site-header" id="top">
@@ -26,7 +26,7 @@
     <nav class="site-nav" aria-label="Principal">
       <a href="#about">About Us</a>
       <a href="#contact">Contact</a>
-      <a href="login.html">Login</a>
+      <a href="../login.html">Login</a>
       <a class="language-pill" href="#contact">Language <strong>EN</strong></a>
     </nav>
   </header>
@@ -157,8 +157,20 @@
         <p>Choose the catering area you want to build first.</p>
       </div>
 
+      <div class="builder-chip" aria-live="polite">
+        <span class="builder-chip-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 17h16M7 17a5 5 0 0 1 10 0M12 7v4M9 7h6"></path>
+          </svg>
+        </span>
+        <span>
+          <small>Your catering design</small>
+          <strong id="builder-summary">Start with a table.</strong>
+        </span>
+      </div>
+
       <div class="category-strip" aria-label="Catering categories">
-        <a class="category-item" href="#start" data-start-option="Catering">
+        <a class="category-item" href="#tables" data-builder-category="tables">
           <span class="category-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64">
               <path d="M17 25c0-6 30-6 30 0s-30 6-30 0zM20 28c2 4 22 4 24 0M32 31v20M24 51h16"></path>
@@ -167,7 +179,7 @@
           <strong>Tables</strong>
         </a>
 
-        <a class="category-item" href="#start" data-start-option="Catering">
+        <a class="category-item" href="#catering" data-builder-category="chairs">
           <span class="category-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64">
               <path d="M21 17h22v18H21zM18 35h28M23 35l-3 18M41 35l3 18M24 24h16"></path>
@@ -205,6 +217,51 @@
         </a>
 
       </div>
+    </section>
+
+    <section class="table-builder is-hidden-step" id="tables" aria-labelledby="tables-title">
+      <a class="flow-back" href="#catering" aria-label="Back to catering">
+        Back
+      </a>
+
+      <div class="table-builder-layout">
+        <div class="table-builder-copy">
+          <p class="eyebrow">Step 01</p>
+          <h2 id="tables-title">Choose your table</h2>
+          <p>Select the table first. Your choice will stay saved, then we continue with chairs.</p>
+        </div>
+
+        <div class="table-choice-grid" aria-label="Table options">
+          <button class="table-choice" type="button" data-table-choice="Round 48 table" data-table-note="Best for 4 to 6 guests">
+            <span class="table-choice-image" aria-hidden="true"></span>
+            <strong>Round 48</strong>
+            <small>4 to 6 guests</small>
+          </button>
+          <button class="table-choice" type="button" data-table-choice="Round 60 table" data-table-note="Best for 6 to 8 guests">
+            <span class="table-choice-image" aria-hidden="true"></span>
+            <strong>Round 60</strong>
+            <small>6 to 8 guests</small>
+          </button>
+          <button class="table-choice" type="button" data-table-choice="Cocktail table" data-table-note="Best for standing receptions">
+            <span class="table-choice-image" aria-hidden="true"></span>
+            <strong>Cocktail</strong>
+            <small>Reception flow</small>
+          </button>
+        </div>
+      </div>
+
+      <aside class="builder-preview" aria-live="polite">
+        <span aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 18h16M7 18a5 5 0 0 1 10 0M12 8v5M9 8h6"></path>
+          </svg>
+        </span>
+        <div>
+          <small>Saved design</small>
+          <strong id="table-preview">No table selected yet</strong>
+          <p id="table-preview-note">Choose a table to unlock chairs.</p>
+        </div>
+      </aside>
     </section>
 
     <section class="start-section is-hidden-step" id="start" aria-labelledby="start-title">
@@ -247,4 +304,3 @@
   <script src="app.js"></script>
 </body>
 </html>
-

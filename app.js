@@ -1,4 +1,17 @@
-const stepIds = ["calendar", "industries", "catering", "start", "about", "contact"];
+const stepIds = ["calendar", "industries", "catering", "tables", "start", "about", "contact"];
+const cateringBuild = {
+  table: "",
+  tableNote: ""
+};
+const savedBuild = window.localStorage.getItem("caterVegasBuild");
+
+if (savedBuild) {
+  try {
+    Object.assign(cateringBuild, JSON.parse(savedBuild));
+  } catch (error) {
+    window.localStorage.removeItem("caterVegasBuild");
+  }
+}
 
 function showStep(stepId) {
   const activeStep = stepIds.includes(stepId) ? stepId : "calendar";
@@ -23,6 +36,7 @@ function showStep(stepId) {
   }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
+  updateBuilderPreview();
 }
 
 function markIndustryPanel(link) {
@@ -32,6 +46,39 @@ function markIndustryPanel(link) {
   document.querySelectorAll(".industry-panel").forEach((item) => item.classList.remove("is-selected"));
   panel.classList.add("is-selected");
   return true;
+}
+
+function updateBuilderPreview() {
+  const builderSummary = document.getElementById("builder-summary");
+  const tablePreview = document.getElementById("table-preview");
+  const tablePreviewNote = document.getElementById("table-preview-note");
+  const tablesCategory = document.querySelector('[data-builder-category="tables"]');
+  const chairsCategory = document.querySelector('[data-builder-category="chairs"]');
+
+  if (builderSummary) {
+    builderSummary.textContent = cateringBuild.table
+      ? `Table saved: ${cateringBuild.table}. Next: Chairs.`
+      : "Start with a table.";
+  }
+
+  if (tablePreview) {
+    tablePreview.textContent = cateringBuild.table || "No table selected yet";
+  }
+
+  if (tablePreviewNote) {
+    tablePreviewNote.textContent = cateringBuild.tableNote || "Choose a table to unlock chairs.";
+  }
+
+  tablesCategory?.classList.toggle("is-complete", Boolean(cateringBuild.table));
+  chairsCategory?.classList.toggle("is-next", Boolean(cateringBuild.table));
+
+  document.querySelectorAll("[data-table-choice]").forEach((choice) => {
+    choice.classList.toggle("is-selected", choice.dataset.tableChoice === cateringBuild.table);
+  });
+}
+
+function saveBuilder() {
+  window.localStorage.setItem("caterVegasBuild", JSON.stringify(cateringBuild));
 }
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
@@ -89,6 +136,21 @@ document.querySelectorAll("[data-start-option]").forEach((link) => {
 
 document.querySelectorAll("[data-path]").forEach((button) => {
   button.addEventListener("click", () => setStartPath(button.dataset.path));
+});
+
+document.querySelectorAll("[data-table-choice]").forEach((button) => {
+  button.addEventListener("click", () => {
+    cateringBuild.table = button.dataset.tableChoice;
+    cateringBuild.tableNote = button.dataset.tableNote;
+    saveBuilder();
+
+    document.querySelectorAll("[data-table-choice]").forEach((choice) => {
+      choice.classList.toggle("is-selected", choice === button);
+    });
+
+    updateBuilderPreview();
+    window.setTimeout(() => showStep("catering"), 420);
+  });
 });
 
 document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) => {
