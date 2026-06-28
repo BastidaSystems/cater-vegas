@@ -2,11 +2,11 @@
   color-scheme: light;
   --ink: #101513;
   --muted: #53605a;
-  --line: #e5e9e4;
+  --line: #eee8dd;
   --white: #ffffff;
-  --bone: #f6f1e8;
-  --bone-light: #fbf8f1;
-  --soft: #f6f1e8;
+  --bone: #fbf8f1;
+  --bone-light: #fffdf8;
+  --soft: #fbf8f1;
   --green: #1f2421;
   --green-bright: #8c7a5b;
   --gold: #b59a6a;
@@ -54,7 +54,7 @@ svg {
   gap: 18px;
   min-height: 76px;
   padding: 12px clamp(20px, 3vw, 42px);
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 253, 248, 0.96);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(18px);
 }
@@ -297,7 +297,7 @@ svg {
   min-height: calc(100vh - 76px);
   overflow: hidden;
   background:
-    linear-gradient(90deg, rgba(246, 241, 232, 0.92), rgba(251, 248, 241, 0.86)),
+    linear-gradient(90deg, rgba(251, 248, 241, 0.92), rgba(255, 253, 248, 0.88)),
     var(--bone);
 }
 
@@ -329,8 +329,8 @@ svg {
 .industry-panel::after {
   z-index: -1;
   background:
-    linear-gradient(180deg, rgba(251, 248, 241, 0), rgba(246, 241, 232, 0.84) 80%),
-    linear-gradient(90deg, rgba(251, 248, 241, 0.96), rgba(251, 248, 241, 0.62));
+    linear-gradient(180deg, rgba(255, 253, 248, 0), rgba(251, 248, 241, 0.78) 80%),
+    linear-gradient(90deg, rgba(255, 253, 248, 0.96), rgba(255, 253, 248, 0.62));
 }
 
 .industry-panel:not(:first-child) {
@@ -540,7 +540,7 @@ svg {
   width: 100%;
   overflow: hidden;
   background:
-    linear-gradient(90deg, rgba(246, 241, 232, 0.94), rgba(251, 248, 241, 0.88)),
+    linear-gradient(90deg, rgba(251, 248, 241, 0.94), rgba(255, 253, 248, 0.88)),
     var(--bone);
 }
 
