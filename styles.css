@@ -139,17 +139,18 @@ svg {
   justify-items: center;
   align-items: center;
   min-height: calc(100vh - 76px);
-  padding: clamp(8px, 1.2vw, 16px) clamp(22px, 5vw, 70px) clamp(18px, 2.6vw, 32px);
+  padding: clamp(6px, 1vw, 12px) clamp(18px, 4vw, 56px) clamp(12px, 2vw, 24px);
   background: var(--white);
 }
 
 .booking-shell {
   display: grid;
-  width: min(100%, 760px);
-  gap: 10px;
-  padding: clamp(18px, 2.5vw, 34px);
+  width: min(100%, 680px);
+  max-height: calc(100vh - 118px);
+  gap: 8px;
+  padding: clamp(14px, 1.8vw, 24px);
   border: 2px solid #111614;
-  border-radius: 42px;
+  border-radius: 34px;
   background: var(--white);
   box-shadow: 0 28px 80px rgba(27, 42, 34, 0.08);
 }
@@ -169,7 +170,7 @@ svg {
 }
 
 .calendar-card {
-  padding: clamp(12px, 1.6vw, 22px) clamp(18px, 3vw, 42px) clamp(22px, 3vw, 42px);
+  padding: clamp(6px, 1vw, 14px) clamp(14px, 2.2vw, 32px) clamp(12px, 2vw, 24px);
   border: 0;
   border-radius: 0;
   background: var(--white);
@@ -177,9 +178,9 @@ svg {
 
 .calendar-card-header {
   display: grid;
-  grid-template-columns: 42px 1fr 42px;
+  grid-template-columns: 34px 1fr 34px;
   align-items: center;
-  margin-bottom: clamp(18px, 2.4vw, 32px);
+  margin-bottom: clamp(10px, 1.5vw, 18px);
 }
 
 .calendar-card-header strong {
@@ -192,16 +193,16 @@ svg {
 }
 
 .month-name {
-  font-size: clamp(3.1rem, 7vw, 5.6rem);
+  font-size: clamp(2.35rem, 4.9vw, 3.9rem);
 }
 
 .month-year {
   display: flex;
-  width: min(100%, 520px);
+  width: min(100%, 430px);
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   color: #111614;
-  font-size: clamp(1.15rem, 2vw, 1.65rem);
+  font-size: clamp(0.95rem, 1.45vw, 1.24rem);
 }
 
 .month-year::before,
@@ -215,13 +216,13 @@ svg {
 
 .calendar-card-header button {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 30px;
+  height: 30px;
   place-items: center;
   border-radius: 50%;
   background: transparent;
   color: var(--ink);
-  font-size: 1.25rem;
+  font-size: 1rem;
   transition: background 160ms ease, transform 160ms ease;
 }
 
@@ -233,13 +234,13 @@ svg {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: clamp(6px, 1vw, 12px) clamp(10px, 1.8vw, 24px);
+  gap: clamp(3px, 0.65vw, 8px) clamp(8px, 1.35vw, 18px);
 }
 
 .calendar-grid span {
   color: #111614;
   font-family: var(--serif);
-  font-size: clamp(1rem, 1.7vw, 1.42rem);
+  font-size: clamp(0.78rem, 1.2vw, 1.02rem);
   font-weight: 400;
   text-align: center;
   text-transform: uppercase;
@@ -247,15 +248,15 @@ svg {
 
 .calendar-grid button {
   display: grid;
-  min-height: clamp(36px, 4.2vw, 54px);
+  min-height: clamp(28px, 3.2vw, 40px);
   place-items: center;
   border: 1px solid transparent;
-  border-radius: 14px;
+  border-radius: 11px;
   background: transparent;
   color: var(--ink);
   font-family: var(--serif);
   font-weight: 400;
-  font-size: clamp(1.1rem, 2.05vw, 1.62rem);
+  font-size: clamp(0.92rem, 1.55vw, 1.22rem);
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
