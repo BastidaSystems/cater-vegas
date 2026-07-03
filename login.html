@@ -5,80 +5,91 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Login de Cater Vegas con Supabase Auth." />
     <title>Cater Vegas | Login</title>
-    <link rel="stylesheet" href="style.css?v=scale-2" />
+    <link rel="stylesheet" href="styles.css?v=20260703-catering-fit-2" />
     <style>
       body {
         min-height: 100vh;
         min-height: 100svh;
         overflow: auto;
+        background: var(--bone);
+        color: var(--ink);
       }
 
       .auth-shell {
         display: grid;
-        min-height: 100vh;
-        min-height: 100svh;
+        min-height: calc(100svh - 76px);
         place-items: center;
-        padding: clamp(5.5rem, 12vh, 8rem) var(--page-gutter) 3rem;
+        padding: clamp(2rem, 5vw, 4.5rem) var(--page-gutter, clamp(20px, 5vw, 72px));
         background:
-          linear-gradient(180deg, rgba(185, 144, 91, 0.11), transparent 34%),
-          linear-gradient(145deg, #020202 0%, var(--black) 58%, #0a0a0a 100%);
+          radial-gradient(circle at 18% 12%, rgba(16, 21, 19, 0.05), transparent 25rem),
+          linear-gradient(180deg, var(--bone-light) 0%, var(--bone) 100%);
       }
 
       .auth-panel {
-        width: min(100%, 28rem);
-        border: 1px solid rgba(185, 144, 91, 0.24);
-        border-radius: 1.4rem;
-        background: rgba(5, 5, 5, 0.82);
-        box-shadow: 0 2rem 5rem rgba(0, 0, 0, 0.36);
-        padding: clamp(1.5rem, 4vw, 2.35rem);
+        width: min(100%, 540px);
+        border: 2px solid rgba(16, 21, 19, 0.88);
+        border-radius: 30px;
+        background: rgba(255, 253, 248, 0.92);
+        box-shadow: 0 28px 80px rgba(55, 45, 32, 0.1);
+        padding: clamp(1.4rem, 4vw, 2.5rem);
       }
 
       .auth-kicker {
-        color: var(--gold-light);
-        font-size: 0.68rem;
-        font-weight: 800;
-        letter-spacing: 0.22em;
+        color: var(--ink);
+        font-size: 0.72rem;
+        font-weight: 900;
+        letter-spacing: 0.26em;
         text-transform: uppercase;
       }
 
       .auth-panel h1 {
-        margin-top: 0.85rem;
-        font-size: clamp(2.1rem, 9vw, 4rem);
-        line-height: 0.9;
-        letter-spacing: 0.03em;
+        margin: 0.9rem 0 0;
+        color: var(--ink);
+        font-family: var(--serif);
+        font-size: clamp(3.6rem, 11vw, 6.4rem);
+        font-weight: 500;
+        letter-spacing: 0;
+        line-height: 0.82;
       }
 
       .auth-panel p {
-        margin-top: 1rem;
-        color: var(--muted);
-        font-size: 0.92rem;
-        line-height: 1.6;
+        margin: 1.1rem 0 0;
+        color: #3f4843;
+        font-family: var(--serif);
+        font-size: clamp(1.08rem, 1.6vw, 1.35rem);
+        line-height: 1.35;
       }
 
       .auth-form {
         display: grid;
-        gap: 0.85rem;
+        gap: 0.9rem;
         margin-top: 1.6rem;
       }
 
       .auth-form label {
         display: grid;
-        gap: 0.42rem;
-        color: rgba(245, 241, 234, 0.76);
+        gap: 0.44rem;
+        color: var(--ink);
         font-size: 0.72rem;
-        font-weight: 800;
-        letter-spacing: 0.14em;
+        font-weight: 900;
+        letter-spacing: 0.16em;
         text-transform: uppercase;
       }
 
       .auth-form input {
         width: 100%;
-        border: 1px solid rgba(185, 144, 91, 0.26);
+        border: 1px solid rgba(16, 21, 19, 0.18);
         border-radius: 999px;
-        background: rgba(255, 255, 255, 0.045);
-        color: var(--text);
+        background: #fffefa;
+        color: var(--ink);
         outline: 0;
-        padding: 0.94rem 1rem;
+        padding: 0.95rem 1rem;
+        font: inherit;
+      }
+
+      .auth-form input:focus {
+        border-color: var(--ink);
+        box-shadow: 0 0 0 4px rgba(16, 21, 19, 0.06);
       }
 
       .auth-actions {
@@ -89,41 +100,58 @@
       }
 
       .auth-button {
+        min-height: 48px;
+        border: 1px solid var(--ink);
         border-radius: 999px;
-        background: var(--gold);
-        color: #050505;
+        background: var(--ink);
+        color: var(--bone-light);
+        cursor: pointer;
         font-size: 0.72rem;
         font-weight: 900;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.14em;
         padding: 0.9rem 1rem;
         text-transform: uppercase;
+        transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+      }
+
+      .auth-button:hover {
+        transform: translateY(-1px);
       }
 
       .auth-button.secondary {
-        border: 1px solid rgba(185, 144, 91, 0.32);
         background: transparent;
-        color: var(--gold-light);
+        color: var(--ink);
       }
 
       .auth-recover-link {
         justify-self: start;
-        color: var(--gold-light);
-        font-size: 0.82rem;
+        color: var(--ink);
+        font-size: 0.9rem;
+        font-weight: 800;
       }
 
       .auth-status {
         min-height: 1.25rem;
-        color: var(--gold-light);
-        font-size: 0.8rem;
+        color: #3f4843;
+        font-size: 0.9rem;
       }
 
       .auth-links {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.9rem;
+        gap: 0.7rem;
         margin-top: 1.25rem;
-        color: var(--gold-light);
+        align-items: center;
+      }
+
+      .auth-links a {
+        border: 1px solid rgba(16, 21, 19, 0.18);
+        border-radius: 999px;
+        color: var(--ink);
         font-size: 0.82rem;
+        font-weight: 900;
+        padding: 0.65rem 0.9rem;
+        text-transform: uppercase;
       }
 
       @media (max-width: 560px) {
@@ -134,18 +162,26 @@
     </style>
   </head>
   <body>
-    <header class="site-header" aria-label="Encabezado principal">
-      <a class="logo" href="index.html" aria-label="Cater Vegas inicio">CATER VEGAS</a>
+    <header class="site-header" id="top">
+      <a class="brand" href="index.html#calendar" aria-label="Cater Vegas home">
+        <span class="brand-mark">CV</span>
+        <span class="brand-copy">
+          <strong>Cater Vegas</strong>
+          <small>Events &amp; Hospitality</small>
+        </span>
+      </a>
+      <nav class="site-nav" aria-label="Principal">
+        <a href="index.html#about">About Us</a>
+        <a href="index.html#contact">Contact</a>
+        <a class="language-pill" href="index.html#contact">Language <strong>EN</strong></a>
+      </nav>
     </header>
 
     <main class="auth-shell">
       <section class="auth-panel" aria-labelledby="auth-title">
-        <span class="auth-kicker">Supabase Auth</span>
+        <span class="auth-kicker">Cater Vegas Access</span>
         <h1 id="auth-title">Acceso</h1>
-        <p>
-          Entra con tu cuenta para administrar eventos, revisar planes y usar BEOFlow
-          desde Supabase.
-        </p>
+        <p>Entra con tu cuenta para revisar el admin, colaboradores y solicitudes de Cater Vegas.</p>
 
         <form class="auth-form" id="authForm">
           <label>
@@ -162,18 +198,16 @@
             <button class="auth-button secondary" id="signupButton" type="button">Crear cuenta</button>
           </div>
 
-          <button class="auth-button secondary" id="magicLinkButton" type="button">
-            Enviar magic link
-          </button>
+          <button class="auth-button secondary" id="magicLinkButton" type="button">Enviar magic link</button>
           <a class="auth-recover-link" href="recover.html">Recuperar password</a>
 
           <p class="auth-status" id="authStatus" aria-live="polite"></p>
         </form>
 
-        <nav class="auth-links" aria-label="Navegación de sesión">
+        <nav class="auth-links" aria-label="Navegacion de sesion">
           <a href="admin/?preview=1">Ver admin preview</a>
           <a href="admin/">Admin</a>
-          <a href="index.html">Volver al generador</a>
+          <a href="index.html#calendar">Volver</a>
           <button class="auth-button secondary" id="signoutButton" type="button">Salir</button>
         </nav>
       </section>
@@ -215,7 +249,7 @@
         if (!supabase) return;
         const { data } = await supabase.auth.getSession();
         if (data.session) {
-          setStatus(`Sesión activa: ${data.session.user.email}`);
+          setStatus(`Sesion activa: ${data.session.user.email}`);
           try {
             const nextPath = await resolvePostLoginPath();
             navigateWithLoopGuard(nextPath, "login-session");
@@ -269,7 +303,7 @@
       signoutButton.addEventListener("click", async () => {
         if (!supabase) return;
         await supabase.auth.signOut();
-        setStatus("Sesión cerrada.");
+        setStatus("Sesion cerrada.");
       });
 
       refreshSessionStatus();
