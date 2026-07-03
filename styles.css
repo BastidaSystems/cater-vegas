@@ -464,10 +464,8 @@ svg {
 
 .catering-showroom {
   position: relative;
-  display: grid;
-  align-content: start;
-  min-height: 0;
-  height: calc(100vh - 76px);
+  display: block;
+  min-height: calc(100vh - 76px);
   padding: 0;
   background: var(--bone);
   overflow: hidden;
@@ -475,18 +473,18 @@ svg {
 
 .flow-back {
   position: absolute;
-  top: clamp(16px, 2.4vw, 30px);
-  left: clamp(20px, 3.4vw, 54px);
-  z-index: 2;
+  top: clamp(24px, 3vw, 42px);
+  left: clamp(24px, 3.5vw, 58px);
+  z-index: 6;
   display: inline-flex;
-  min-height: 38px;
+  min-height: 42px;
   align-items: center;
   gap: 8px;
-  padding: 0 14px;
-  border: 1px solid rgba(16, 21, 19, 0.14);
+  padding: 0 18px;
+  border: 1px solid rgba(16, 21, 19, 0.18);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.72);
-  color: #202824;
+  background: rgba(255, 253, 248, 0.9);
+  color: #111614;
   font-size: 0.78rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -597,8 +595,9 @@ svg {
   position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  min-height: 0;
-  height: 100%;
+  min-height: 680px;
+  height: calc(100vh - 76px);
+  max-height: 820px;
   width: 100%;
   overflow: hidden;
   background:
@@ -616,7 +615,7 @@ svg {
   align-content: end;
   justify-items: start;
   min-width: 0;
-  padding: clamp(16px, 2.4vw, 30px) clamp(12px, 1.8vw, 24px);
+  padding: clamp(130px, 16vh, 178px) clamp(22px, 2.7vw, 44px) clamp(56px, 7vh, 76px);
   isolation: isolate;
   overflow: hidden;
   color: var(--ink);
@@ -650,8 +649,8 @@ svg {
 }
 
 .category-item:not(:first-child) {
-  margin-left: -2.6vw;
-  padding-left: clamp(30px, 4.8vw, 58px);
+  margin-left: -2.3vw;
+  padding-left: clamp(54px, 6vw, 88px);
   clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
 }
 
@@ -711,10 +710,10 @@ svg {
 .category-icon {
   display: grid;
   position: absolute;
-  left: clamp(16px, 2.4vw, 34px);
-  top: clamp(14px, 2.4vw, 30px);
-  width: clamp(42px, 4vw, 58px);
-  height: clamp(42px, 4vw, 58px);
+  left: clamp(30px, 4vw, 66px);
+  top: clamp(96px, 12vh, 136px);
+  width: clamp(62px, 6vw, 92px);
+  height: clamp(62px, 6vw, 92px);
   place-items: center;
   border: 1px solid rgba(16, 21, 19, 0.2);
   border-radius: 50%;
@@ -725,7 +724,11 @@ svg {
 }
 
 .category-item:not(:first-child) .category-icon {
-  left: clamp(30px, 4.8vw, 54px);
+  left: clamp(62px, 7vw, 108px);
+}
+
+.category-item:first-child .category-icon {
+  top: clamp(122px, 14vh, 166px);
 }
 
 .category-icon svg {
@@ -742,7 +745,7 @@ svg {
   position: relative;
   z-index: 1;
   color: #050807;
-  font-size: clamp(0.94rem, 1.35vw, 1.55rem);
+  font-size: clamp(1.42rem, 2.3vw, 3.05rem);
   font-weight: 950;
   letter-spacing: -0.02em;
   line-height: 0.95;
@@ -1069,8 +1072,8 @@ svg {
 
   .category-strip {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    height: 100%;
-    min-height: 0;
+    height: 520px;
+    min-height: 520px;
   }
 
   .table-builder {
@@ -1082,7 +1085,7 @@ svg {
   }
 
   .category-item {
-    padding: 20px 14px;
+    padding: 84px 18px 34px;
     transform: none;
   }
 
