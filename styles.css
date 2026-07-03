@@ -465,7 +465,7 @@ svg {
 .catering-showroom {
   position: relative;
   display: block;
-  min-height: calc(100vh - 76px);
+  min-height: clamp(540px, calc(100vh - 116px), 720px);
   padding: 0;
   background: var(--bone);
   overflow: hidden;
@@ -595,9 +595,9 @@ svg {
   position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  min-height: 680px;
-  height: calc(100vh - 76px);
-  max-height: 820px;
+  min-height: 540px;
+  height: clamp(540px, calc(100vh - 116px), 720px);
+  max-height: 720px;
   width: 100%;
   overflow: hidden;
   background:
@@ -615,7 +615,7 @@ svg {
   align-content: end;
   justify-items: start;
   min-width: 0;
-  padding: clamp(130px, 16vh, 178px) clamp(22px, 2.7vw, 44px) clamp(56px, 7vh, 76px);
+  padding: clamp(92px, 11vh, 128px) clamp(22px, 2.7vw, 44px) clamp(34px, 4.5vh, 50px);
   isolation: isolate;
   overflow: hidden;
   color: var(--ink);
@@ -650,7 +650,7 @@ svg {
 
 .category-item:not(:first-child) {
   margin-left: -2.3vw;
-  padding-left: clamp(54px, 6vw, 88px);
+  padding-left: clamp(48px, 5.6vw, 78px);
   clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
 }
 
@@ -710,10 +710,10 @@ svg {
 .category-icon {
   display: grid;
   position: absolute;
-  left: clamp(30px, 4vw, 66px);
-  top: clamp(96px, 12vh, 136px);
-  width: clamp(62px, 6vw, 92px);
-  height: clamp(62px, 6vw, 92px);
+  left: clamp(28px, 3.6vw, 58px);
+  top: clamp(58px, 7vh, 84px);
+  width: clamp(58px, 5vw, 76px);
+  height: clamp(58px, 5vw, 76px);
   place-items: center;
   border: 1px solid rgba(16, 21, 19, 0.2);
   border-radius: 50%;
@@ -724,11 +724,11 @@ svg {
 }
 
 .category-item:not(:first-child) .category-icon {
-  left: clamp(62px, 7vw, 108px);
+  left: clamp(52px, 6vw, 88px);
 }
 
 .category-item:first-child .category-icon {
-  top: clamp(122px, 14vh, 166px);
+  top: clamp(86px, 10vh, 116px);
 }
 
 .category-icon svg {
@@ -745,7 +745,7 @@ svg {
   position: relative;
   z-index: 1;
   color: #050807;
-  font-size: clamp(1.42rem, 2.3vw, 3.05rem);
+  font-size: clamp(1.3rem, 2vw, 2.65rem);
   font-weight: 950;
   letter-spacing: -0.02em;
   line-height: 0.95;
