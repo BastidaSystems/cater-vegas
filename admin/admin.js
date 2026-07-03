@@ -14,6 +14,7 @@ const REALTIME_ENABLED =
   window.CATER_VEGAS_ENABLE_REALTIME === true ||
   new URLSearchParams(window.location.search).get("realtime") === "1";
 const ADMIN_REFRESH_INTERVAL_MS = 60000;
+const ADMIN_PREVIEW_MODE = new URLSearchParams(window.location.search).get("preview") === "1";
 const PENDING_PROFILE_ROLES = [
   "workspace_pending",
   "organizer_pending",
@@ -2099,6 +2100,18 @@ function startAdminLiveUpdates() {
 }
 
 async function bootAdmin() {
+  if (ADMIN_PREVIEW_MODE) {
+    currentUser = { email: "preview@catervegas.com" };
+    currentProfile = { role: "owner" };
+    currentMembership = { role: "owner", status: "active" };
+    currentWorkspace = { name: "Cater Vegas Preview" };
+    currentRole = "owner";
+    authReady = false;
+    syncAdminPermissionsUi();
+    setSessionStatus("Vista previa del admin. No hay datos reales conectados.");
+    renderAnalytics();
+    return;
+  }
   if (!isSupabaseConfigured) {
     setSessionStatus("Configura Supabase en lib/supabaseClient.js para usar el admin.");
     return;
