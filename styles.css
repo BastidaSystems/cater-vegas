@@ -468,7 +468,7 @@ svg {
   align-content: start;
   min-height: 0;
   height: calc(100vh - 76px);
-  padding: clamp(8px, 1.4vw, 18px) 0 0;
+  padding: 0;
   background: var(--bone);
   overflow: hidden;
 }
@@ -598,7 +598,7 @@ svg {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   min-height: 0;
-  height: clamp(280px, calc(100vh - 190px), 380px);
+  height: 100%;
   width: 100%;
   overflow: hidden;
   background:
@@ -1069,7 +1069,7 @@ svg {
 
   .category-strip {
     grid-template-columns: repeat(5, minmax(0, 1fr));
-    height: 340px;
+    height: 100%;
     min-height: 0;
   }
 
