@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin.css?v=inventory-reset-20260706" />
+    <link rel="stylesheet" href="admin.css?v=inventory-categories-20260706" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple" data-admin-view="calendar">
@@ -129,13 +129,14 @@
               </div>
             </form>
 
-            <div class="inventory-grid" id="inventoryList" aria-live="polite"></div>
+            <div class="inventory-category-bar" id="inventoryCategoryBar" aria-label="Categorias de inventario"></div>
+            <div class="inventory-list" id="inventoryList" aria-live="polite"></div>
           </section>
         </section>
       </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=inventory-reset-20260706"></script>
+    <script type="module" src="admin.js?v=inventory-categories-20260706"></script>
   </body>
 </html>

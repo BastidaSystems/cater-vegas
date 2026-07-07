@@ -84,15 +84,30 @@ const inventoryImageUrl = document.querySelector("#inventoryImageUrl");
 const inventoryImageFile = document.querySelector("#inventoryImageFile");
 const inventoryDescription = document.querySelector("#inventoryDescription");
 const inventoryStatus = document.querySelector("#inventoryStatus");
+const inventoryCategoryBar = document.querySelector("#inventoryCategoryBar");
 const inventoryList = document.querySelector("#inventoryList");
 const refreshInventoryButton = document.querySelector("#refreshInventoryButton");
 const resetInventoryButton = document.querySelector("#resetInventoryButton");
+
+const INVENTORY_CATEGORY_ICONS = {
+  all: "All",
+  tables: "Tbl",
+  chairs: "Chr",
+  linen: "Lin",
+  decor: "Dec",
+  tents: "Ten",
+  food: "Food",
+  beverages: "Bar",
+  entertainment: "Ent",
+  lodging: "Stay",
+};
 
 let supabase = null;
 let currentUser = null;
 let currentRole = "";
 let allEvents = [];
 let inventoryItems = [];
+let activeInventoryCategory = "all";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -198,6 +213,52 @@ function providerToInventory(row) {
   };
 }
 
+function normalizeInventoryItem(item) {
+  if (!item) return null;
+  const meta = parseInventoryNotes(item.notes) || item;
+  const category = normalizeInventoryCategory(meta.category || item.category) || "tables";
+
+  return {
+    id: item.id,
+    name: item.name || item.provider_name || "",
+    category,
+    description: meta.description || item.description || "",
+    quantity_available: Number(meta.quantity_available ?? item.quantity_available ?? 0),
+    price_label: meta.price_label || item.price_label || "",
+    image_url: meta.image_url || item.image_url || "",
+    status: item.status || "active",
+  };
+}
+
+function renderInventoryCategories() {
+  if (!inventoryCategoryBar) return;
+
+  const counts = inventoryItems.reduce(
+    (acc, item) => {
+      const category = normalizeInventoryCategory(item.category) || "tables";
+      acc.all += 1;
+      acc[category] = (acc[category] || 0) + 1;
+      return acc;
+    },
+    { all: 0 }
+  );
+
+  const categories = ["all", ...INVENTORY_CATEGORY_IDS.filter((category) => counts[category])];
+  inventoryCategoryBar.innerHTML = categories
+    .map((category) => {
+      const label = category === "all" ? "Todo" : inventoryCategoryLabel(category);
+      const icon = INVENTORY_CATEGORY_ICONS[category] || category.slice(0, 3);
+      return `
+        <button class="inventory-category-chip ${activeInventoryCategory === category ? "is-active" : ""}" type="button" data-inventory-category="${escapeHtml(category)}">
+          <span aria-hidden="true">${escapeHtml(icon)}</span>
+          <strong>${escapeHtml(label)}</strong>
+          <small>${Number(counts[category] || 0)}</small>
+        </button>
+      `;
+    })
+    .join("");
+}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     if (!file) {
@@ -286,15 +347,27 @@ function renderCalendar() {
 function renderInventory() {
   if (!inventoryList) return;
 
+  renderInventoryCategories();
+
   if (!inventoryItems.length) {
     inventoryList.innerHTML = '<div class="empty-state">No hay articulos en inventario todavia.</div>';
     return;
   }
 
-  inventoryList.innerHTML = inventoryItems
+  const visibleItems =
+    activeInventoryCategory === "all"
+      ? inventoryItems
+      : inventoryItems.filter((item) => normalizeInventoryCategory(item.category) === activeInventoryCategory);
+
+  if (!visibleItems.length) {
+    inventoryList.innerHTML = `<div class="empty-state">No hay articulos en ${escapeHtml(inventoryCategoryLabel(activeInventoryCategory))}.</div>`;
+    return;
+  }
+
+  inventoryList.innerHTML = visibleItems
     .map(
       (item) => `
-        <article class="inventory-card">
+        <article class="inventory-row">
           <div class="inventory-photo">
             ${
               item.image_url
@@ -302,10 +375,12 @@ function renderInventory() {
                 : '<span>Sin foto</span>'
             }
           </div>
-          <div class="inventory-card-body">
+          <div class="inventory-row-main">
             <p class="eyebrow">${escapeHtml(inventoryCategoryLabel(item.category))}</p>
             <h3>${escapeHtml(item.name)}</h3>
             <p>${escapeHtml(item.description || "Sin descripcion.")}</p>
+          </div>
+          <div class="inventory-row-meta">
             <div class="inventory-meta">
               <span>${Number(item.quantity_available ?? 0)} disponibles</span>
               ${item.price_label ? `<span>${escapeHtml(item.price_label)}</span>` : ""}
@@ -346,7 +421,7 @@ async function loadEvents() {
 
 async function loadInventory() {
   if (!supabase) {
-    inventoryItems = localInventoryRows();
+    inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
     renderInventory();
     setInventoryStatus("Modo local: conecta Supabase para que el comprador lo vea en otro dispositivo.");
     return;
@@ -359,7 +434,7 @@ async function loadInventory() {
     .order("created_at", { ascending: false });
 
   if (error) {
-    inventoryItems = localInventoryRows();
+    inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
     renderInventory();
     setInventoryStatus(`No se pudo leer inventario: ${error.message}.`);
     return;
@@ -546,6 +621,13 @@ inventoryList?.addEventListener("click", (event) => {
 
   if (target.dataset.editInventory) editInventoryItem(target.dataset.editInventory);
   if (target.dataset.deleteInventory) deleteInventoryItem(target.dataset.deleteInventory);
+});
+
+inventoryCategoryBar?.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-inventory-category]");
+  if (!target) return;
+  activeInventoryCategory = target.dataset.inventoryCategory || "all";
+  renderInventory();
 });
 
 document.querySelectorAll(".sidebar-link").forEach((link) => {
