@@ -4670,3 +4670,348 @@ textarea:focus {
     border-top-color: var(--cv-public-line);
   }
 }
+
+/* Cater Vegas admin bone refresh. Visual-only overrides; existing IDs/classes/data hooks stay intact. */
+:root {
+  color-scheme: light;
+  --cv-public-black: #fbf8f1;
+  --cv-public-black-2: #fffdf8;
+  --cv-public-gold: #b59a6a;
+  --cv-public-gold-light: #8c7a5b;
+  --cv-public-text: #101513;
+  --cv-public-muted: #53605a;
+  --cv-public-line: #eee8dd;
+  --cv-public-line-strong: #d7c8ad;
+  --cv-public-panel: rgba(255, 253, 248, 0.88);
+  --cv-public-panel-strong: rgba(255, 253, 248, 0.96);
+  --cv-public-green: #1f2421;
+  --cv-public-success: #3b8b60;
+  --cv-light-bg: #fbf8f1;
+  --cv-light-bg-soft: #fffdf8;
+  --cv-light-card: rgba(255, 253, 248, 0.9);
+  --cv-light-card-2: rgba(181, 154, 106, 0.08);
+  --cv-light-line: #eee8dd;
+  --cv-light-line-strong: #d7c8ad;
+  --cv-light-text: #101513;
+  --cv-light-muted: #53605a;
+  --cv-light-soft: rgba(16, 21, 19, 0.52);
+  --cv-light-green: #1f2421;
+  --cv-light-green-2: #2c3732;
+  --cv-light-gold: #b59a6a;
+  --cv-light-gold-2: #8c7a5b;
+  --cv-light-success: #3b8b60;
+  --cv-light-shadow: 0 26px 80px rgba(27, 42, 34, 0.1);
+  --cv-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --cv-sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+html,
+body {
+  background: #fbf8f1;
+}
+
+body {
+  background:
+    radial-gradient(circle at 88% 4%, rgba(181, 154, 106, 0.12), transparent 20rem),
+    linear-gradient(180deg, #fffdf8 0%, #fbf8f1 42%, #f6efe3 100%);
+  color: var(--cv-public-text);
+  font-family: var(--cv-sans);
+}
+
+.admin-layout-simple::before {
+  background: linear-gradient(90deg, transparent, rgba(181, 154, 106, 0.32), transparent);
+}
+
+.admin-layout-simple .admin-sidebar {
+  border-right: 1px solid var(--cv-public-line);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(181, 154, 106, 0.12), transparent 13rem),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.98), rgba(251, 248, 241, 0.96));
+  box-shadow: 18px 0 60px rgba(27, 42, 34, 0.06);
+}
+
+.admin-logo {
+  color: var(--cv-public-gold-light);
+}
+
+.admin-logo span {
+  border-color: rgba(181, 154, 106, 0.46);
+  background: #fbf8f1;
+  box-shadow: 0 18px 44px rgba(27, 42, 34, 0.08);
+  color: var(--cv-public-gold-light);
+  font-family: var(--cv-serif);
+}
+
+.admin-logo strong {
+  color: var(--cv-public-text);
+  font-family: var(--cv-serif);
+  font-weight: 700;
+}
+
+.sidebar-link {
+  color: rgba(16, 21, 19, 0.68);
+}
+
+.sidebar-link span {
+  color: var(--cv-public-gold-light);
+}
+
+.sidebar-link:hover,
+.sidebar-link.is-active {
+  border-color: rgba(181, 154, 106, 0.38);
+  background: rgba(181, 154, 106, 0.09);
+  color: var(--cv-public-text);
+  box-shadow: 0 18px 38px rgba(27, 42, 34, 0.06);
+}
+
+.sidebar-mini,
+.workspace-badge-inline,
+.user-pill,
+.logout-button,
+.command-card,
+.panel,
+.admin-tools-accordion,
+.dashboard-state-card,
+.state-mini-panel,
+.state-item-card,
+.onboarding-panel,
+.event-create-form,
+.provider-form,
+.provider-info-card,
+.provider-directory,
+.assignment-panel,
+.quote-draft-preview {
+  border-color: var(--cv-public-line);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 253, 248, 0.9)),
+    var(--cv-public-panel);
+  color: var(--cv-public-text);
+  box-shadow: var(--cv-light-shadow);
+}
+
+.sidebar-mini,
+.workspace-badge-inline,
+.user-pill,
+.logout-button {
+  background: rgba(255, 253, 248, 0.88);
+}
+
+.sidebar-mini small,
+.user-pill small,
+.header-title p:last-child,
+.session-status,
+.command-card p,
+.ai-card p,
+.beoflow-admin > p,
+.quote-assistant-note,
+.quote-draft-brief p:not(.eyebrow),
+.quote-draft-brief li,
+.event-meta,
+.request-meta,
+.workspace-meta,
+.collaborator-meta,
+.assignment-meta,
+.empty-state,
+.calendar-agenda p,
+.calendar-agenda-row small,
+.calendar-weekday {
+  color: var(--cv-public-muted);
+}
+
+.header-title h1,
+.metric-card-premium .kpi-topline strong,
+.panel-heading h2,
+.workspace-topline h2,
+.provider-directory h3,
+.assignment-panel h3,
+.quote-assistant-header h3 {
+  color: var(--cv-public-text);
+  font-family: var(--cv-serif);
+  font-weight: 700;
+}
+
+.header-title p:last-child {
+  color: var(--cv-public-muted);
+}
+
+.workspace-badge-inline {
+  color: var(--cv-public-gold-light);
+}
+
+.avatar,
+.metric-card-premium .metric-icon,
+.calendar-agenda-row span,
+.request-avatar,
+.status-badge,
+.state-badge {
+  border-color: rgba(181, 154, 106, 0.32);
+  background: rgba(181, 154, 106, 0.1);
+  color: var(--cv-public-gold-light);
+}
+
+.logout-button,
+.secondary-button,
+.tiny-button,
+.panel-heading button,
+.quick-actions button {
+  border-color: var(--cv-public-line);
+  background: rgba(255, 253, 248, 0.92);
+  color: var(--cv-public-text);
+}
+
+.primary-button,
+.quick-actions button:first-child,
+.state-heading .primary-button,
+.cater-gold-action {
+  border-color: rgba(181, 154, 106, 0.58);
+  background: rgba(181, 154, 106, 0.12);
+  color: var(--cv-public-gold-light);
+  box-shadow: 0 18px 42px rgba(27, 42, 34, 0.08);
+}
+
+.metric-card-premium .kpi-card-action {
+  border-color: rgba(181, 154, 106, 0.22);
+  background:
+    radial-gradient(circle at 18% 10%, rgba(181, 154, 106, 0.11), transparent 9rem),
+    linear-gradient(145deg, rgba(255, 253, 248, 0.96), rgba(251, 248, 241, 0.94));
+  color: var(--cv-public-text);
+  box-shadow: 0 24px 64px rgba(27, 42, 34, 0.1);
+}
+
+.metric-card-premium .kpi-card-action::before {
+  background: radial-gradient(circle at 86% 22%, rgba(181, 154, 106, 0.11), transparent 11rem);
+}
+
+.metric-card-premium .kpi-card-action::after {
+  background:
+    linear-gradient(90deg, rgba(181, 154, 106, 0.22), rgba(181, 154, 106, 0.08) 48%, rgba(255, 255, 255, 0.34)),
+    radial-gradient(ellipse at 24% 22%, rgba(181, 154, 106, 0.14), transparent 58%);
+}
+
+.metric-card-premium .kpi-card-action:hover,
+.metric-card-premium .kpi-card-action:focus-visible {
+  border-color: rgba(181, 154, 106, 0.5);
+  box-shadow: 0 30px 78px rgba(27, 42, 34, 0.14);
+}
+
+.metric-card-premium .metric-icon {
+  background: rgba(255, 253, 248, 0.9);
+  box-shadow: 0 18px 36px rgba(27, 42, 34, 0.08);
+}
+
+.metric-card-premium .kpi-copy small {
+  color: rgba(16, 21, 19, 0.82);
+}
+
+.metric-card-premium .kpi-status,
+.metric-card-premium .kpi-status-neutral {
+  color: rgba(16, 21, 19, 0.58);
+}
+
+.metric-card-premium .kpi-status-positive {
+  color: var(--cv-public-success);
+}
+
+.metric-card-premium .kpi-status-pending,
+.metric-card-premium .kpi-arrow,
+.panel-heading span,
+.calendar-month-label,
+.eyebrow,
+.amount,
+.admin-status {
+  color: var(--cv-public-gold-light);
+}
+
+.metric-card-premium .kpi-status > span {
+  background: rgba(181, 154, 106, 0.12);
+  color: var(--cv-public-gold-light);
+}
+
+.calendar-panel,
+.quote-draft-preview {
+  background:
+    radial-gradient(circle at 90% 0%, rgba(181, 154, 106, 0.1), transparent 16rem),
+    rgba(255, 253, 248, 0.92);
+}
+
+.panel-heading,
+.workspace-topline,
+.calendar-agenda,
+.quote-assistant-panel {
+  border-color: var(--cv-public-line);
+}
+
+.calendar-day {
+  border-top-color: rgba(181, 154, 106, 0.18);
+  color: rgba(16, 21, 19, 0.78);
+}
+
+.calendar-day.is-today span:first-child {
+  border-color: rgba(181, 154, 106, 0.44);
+  background: rgba(181, 154, 106, 0.14);
+  color: var(--cv-public-gold-light);
+}
+
+.calendar-day.has-event {
+  color: var(--cv-public-gold-light);
+}
+
+.calendar-dot {
+  background: var(--cv-public-gold-light);
+  box-shadow: 0 0 12px rgba(181, 154, 106, 0.28);
+}
+
+.calendar-agenda > strong,
+.calendar-agenda-row,
+.event-row,
+.collaborator-row,
+.assignment-row,
+.request-row,
+.customer-row,
+.workspace-stat,
+.mini-event-row,
+.timeline-item {
+  color: var(--cv-public-text);
+}
+
+.calendar-agenda-row,
+.mini-event-row,
+.request-row,
+.quote-draft-brief > div {
+  border-color: rgba(181, 154, 106, 0.18);
+}
+
+input,
+select,
+textarea,
+pre {
+  border-color: rgba(181, 154, 106, 0.28);
+  background: rgba(255, 253, 248, 0.92);
+  color: var(--cv-public-text);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: rgba(83, 96, 90, 0.62);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: rgba(181, 154, 106, 0.72);
+  box-shadow: 0 0 0 3px rgba(181, 154, 106, 0.14);
+}
+
+.event-form label,
+.collaborator-form label,
+.assignment-form label,
+.quote-event-picker,
+.quote-draft-message {
+  color: var(--cv-public-muted);
+}
+
+.provider-checklist span {
+  border-color: rgba(181, 154, 106, 0.22);
+  background: rgba(181, 154, 106, 0.07);
+  color: rgba(16, 21, 19, 0.76);
+}
