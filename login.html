@@ -231,9 +231,27 @@
       const magicLinkButton = document.querySelector("#magicLinkButton");
       const signoutButton = document.querySelector("#signoutButton");
       const authStatus = document.querySelector("#authStatus");
+      const authConnectionMessage = "No se pudo conectar con Supabase. Revisa la URL del proyecto o tu conexion.";
 
       function setStatus(message) {
         authStatus.textContent = message;
+      }
+
+      function getAuthErrorMessage(error) {
+        const message = error instanceof Error ? error.message : String(error || "");
+        const normalized = message.toLowerCase();
+
+        if (
+          normalized.includes("load failed") ||
+          normalized.includes("failed to fetch") ||
+          normalized.includes("fetch failed") ||
+          normalized.includes("networkerror") ||
+          normalized.includes("could not be found")
+        ) {
+          return authConnectionMessage;
+        }
+
+        return message || "No se pudo completar la solicitud.";
       }
 
       const params = new URLSearchParams(window.location.search);
@@ -245,19 +263,29 @@
         setStatus("Configura Supabase en lib/supabaseClient.js antes de usar Auth.");
       }
 
-      const supabase = isSupabaseConfigured ? requireSupabase() : null;
+      let supabase = null;
+      try {
+        supabase = isSupabaseConfigured ? requireSupabase() : null;
+      } catch (error) {
+        setStatus(getAuthErrorMessage(error));
+      }
 
       async function refreshSessionStatus() {
         if (!supabase) return;
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          setStatus(`Sesion activa: ${data.session.user.email}`);
-          try {
-            const nextPath = await resolvePostLoginPath();
-            navigateWithLoopGuard(nextPath, "login-session");
-          } catch (routeError) {
-            setStatus(routeError.message);
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          if (error) throw error;
+          if (data?.session) {
+            setStatus(`Sesion activa: ${data.session.user.email}`);
+            try {
+              const nextPath = await resolvePostLoginPath();
+              navigateWithLoopGuard(nextPath, "login-session");
+            } catch (routeError) {
+              setStatus(getAuthErrorMessage(routeError));
+            }
           }
+        } catch (error) {
+          setStatus(getAuthErrorMessage(error));
         }
       }
 
@@ -266,13 +294,18 @@
         if (!supabase) return;
 
         setStatus("Entrando...");
-        const { error } = await supabase.auth.signInWithPassword({
-          email: emailInput.value.trim(),
-          password: passwordInput.value,
-        });
+        let error = null;
+        try {
+          ({ error } = await supabase.auth.signInWithPassword({
+            email: emailInput.value.trim(),
+            password: passwordInput.value,
+          }));
+        } catch (requestError) {
+          error = requestError;
+        }
 
         if (error) {
-          setStatus(error.message);
+          setStatus(getAuthErrorMessage(error));
           return;
         }
 
@@ -280,7 +313,7 @@
           const nextPath = await resolvePostLoginPath();
           navigateWithLoopGuard(nextPath, "login-submit");
         } catch (routeError) {
-          setStatus(routeError.message);
+          setStatus(getAuthErrorMessage(routeError));
         }
       });
 
@@ -288,20 +321,29 @@
         if (!supabase) return;
 
         setStatus("Enviando magic link...");
-        const { error } = await supabase.auth.signInWithOtp({
-          email: emailInput.value.trim(),
-          options: {
-            emailRedirectTo: new URL("login.html", window.location.href).href,
-          },
-        });
+        let error = null;
+        try {
+          ({ error } = await supabase.auth.signInWithOtp({
+            email: emailInput.value.trim(),
+            options: {
+              emailRedirectTo: new URL("login.html", window.location.href).href,
+            },
+          }));
+        } catch (requestError) {
+          error = requestError;
+        }
 
-        setStatus(error ? error.message : "Magic link enviado.");
+        setStatus(error ? getAuthErrorMessage(error) : "Magic link enviado.");
       });
 
       signoutButton.addEventListener("click", async () => {
         if (!supabase) return;
-        await supabase.auth.signOut();
-        setStatus("Sesion cerrada.");
+        try {
+          await supabase.auth.signOut();
+          setStatus("Sesion cerrada.");
+        } catch (error) {
+          setStatus(getAuthErrorMessage(error));
+        }
       });
 
       refreshSessionStatus();

@@ -184,27 +184,56 @@
       const newPassword = document.querySelector("#newPassword");
       const confirmPassword = document.querySelector("#confirmPassword");
       const recoverStatus = document.querySelector("#recoverStatus");
-      const supabase = isSupabaseConfigured ? requireSupabase() : null;
+      const authConnectionMessage = "No se pudo conectar con Supabase. Revisa la URL del proyecto o tu conexion.";
+      let supabase = null;
 
       function setStatus(message) {
         recoverStatus.textContent = message;
+      }
+
+      function getAuthErrorMessage(error) {
+        const message = error instanceof Error ? error.message : String(error || "");
+        const normalized = message.toLowerCase();
+
+        if (
+          normalized.includes("load failed") ||
+          normalized.includes("failed to fetch") ||
+          normalized.includes("fetch failed") ||
+          normalized.includes("networkerror") ||
+          normalized.includes("could not be found")
+        ) {
+          return authConnectionMessage;
+        }
+
+        return message || "No se pudo completar la solicitud.";
       }
 
       if (!isSupabaseConfigured) {
         setStatus("Configura Supabase en lib/supabaseClient.js antes de usar recovery.");
       }
 
+      try {
+        supabase = isSupabaseConfigured ? requireSupabase() : null;
+      } catch (error) {
+        setStatus(getAuthErrorMessage(error));
+      }
+
       async function showRecoveryState() {
         if (!supabase) return;
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
-          setStatus("Link validado. Escribe una password nueva.");
-          newPassword.focus();
-          return;
-        }
+        try {
+          const { data, error } = await supabase.auth.getSession();
+          if (error) throw error;
+          if (data?.session) {
+            setStatus("Link validado. Escribe una password nueva.");
+            newPassword.focus();
+            return;
+          }
 
-        if (window.location.hash || window.location.search.includes("type=recovery")) {
-          setStatus("Abre de nuevo el link de recovery o pide otro correo.");
+          if (window.location.hash || window.location.search.includes("type=recovery")) {
+            setStatus("Abre de nuevo el link de recovery o pide otro correo.");
+          }
+        } catch (error) {
+          setStatus(getAuthErrorMessage(error));
         }
       }
 
@@ -213,11 +242,16 @@
         if (!supabase) return;
 
         setStatus("Enviando recovery...");
-        const { error } = await supabase.auth.resetPasswordForEmail(recoverEmail.value.trim(), {
-          redirectTo: new URL("recover.html", window.location.href).href,
-        });
+        let error = null;
+        try {
+          ({ error } = await supabase.auth.resetPasswordForEmail(recoverEmail.value.trim(), {
+            redirectTo: new URL("recover.html", window.location.href).href,
+          }));
+        } catch (requestError) {
+          error = requestError;
+        }
 
-        setStatus(error ? error.message : "Recovery enviado. Revisa el correo.");
+        setStatus(error ? getAuthErrorMessage(error) : "Recovery enviado. Revisa el correo.");
       });
 
       newPasswordForm.addEventListener("submit", async (event) => {
@@ -230,23 +264,38 @@
         }
 
         setStatus("Guardando password...");
-        const { data } = await supabase.auth.getSession();
-        if (!data.session) {
+        let data = null;
+        try {
+          ({ data } = await supabase.auth.getSession());
+        } catch (error) {
+          setStatus(getAuthErrorMessage(error));
+          return;
+        }
+        if (!data?.session) {
           setStatus("Primero abre el link de recovery desde el correo.");
           return;
         }
 
-        const { error } = await supabase.auth.updateUser({
-          password: newPassword.value,
-        });
+        let error = null;
+        try {
+          ({ error } = await supabase.auth.updateUser({
+            password: newPassword.value,
+          }));
+        } catch (requestError) {
+          error = requestError;
+        }
 
         if (error) {
-          setStatus(error.message);
+          setStatus(getAuthErrorMessage(error));
           return;
         }
 
-        await supabase.auth.signOut();
-        window.location.href = "login.html?password=updated";
+        try {
+          await supabase.auth.signOut();
+          window.location.href = "login.html?password=updated";
+        } catch (requestError) {
+          setStatus(getAuthErrorMessage(requestError));
+        }
       });
 
       showRecoveryState();

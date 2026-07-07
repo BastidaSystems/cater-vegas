@@ -231,10 +231,34 @@
       const company = document.querySelector("#accountCompany");
       const status = document.querySelector("#accountStatus");
       const accountType = "collaborator";
-      const supabase = isSupabaseConfigured ? requireSupabase() : null;
+      const authConnectionMessage = "No se pudo conectar con Supabase. Revisa la URL del proyecto o tu conexion.";
+      let supabase = null;
 
       function setStatus(message) {
         status.textContent = message;
+      }
+
+      function getAuthErrorMessage(error) {
+        const message = error instanceof Error ? error.message : String(error || "");
+        const normalized = message.toLowerCase();
+
+        if (
+          normalized.includes("load failed") ||
+          normalized.includes("failed to fetch") ||
+          normalized.includes("fetch failed") ||
+          normalized.includes("networkerror") ||
+          normalized.includes("could not be found")
+        ) {
+          return authConnectionMessage;
+        }
+
+        return message || "No se pudo completar la solicitud.";
+      }
+
+      try {
+        supabase = isSupabaseConfigured ? requireSupabase() : null;
+      } catch (error) {
+        setStatus(getAuthErrorMessage(error));
       }
 
       async function upsertProfile(userId, workspaceId, role) {
@@ -275,35 +299,42 @@
 
         setStatus("Creando solicitud...");
 
-        const { data, error } = await supabase.auth.signUp({
-          email: email.value.trim(),
-          password: password.value,
-          options: {
-            data: {
-              full_name: fullName.value.trim(),
-              phone: phone.value.trim(),
-              company: company.value.trim(),
-              cater_role: "collaborator_pending",
-              workspace_id: DEFAULT_WORKSPACE_ID,
-              account_type: accountType,
+        let data = null;
+        let error = null;
+
+        try {
+          ({ data, error } = await supabase.auth.signUp({
+            email: email.value.trim(),
+            password: password.value,
+            options: {
+              data: {
+                full_name: fullName.value.trim(),
+                phone: phone.value.trim(),
+                company: company.value.trim(),
+                cater_role: "collaborator_pending",
+                workspace_id: DEFAULT_WORKSPACE_ID,
+                account_type: accountType,
+              },
+              emailRedirectTo: new URL("login.html", window.location.href).href,
             },
-            emailRedirectTo: new URL("login.html", window.location.href).href,
-          },
-        });
+          }));
+        } catch (requestError) {
+          error = requestError;
+        }
 
         if (error) {
-          setStatus(error.message);
+          setStatus(getAuthErrorMessage(error));
           return;
         }
 
-        if (data.user && data.session) {
+        if (data?.user && data.session) {
           try {
             await createPendingAccess(data.user);
             window.setTimeout(() => {
               window.location.href = "pending.html";
             }, 500);
           } catch (requestError) {
-            setStatus(requestError.message);
+            setStatus(getAuthErrorMessage(requestError));
           }
           return;
         }
