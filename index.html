@@ -31,11 +31,13 @@
 
   <main>
     <section class="calendar-hero" id="calendar" aria-labelledby="calendar-title">
-      <div class="booking-shell" aria-label="Calendar design options">
-        <div class="booking-heading">
-          <p class="eyebrow">Start with the date</p>
-        </div>
+      <div class="landing-hero-copy">
+        <p class="hero-kicker">Plan your perfect event</p>
+        <h1 id="calendar-title">Start with the date</h1>
+        <p>Choose your event date to begin your journey.</p>
+      </div>
 
+      <div class="booking-shell" aria-label="Calendar design options">
         <div class="calendar-card compact-calendar" aria-label="June 2026 compact month calendar">
           <div class="calendar-card-header">
             <button type="button" aria-label="Previous month">&lt;</button>
@@ -80,7 +82,39 @@
             <button type="button">30</button>
           </div>
         </div>
+
+        <div class="calendar-selection-bar" aria-live="polite">
+          <div>
+            <span id="selected-date-day">Thursday</span>
+            <strong id="selected-date-value">June 18, 2026</strong>
+          </div>
+          <a class="hero-continue-button" href="#event-type">Continue <span aria-hidden="true">→</span></a>
+        </div>
       </div>
+
+      <aside class="hero-feedback-card" aria-label="Guest feedback">
+        <div class="feedback-rating">
+          <span aria-label="Five stars">★★★★★</span>
+          <strong>4.9/5</strong>
+          <small>Basado en 547+ eventos.</small>
+        </div>
+        <div class="feedback-rotator">
+          <figure class="feedback-quote is-one">
+            <blockquote>"Planning our event was incredibly simple."</blockquote>
+            <figcaption><strong>Sarah M.</strong><span>Corporate Event</span></figcaption>
+          </figure>
+          <figure class="feedback-quote is-two" aria-hidden="true">
+            <blockquote>"Every detail felt calm, clear and handled."</blockquote>
+            <figcaption><strong>Daniel R.</strong><span>Private Event</span></figcaption>
+          </figure>
+          <figure class="feedback-quote is-three" aria-hidden="true">
+            <blockquote>"The easiest planning experience we have had."</blockquote>
+            <figcaption><strong>Monica L.</strong><span>Hospitality Event</span></figcaption>
+          </figure>
+        </div>
+      </aside>
+
+      <p class="hero-footer-line">Your event journey starts with a date.</p>
     </section>
 
     <section class="industry-hero is-hidden-step" id="event-type" aria-label="Event types">

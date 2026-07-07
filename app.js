@@ -536,15 +536,37 @@ document.querySelectorAll(".industry-panel").forEach((panel) => {
   });
 });
 
+function updateHeroSelectedDate(dayValue) {
+  const day = Number(dayValue);
+  if (!Number.isFinite(day)) return;
+  const selectedDate = new Date(2026, 5, day);
+  const selectedDateDay = document.getElementById("selected-date-day");
+  const selectedDateValue = document.getElementById("selected-date-value");
+
+  if (selectedDateDay) {
+    selectedDateDay.textContent = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(selectedDate);
+  }
+
+  if (selectedDateValue) {
+    selectedDateValue.textContent = new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(selectedDate);
+  }
+}
+
 document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll(".calendar-grid button").forEach((day) => day.classList.remove("is-selected"));
     button.classList.add("is-selected");
     build.eventDate = `June ${button.textContent.trim()}, 2026`;
+    updateHeroSelectedDate(button.textContent.trim());
     saveBuild();
     window.setTimeout(() => showStep("event-type"), 260);
   });
 });
 
+updateHeroSelectedDate(document.querySelector(".calendar-grid button.is-selected")?.textContent.trim() || "18");
 loadPublicInventory();
 showStep(window.location.hash.slice(1));
