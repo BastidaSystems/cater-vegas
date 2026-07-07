@@ -139,6 +139,7 @@ function renderPublicTables(items, message = "") {
           </span>
           <strong>${escapeHtml(item.name)}</strong>
           <small>${escapeHtml(item.price_label || `${Number(item.quantity_available || 0)} available`)}</small>
+          ${item.description ? `<span class="table-choice-description">${escapeHtml(item.description)}</span>` : ""}
         </button>
       `
     )

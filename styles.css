@@ -791,12 +791,13 @@ svg {
 .table-builder {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(260px, 0.72fr) minmax(440px, 1fr);
-  gap: clamp(24px, 4vw, 70px);
+  grid-template-columns: minmax(250px, 0.5fr) minmax(0, 1fr);
+  gap: clamp(28px, 4vw, 76px);
   align-items: center;
   min-height: calc(100vh - 76px);
   padding: clamp(66px, 8vw, 112px) clamp(24px, 5vw, 88px) clamp(34px, 5vw, 70px);
   background: var(--bone);
+  overflow-x: clip;
 }
 
 .table-builder-layout {
@@ -822,18 +823,22 @@ svg {
 
 .table-choice-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: clamp(12px, 1.8vw, 22px);
+  grid-template-columns: repeat(auto-fit, minmax(210px, 260px));
+  gap: clamp(14px, 1.8vw, 24px);
+  align-items: stretch;
+  justify-content: start;
+  width: min(100%, 860px);
 }
 
 .table-choice {
   display: grid;
-  gap: 12px;
-  min-height: clamp(250px, 38vh, 350px);
-  align-content: end;
-  padding: 18px;
+  grid-template-rows: 160px auto auto minmax(0, 1fr);
+  gap: 10px;
+  min-width: 0;
+  min-height: 0;
+  padding: 14px;
   border: 1px solid rgba(17, 22, 20, 0.12);
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255, 253, 248, 0.74);
   color: #111614;
   font: inherit;
@@ -858,11 +863,16 @@ svg {
 }
 
 .table-choice-image {
+  display: grid;
+  place-items: center;
   overflow: hidden;
-  min-height: 150px;
-  border-radius: 13px;
+  width: 100%;
+  min-width: 0;
+  height: 160px;
+  border: 1px solid rgba(134, 120, 90, 0.16);
+  border-radius: 12px;
   background:
-    linear-gradient(180deg, rgba(255, 253, 248, 0.04), rgba(251, 248, 241, 0.46)),
+    linear-gradient(180deg, rgba(255, 253, 248, 0.68), rgba(246, 239, 226, 0.72)),
     url("assets/tables.jpeg");
   background-position: center;
   background-size: cover;
@@ -870,17 +880,20 @@ svg {
 }
 
 .table-choice-image img {
+  display: block;
   width: 100%;
-  height: 150px;
+  max-width: 100%;
+  height: 100%;
   border-radius: inherit;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .table-choice strong {
   font-family: var(--serif);
-  font-size: clamp(1.8rem, 2.5vw, 3rem);
+  font-size: clamp(1.55rem, 2vw, 2.25rem);
   font-weight: 600;
-  line-height: 0.9;
+  line-height: 1;
+  overflow-wrap: anywhere;
 }
 
 .table-choice small {
@@ -889,6 +902,16 @@ svg {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.table-choice-description {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #5c665e;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .builder-preview {
@@ -1171,11 +1194,17 @@ svg {
   }
 
   .table-choice-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
   }
 
   .table-choice {
-    min-height: 250px;
+    grid-template-rows: 140px auto auto minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .table-choice-image {
+    height: 140px;
   }
 
   .category-strip {
