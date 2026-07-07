@@ -217,11 +217,6 @@ function cleanProviderNotes(notes = "") {
     .trim();
 }
 
-function isMissingSchemaColumnError(error) {
-  const message = String(error?.message || "").toLowerCase();
-  return error?.code === "PGRST204" || error?.code === "42703" || message.includes("schema cache") || message.includes("column");
-}
-
 function providerMeta(provider) {
   return parseInventoryNotes(provider?.notes) || {};
 }
@@ -480,25 +475,14 @@ async function loadPublicInventory() {
   }
 
   try {
-    let result = await client
+    const result = await client
       .from("cater_providers")
-      .select("id,provider_name,provider_type,service_category,public_description,notes,image_url,status,created_at")
+      .select("id,provider_name,provider_type,notes,status,created_at")
       .eq("workspace_id", workspaceId)
       .eq("status", "active")
-      .eq("public_visible", true)
+      .ilike("notes", `${INVENTORY_NOTE_PREFIX}%`)
       .order("created_at", { ascending: false })
       .limit(200);
-
-    if (isMissingSchemaColumnError(result.error)) {
-      result = await client
-        .from("cater_providers")
-        .select("id,provider_name,provider_type,notes,status,created_at")
-        .eq("workspace_id", workspaceId)
-        .eq("status", "active")
-        .ilike("notes", `${INVENTORY_NOTE_PREFIX}%`)
-        .order("created_at", { ascending: false })
-        .limit(200);
-    }
 
     const { data, error } = result;
     if (error) throw error;
