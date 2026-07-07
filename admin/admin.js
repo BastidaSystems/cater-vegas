@@ -89,6 +89,7 @@ const inventoryDescription = document.querySelector("#inventoryDescription");
 const inventoryStatus = document.querySelector("#inventoryStatus");
 const inventoryCategoryBar = document.querySelector("#inventoryCategoryBar");
 const inventoryList = document.querySelector("#inventoryList");
+const inventoryDetailPanel = document.querySelector("#inventoryDetailPanel");
 const refreshInventoryButton = document.querySelector("#refreshInventoryButton");
 const resetInventoryButton = document.querySelector("#resetInventoryButton");
 
@@ -111,6 +112,7 @@ let currentRole = "";
 let allEvents = [];
 let inventoryItems = [];
 let activeInventoryCategory = "all";
+let selectedInventoryId = "";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -260,6 +262,22 @@ function renderInventoryCategories() {
       `;
     })
     .join("");
+}
+
+function inventoryIconForCategory(category) {
+  const normalized = normalizeInventoryCategory(category) || "tables";
+  const icons = {
+    tables: "T",
+    chairs: "C",
+    linen: "L",
+    decor: "D",
+    tents: "TN",
+    food: "F",
+    beverages: "B",
+    entertainment: "E",
+    lodging: "H",
+  };
+  return icons[normalized] || "I";
 }
 
 function fileToDataUrl(file) {
@@ -436,6 +454,7 @@ function renderInventory() {
 
   if (!inventoryItems.length) {
     inventoryList.innerHTML = '<div class="empty-state">No hay articulos en inventario todavia.</div>';
+    renderInventoryDetail(null);
     return;
   }
 
@@ -446,39 +465,74 @@ function renderInventory() {
 
   if (!visibleItems.length) {
     inventoryList.innerHTML = `<div class="empty-state">No hay articulos en ${escapeHtml(inventoryCategoryLabel(activeInventoryCategory))}.</div>`;
+    renderInventoryDetail(null);
     return;
+  }
+
+  if (!visibleItems.some((item) => String(item.id) === String(selectedInventoryId))) {
+    selectedInventoryId = visibleItems[0]?.id || "";
   }
 
   inventoryList.innerHTML = visibleItems
     .map(
       (item) => `
-        <article class="inventory-row">
-          <div class="inventory-photo">
+        <button class="inventory-icon-card ${String(item.id) === String(selectedInventoryId) ? "is-selected" : ""}" type="button" data-select-inventory="${escapeHtml(item.id)}">
+          <span class="inventory-icon-photo">
             ${
               item.image_url
                 ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">`
-                : '<span>Sin foto</span>'
+                : `<b>${escapeHtml(inventoryIconForCategory(item.category))}</b>`
             }
-          </div>
-          <div class="inventory-row-main">
-            <p class="eyebrow">${escapeHtml(inventoryCategoryLabel(item.category))}</p>
-            <h3>${escapeHtml(item.name)}</h3>
-            <p>${escapeHtml(item.description || "Sin descripcion.")}</p>
-          </div>
-          <div class="inventory-row-meta">
-            <div class="inventory-meta">
-              <span>${Number(item.quantity_available ?? 0)} disponibles</span>
-              ${item.price_label ? `<span>${escapeHtml(item.price_label)}</span>` : ""}
-            </div>
-            <div class="inventory-actions">
-              <button class="secondary-button" type="button" data-edit-inventory="${escapeHtml(item.id)}">Editar</button>
-              <button class="tiny-button" type="button" data-delete-inventory="${escapeHtml(item.id)}">Eliminar</button>
-            </div>
-          </div>
-        </article>
+          </span>
+          <span class="inventory-icon-meta">
+            <small>${escapeHtml(inventoryCategoryLabel(item.category))}</small>
+            <strong>${escapeHtml(item.name)}</strong>
+            <em>${Number(item.quantity_available ?? 0)} disp.</em>
+          </span>
+        </button>
       `
     )
     .join("");
+
+  renderInventoryDetail(visibleItems.find((item) => String(item.id) === String(selectedInventoryId)) || visibleItems[0]);
+}
+
+function renderInventoryDetail(item) {
+  if (!inventoryDetailPanel) return;
+
+  if (!item) {
+    inventoryDetailPanel.innerHTML = `
+      <div class="inventory-detail-empty">
+        <span aria-hidden="true">INV</span>
+        <strong>Selecciona un articulo</strong>
+        <small>La informacion completa aparecera aqui.</small>
+      </div>
+    `;
+    return;
+  }
+
+  inventoryDetailPanel.innerHTML = `
+    <div class="inventory-detail-image">
+      ${
+        item.image_url
+          ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">`
+          : `<span>${escapeHtml(inventoryIconForCategory(item.category))}</span>`
+      }
+    </div>
+    <div class="inventory-detail-content">
+      <p class="eyebrow">${escapeHtml(inventoryCategoryLabel(item.category))}</p>
+      <h3>${escapeHtml(item.name)}</h3>
+      <div class="inventory-detail-tags">
+        <span>${Number(item.quantity_available ?? 0)} disponibles</span>
+        ${item.price_label ? `<span>${escapeHtml(item.price_label)}</span>` : ""}
+      </div>
+      <p>${escapeHtml(item.description || "Sin descripcion.")}</p>
+      <div class="inventory-actions">
+        <button class="secondary-button" type="button" data-edit-inventory="${escapeHtml(item.id)}">Editar</button>
+        <button class="tiny-button" type="button" data-delete-inventory="${escapeHtml(item.id)}">Eliminar</button>
+      </div>
+    </div>
+  `;
 }
 
 async function loadEvents() {
@@ -704,9 +758,16 @@ refreshInventoryButton?.addEventListener("click", loadInventory);
 resetInventoryButton?.addEventListener("click", resetInventoryForm);
 
 inventoryList?.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-edit-inventory], [data-delete-inventory]");
+  const target = event.target.closest("[data-select-inventory]");
   if (!target) return;
 
+  selectedInventoryId = target.dataset.selectInventory || "";
+  renderInventory();
+});
+
+inventoryDetailPanel?.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-edit-inventory], [data-delete-inventory]");
+  if (!target) return;
   if (target.dataset.editInventory) editInventoryItem(target.dataset.editInventory);
   if (target.dataset.deleteInventory) deleteInventoryItem(target.dataset.deleteInventory);
 });
