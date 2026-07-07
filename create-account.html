@@ -168,18 +168,18 @@
         <section class="account-hero">
           <p class="account-kicker">Cater Vegas Team</p>
           <h1>Crear cuenta</h1>
-          <p>Por ahora las solicitudes se reciben solo para colaboradores de Cater Vegas.</p>
+          <p>Crea tu acceso al workspace de Cater Vegas como colaborador.</p>
 
           <article class="account-card is-selected" data-account-card="collaborator">
             <p class="account-kicker">Equipo</p>
             <h2>Soy colaborador</h2>
-            <p>Solicita acceso al workspace Cater Vegas como staff u organizador.</p>
+            <p>Entra al portal de colaborador para ver tu perfil y asignaciones del equipo.</p>
             <button type="button">Seleccionado</button>
           </article>
         </section>
 
         <section class="account-form-panel" aria-labelledby="account-form-title">
-          <p class="account-kicker" id="accountTypeLabel">Collaborator pending</p>
+          <p class="account-kicker" id="accountTypeLabel">Collaborator access</p>
           <h2 id="account-form-title">Datos de la cuenta</h2>
 
           <form class="account-form" id="accountForm">
@@ -198,17 +198,7 @@
               <input id="accountPassword" type="password" autocomplete="new-password" minlength="6" required />
             </label>
 
-            <label>
-              Telefono
-              <input id="accountPhone" type="tel" autocomplete="tel" />
-            </label>
-
-            <label>
-              Empresa / contexto
-              <input id="accountCompany" type="text" placeholder="Cater Vegas, venue, agencia o equipo" />
-            </label>
-
-            <button class="account-button" type="submit">Crear solicitud</button>
+            <button class="account-button" type="submit">Crear cuenta</button>
             <p class="account-status" id="accountStatus" aria-live="polite"></p>
           </form>
         </section>
@@ -220,15 +210,15 @@
       import {
         DEFAULT_WORKSPACE_ID,
         isSupabaseConfigured,
+        navigateWithLoopGuard,
         requireSupabase,
+        resolvePostLoginPath,
       } from "./lib/supabaseClient.js?v=supabase-auth-loader-20260619";
 
       const form = document.querySelector("#accountForm");
       const fullName = document.querySelector("#fullName");
       const email = document.querySelector("#accountEmail");
       const password = document.querySelector("#accountPassword");
-      const phone = document.querySelector("#accountPhone");
-      const company = document.querySelector("#accountCompany");
       const status = document.querySelector("#accountStatus");
       const accountType = "collaborator";
       const authConnectionMessage = "No se pudo conectar con Supabase. Revisa la URL del proyecto o tu conexion.";
@@ -267,15 +257,13 @@
           workspace_id: workspaceId,
           full_name: fullName.value.trim(),
           email: email.value.trim(),
-          phone: phone.value.trim() || null,
-          company: company.value.trim() || null,
           role,
         });
 
         if (error) throw error;
       }
 
-      async function createPendingAccess(user) {
+      async function createWorkspaceAccess(user) {
         await upsertProfile(user.id, DEFAULT_WORKSPACE_ID, "collaborator_pending");
         const { error } = await supabase.from("beoflow_workspace_members").upsert(
           {
@@ -297,7 +285,7 @@
           return;
         }
 
-        setStatus("Creando solicitud...");
+        setStatus("Creando cuenta...");
 
         let data = null;
         let error = null;
@@ -309,8 +297,6 @@
             options: {
               data: {
                 full_name: fullName.value.trim(),
-                phone: phone.value.trim(),
-                company: company.value.trim(),
                 cater_role: "collaborator_pending",
                 workspace_id: DEFAULT_WORKSPACE_ID,
                 account_type: accountType,
@@ -329,9 +315,10 @@
 
         if (data?.user && data.session) {
           try {
-            await createPendingAccess(data.user);
+            await createWorkspaceAccess(data.user);
+            const nextPath = await resolvePostLoginPath();
             window.setTimeout(() => {
-              window.location.href = "pending.html";
+              navigateWithLoopGuard(nextPath, "account-created");
             }, 500);
           } catch (requestError) {
             setStatus(getAuthErrorMessage(requestError));
@@ -339,9 +326,9 @@
           return;
         }
 
-        setStatus("Revisa tu correo para confirmar tu cuenta.");
+        setStatus("Cuenta creada. Revisa tu correo si Supabase pide confirmacion y luego inicia sesion.");
         window.setTimeout(() => {
-          window.location.href = "pending.html?confirm=1";
+          window.location.href = "login.html?created=1";
         }, 900);
       });
     </script>

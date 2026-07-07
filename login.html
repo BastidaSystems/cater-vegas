@@ -257,6 +257,10 @@
       const params = new URLSearchParams(window.location.search);
       if (params.get("password") === "updated") {
         setStatus("Password actualizada. Entra con tu nueva contraseña.");
+      } else if (params.get("signout") === "1") {
+        setStatus("Sesion cerrada. Entra con tu cuenta.");
+      } else if (params.get("created") === "1") {
+        setStatus("Cuenta creada. Entra para abrir tu portal.");
       }
 
       if (!isSupabaseConfigured) {

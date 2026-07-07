@@ -60,15 +60,24 @@
         margin-top: 1.3rem;
       }
 
-      .pending-actions a {
+      .pending-actions a,
+      .pending-actions button {
+        appearance: none;
+        background: transparent;
         border: 1px solid rgba(185, 144, 91, 0.32);
         border-radius: 999px;
         color: var(--gold-light);
+        cursor: pointer;
         font-size: 0.72rem;
         font-weight: 900;
         letter-spacing: 0.12em;
         padding: 0.85rem 1rem;
         text-transform: uppercase;
+      }
+
+      .pending-actions button:disabled {
+        cursor: wait;
+        opacity: 0.72;
       }
     </style>
   </head>
@@ -85,21 +94,63 @@
           Tu cuenta está pendiente de aprobación. Un admin del workspace debe aprobar tu acceso.
         </p>
         <div class="pending-actions">
-          <a href="login.html">Volver al login</a>
+          <button id="pendingSignoutButton" type="button">Salir y login</button>
           <a href="index.html">Cater Vegas</a>
         </div>
       </section>
     </main>
 
     <script type="module">
+      import {
+        isSupabaseConfigured,
+        navigateWithLoopGuard,
+        requireSupabase,
+        resolvePostLoginPath,
+      } from "./lib/supabaseClient.js?v=supabase-auth-loader-20260619";
+
       const params = new URLSearchParams(window.location.search);
       const message = document.querySelector("#pendingMessage");
+      const signoutButton = document.querySelector("#pendingSignoutButton");
 
       if (params.get("status") === "disabled") {
         message.textContent = "Tu acceso está desactivado. Contacta al admin del workspace.";
       } else if (params.get("confirm") === "1") {
-        message.textContent = "Cuenta creada. Revisa tu email, confirma la cuenta y luego inicia sesión para terminar la solicitud.";
+        message.textContent = "Cuenta creada. Revisa tu email, confirma la cuenta y luego inicia sesión para abrir tu portal.";
       }
+
+      async function redirectIfAccessIsReady() {
+        if (!isSupabaseConfigured || params.get("status") === "disabled") return;
+
+        const supabase = requireSupabase();
+        const { data, error } = await supabase.auth.getSession();
+        if (error || !data?.session) return;
+
+        const nextPath = await resolvePostLoginPath();
+        if (!nextPath.startsWith("pending.html")) {
+          navigateWithLoopGuard(nextPath, "pending-access-ready");
+        }
+      }
+
+      signoutButton.addEventListener("click", async () => {
+        signoutButton.disabled = true;
+        signoutButton.textContent = "Saliendo...";
+
+        try {
+          if (isSupabaseConfigured) {
+            const supabase = requireSupabase();
+            await supabase.auth.signOut();
+          }
+        } catch (error) {
+          console.warn("No se pudo cerrar la sesion de Supabase.", error);
+        } finally {
+          window.sessionStorage.removeItem("caterVegasRouteHistory");
+          window.location.href = "login.html?signout=1";
+        }
+      });
+
+      redirectIfAccessIsReady().catch((error) => {
+        console.warn("No se pudo revisar el acceso de la cuenta.", error);
+      });
     </script>
   </body>
 </html>
