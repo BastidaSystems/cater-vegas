@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Login de Cater Vegas con Supabase Auth." />
+    <meta name="description" content="Cater Vegas login with Supabase Auth." />
     <title>Cater Vegas | Login</title>
     <link rel="stylesheet" href="styles.css?v=20260703-catering-fit-2" />
     <style>
@@ -174,7 +174,7 @@
           <small>Events &amp; Hospitality</small>
         </span>
       </a>
-      <nav class="site-nav" aria-label="Principal">
+      <nav class="site-nav" aria-label="Primary">
         <a href="login.html" aria-current="page">Login</a>
         <a href="index.html#contact">Contact</a>
       </nav>
@@ -183,8 +183,8 @@
     <main class="auth-shell">
       <section class="auth-panel" aria-labelledby="auth-title">
         <span class="auth-kicker">Cater Vegas Access</span>
-        <h1 id="auth-title">Acceso</h1>
-        <p>Entra con tu cuenta para revisar el admin, colaboradores y solicitudes de Cater Vegas.</p>
+        <h1 id="auth-title">Sign In</h1>
+        <p>Access your account to review Cater Vegas admin, collaborators, and requests.</p>
 
         <form class="auth-form" id="authForm">
           <label>
@@ -197,21 +197,21 @@
           </label>
 
           <div class="auth-actions">
-            <button class="auth-button" type="submit">Entrar</button>
-            <a class="auth-button secondary" href="create-account.html">Crear cuenta</a>
+            <button class="auth-button" type="submit">Sign In</button>
+            <a class="auth-button secondary" href="create-account.html">Create Account</a>
           </div>
 
-          <button class="auth-button secondary" id="magicLinkButton" type="button">Enviar magic link</button>
-          <a class="auth-recover-link" href="recover.html">Recuperar password</a>
+          <button class="auth-button secondary" id="magicLinkButton" type="button">Send Magic Link</button>
+          <a class="auth-recover-link" href="recover.html">Recover Password</a>
 
           <p class="auth-status" id="authStatus" aria-live="polite"></p>
         </form>
 
-        <nav class="auth-links" aria-label="Navegacion de sesion">
-          <a href="admin/?preview=1">Ver admin preview</a>
+        <nav class="auth-links" aria-label="Session navigation">
+          <a href="admin/?preview=1">View Admin Preview</a>
           <a href="admin/">Admin</a>
-          <a href="index.html#calendar">Volver</a>
-          <button class="auth-button secondary" id="signoutButton" type="button">Salir</button>
+          <a href="index.html#calendar">Back</a>
+          <button class="auth-button secondary" id="signoutButton" type="button">Sign Out</button>
         </nav>
       </section>
     </main>
@@ -231,7 +231,7 @@
       const magicLinkButton = document.querySelector("#magicLinkButton");
       const signoutButton = document.querySelector("#signoutButton");
       const authStatus = document.querySelector("#authStatus");
-      const authConnectionMessage = "No se pudo conectar con Supabase. Revisa la URL del proyecto o tu conexion.";
+      const authConnectionMessage = "Could not connect to Supabase. Check the project URL or your connection.";
 
       function setStatus(message) {
         authStatus.textContent = message;
@@ -251,20 +251,20 @@
           return authConnectionMessage;
         }
 
-        return message || "No se pudo completar la solicitud.";
+        return message || "Could not complete the request.";
       }
 
       const params = new URLSearchParams(window.location.search);
       if (params.get("password") === "updated") {
-        setStatus("Password actualizada. Entra con tu nueva contraseña.");
+        setStatus("Password updated. Sign in with your new password.");
       } else if (params.get("signout") === "1") {
-        setStatus("Sesion cerrada. Entra con tu cuenta.");
+        setStatus("Signed out. Sign in with your account.");
       } else if (params.get("created") === "1") {
-        setStatus("Cuenta creada. Entra para abrir tu portal.");
+        setStatus("Account created. Sign in to open your portal.");
       }
 
       if (!isSupabaseConfigured) {
-        setStatus("Configura Supabase en lib/supabaseClient.js antes de usar Auth.");
+        setStatus("Configure Supabase in lib/supabaseClient.js before using Auth.");
       }
 
       let supabase = null;
@@ -280,7 +280,7 @@
           const { data, error } = await supabase.auth.getSession();
           if (error) throw error;
           if (data?.session) {
-            setStatus(`Sesion activa: ${data.session.user.email}`);
+            setStatus(`Active session: ${data.session.user.email}`);
             try {
               const nextPath = await resolvePostLoginPath();
               navigateWithLoopGuard(nextPath, "login-session");
@@ -297,7 +297,7 @@
         event.preventDefault();
         if (!supabase) return;
 
-        setStatus("Entrando...");
+        setStatus("Signing in...");
         let error = null;
         try {
           ({ error } = await supabase.auth.signInWithPassword({
@@ -324,7 +324,7 @@
       magicLinkButton.addEventListener("click", async () => {
         if (!supabase) return;
 
-        setStatus("Enviando magic link...");
+        setStatus("Sending magic link...");
         let error = null;
         try {
           ({ error } = await supabase.auth.signInWithOtp({
@@ -337,14 +337,14 @@
           error = requestError;
         }
 
-        setStatus(error ? getAuthErrorMessage(error) : "Magic link enviado.");
+        setStatus(error ? getAuthErrorMessage(error) : "Magic link sent.");
       });
 
       signoutButton.addEventListener("click", async () => {
         if (!supabase) return;
         try {
           await supabase.auth.signOut();
-          setStatus("Sesion cerrada.");
+          setStatus("Signed out.");
         } catch (error) {
           setStatus(getAuthErrorMessage(error));
         }
