@@ -10,6 +10,7 @@ import {
 
 const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
 const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
+const PUBLIC_INVENTORY_KEY = "caterVegasPublicInventory";
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 
 const adminLayout = document.querySelector(".admin-layout-simple");
@@ -78,6 +79,10 @@ function localInventoryRows() {
 
 function saveLocalInventory(rows) {
   window.localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(rows));
+}
+
+function savePublicInventory(rows) {
+  window.localStorage.setItem(PUBLIC_INVENTORY_KEY, JSON.stringify(rows));
 }
 
 function parseInventoryNotes(notes) {
@@ -287,6 +292,7 @@ async function loadInventory() {
   }
 
   inventoryItems = (data || []).map(providerToInventory).filter(Boolean);
+  savePublicInventory(inventoryItems);
   renderInventory();
   setInventoryStatus("Inventario sincronizado.");
 }

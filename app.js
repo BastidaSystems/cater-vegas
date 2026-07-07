@@ -1,4 +1,12 @@
+import {
+  DEFAULT_WORKSPACE_ID,
+  isSupabaseConfigured,
+  supabase,
+} from "./lib/supabaseClient.js?v=supabase-auth-loader-20260619";
+
 const stepIds = ["calendar", "industries", "catering", "tables", "start", "about", "contact"];
+const LOCAL_INVENTORY_KEY = "caterVegasPublicInventory";
+const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 const cateringBuild = {
   table: "",
   tableNote: ""
@@ -81,6 +89,112 @@ function saveBuilder() {
   window.localStorage.setItem("caterVegasBuild", JSON.stringify(cateringBuild));
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function parseInventoryNotes(notes) {
+  const raw = String(notes || "");
+  if (!raw.startsWith(INVENTORY_NOTE_PREFIX)) return null;
+
+  try {
+    return JSON.parse(raw.slice(INVENTORY_NOTE_PREFIX.length));
+  } catch {
+    return null;
+  }
+}
+
+function localInventoryRows() {
+  try {
+    return JSON.parse(window.localStorage.getItem(LOCAL_INVENTORY_KEY) || "[]");
+  } catch {
+    return [];
+  }
+}
+
+function renderPublicTables(items, message = "") {
+  const container = document.getElementById("publicTableInventory");
+  if (!container) return;
+
+  if (!items.length) {
+    container.innerHTML = `
+      <div class="empty-state">
+        ${escapeHtml(message || "Tables will appear here when the administrator adds inventory.")}
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = items
+    .map(
+      (item) => `
+        <button class="table-choice" type="button" data-table-choice="${escapeHtml(item.name)}" data-table-note="${escapeHtml(item.description || item.price_label || "Inventory item")}">
+          <span class="table-choice-image" aria-hidden="true">
+            ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="">` : ""}
+          </span>
+          <strong>${escapeHtml(item.name)}</strong>
+          <small>${escapeHtml(item.price_label || `${Number(item.quantity_available || 0)} available`)}</small>
+        </button>
+      `
+    )
+    .join("");
+
+  bindTableChoices();
+  updateBuilderPreview();
+}
+
+async function loadPublicInventory() {
+  const localItems = localInventoryRows();
+  if (localItems.length) {
+    renderPublicTables(localItems);
+  }
+
+  if (!isSupabaseConfigured || !supabase) {
+    if (!localItems.length) renderPublicTables([], "Inventory is loading locally.");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("cater_providers")
+    .select("id,provider_name,provider_type,status,notes,created_at")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("provider_type", "rental")
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    if (!localItems.length) renderPublicTables([], "Inventory will appear here after it is published.");
+    return;
+  }
+
+  const items = (data || [])
+    .map((row) => {
+      const meta = parseInventoryNotes(row.notes);
+      if (meta?.kind !== "inventory") return null;
+      return {
+        id: row.id,
+        name: row.provider_name,
+        category: meta.category,
+        description: meta.description,
+        quantity_available: Number(meta.quantity_available || 0),
+        price_label: meta.price_label || "",
+        image_url: meta.image_url || "",
+      };
+    })
+    .filter(Boolean);
+
+  if (items.length) {
+    window.localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(items));
+  }
+
+  renderPublicTables(items.length ? items : localItems);
+}
+
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
   link.addEventListener("click", (event) => {
     const href = link.getAttribute("href");
@@ -138,20 +252,26 @@ document.querySelectorAll("[data-path]").forEach((button) => {
   button.addEventListener("click", () => setStartPath(button.dataset.path));
 });
 
-document.querySelectorAll("[data-table-choice]").forEach((button) => {
-  button.addEventListener("click", () => {
-    cateringBuild.table = button.dataset.tableChoice;
-    cateringBuild.tableNote = button.dataset.tableNote;
-    saveBuilder();
+function bindTableChoices() {
+  document.querySelectorAll("[data-table-choice]").forEach((button) => {
+    if (button.dataset.choiceBound === "true") return;
+    button.dataset.choiceBound = "true";
+    button.addEventListener("click", () => {
+      cateringBuild.table = button.dataset.tableChoice;
+      cateringBuild.tableNote = button.dataset.tableNote;
+      saveBuilder();
 
-    document.querySelectorAll("[data-table-choice]").forEach((choice) => {
-      choice.classList.toggle("is-selected", choice === button);
+      document.querySelectorAll("[data-table-choice]").forEach((choice) => {
+        choice.classList.toggle("is-selected", choice === button);
+      });
+
+      updateBuilderPreview();
+      window.setTimeout(() => showStep("catering"), 420);
     });
-
-    updateBuilderPreview();
-    window.setTimeout(() => showStep("catering"), 420);
   });
-});
+}
+
+bindTableChoices();
 
 document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) => {
   button.addEventListener("click", () => {
@@ -162,3 +282,4 @@ document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) 
 });
 
 showStep(window.location.hash.slice(1));
+loadPublicInventory();

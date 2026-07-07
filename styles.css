@@ -858,6 +858,7 @@ svg {
 }
 
 .table-choice-image {
+  overflow: hidden;
   min-height: 150px;
   border-radius: 13px;
   background:
@@ -866,6 +867,13 @@ svg {
   background-position: center;
   background-size: cover;
   filter: saturate(0.88);
+}
+
+.table-choice-image img {
+  width: 100%;
+  height: 150px;
+  border-radius: inherit;
+  object-fit: cover;
 }
 
 .table-choice strong {
