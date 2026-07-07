@@ -12,6 +12,7 @@ const sessionStatus = document.querySelector("#sessionStatus");
 const eventsList = document.querySelector("#eventsList");
 const inventoryCatalog = document.querySelector("#inventoryCatalog");
 const signoutButton = document.querySelector("#signoutButton");
+const INVENTORY_SOURCE = "inventory";
 
 let supabase = null;
 
@@ -56,14 +57,16 @@ async function loadClientEvents() {
 
 async function loadInventoryCatalog() {
   const { data, error } = await supabase
-    .from("cater_inventory")
-    .select("id,name,category,description,quantity_available,price_label,image_url,updated_at")
+    .from("cater_providers")
+    .select("id,provider_name,provider_type,service_category,public_description,availability,base_prices,image_url,updated_at")
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
-    .eq("is_active", true)
+    .eq("source", INVENTORY_SOURCE)
+    .eq("public_visible", true)
+    .eq("status", "active")
     .order("created_at", { ascending: false });
 
   if (error) {
-    inventoryCatalog.innerHTML = `<p>${escapeHtml(error.message)}. Pide al administrador crear la tabla cater_inventory.</p>`;
+    inventoryCatalog.innerHTML = `<p>${escapeHtml(error.message)}.</p>`;
     return;
   }
 
@@ -74,26 +77,30 @@ async function loadInventoryCatalog() {
 
   inventoryCatalog.innerHTML = data
     .map(
-      (item) => `
+      (item) => {
+        const quantityMatch = String(item.availability || "").match(/Cantidad:\s*(\d+)/i);
+        const quantity = quantityMatch ? Number(quantityMatch[1]) : 0;
+        return `
         <article class="catalog-item">
           <div class="catalog-photo">
             ${
               item.image_url
-                ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">`
+                ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.provider_name)}">`
                 : "<span>Sin foto</span>"
             }
           </div>
           <div class="catalog-copy">
-            <span>${escapeHtml(item.category || "Inventario")}</span>
-            <h3>${escapeHtml(item.name)}</h3>
-            <p>${escapeHtml(item.description || "Disponible para cotizacion.")}</p>
+            <span>${escapeHtml(item.service_category || item.provider_type || "Inventario")}</span>
+            <h3>${escapeHtml(item.provider_name)}</h3>
+            <p>${escapeHtml(item.public_description || "Disponible para cotizacion.")}</p>
             <div class="catalog-meta">
-              <strong>${Number(item.quantity_available ?? 0)} disponibles</strong>
-              ${item.price_label ? `<strong>${escapeHtml(item.price_label)}</strong>` : ""}
+              <strong>${quantity} disponibles</strong>
+              ${item.base_prices ? `<strong>${escapeHtml(item.base_prices)}</strong>` : ""}
             </div>
           </div>
         </article>
-      `
+      `;
+      }
     )
     .join("");
 }

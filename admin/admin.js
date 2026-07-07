@@ -10,6 +10,7 @@ import {
 
 const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
 const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
+const INVENTORY_SOURCE = "inventory";
 
 const adminLayout = document.querySelector(".admin-layout-simple");
 const sessionStatus = document.querySelector("#sessionStatus");
@@ -77,6 +78,24 @@ function localInventoryRows() {
 
 function saveLocalInventory(rows) {
   window.localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(rows));
+}
+
+function quantityFromAvailability(value) {
+  const match = String(value || "").match(/Cantidad:\s*(\d+)/i);
+  return match ? Number(match[1]) : 0;
+}
+
+function providerToInventory(row) {
+  return {
+    id: row.id,
+    name: row.provider_name || row.name || "",
+    category: row.service_category || row.provider_type || row.category || "Tables",
+    description: row.public_description || row.notes || row.description || "",
+    quantity_available: quantityFromAvailability(row.availability) || Number(row.quantity_available || 0),
+    price_label: row.base_prices || row.price_label || "",
+    image_url: row.image_url || "",
+    status: row.status || "active",
+  };
 }
 
 function fileToDataUrl(file) {
@@ -234,19 +253,20 @@ async function loadInventory() {
   }
 
   const { data, error } = await supabase
-    .from("cater_inventory")
-    .select("*")
+    .from("cater_providers")
+    .select("id,provider_name,provider_type,service_category,public_description,notes,availability,base_prices,image_url,status,source,created_at")
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("source", INVENTORY_SOURCE)
     .order("created_at", { ascending: false });
 
   if (error) {
     inventoryItems = localInventoryRows();
     renderInventory();
-    setInventoryStatus(`No se pudo leer Supabase: ${error.message}. Revisa que exista la tabla cater_inventory.`);
+    setInventoryStatus(`No se pudo leer inventario: ${error.message}.`);
     return;
   }
 
-  inventoryItems = data || [];
+  inventoryItems = (data || []).map(providerToInventory);
   renderInventory();
   setInventoryStatus("Inventario sincronizado.");
 }
@@ -283,9 +303,10 @@ async function deleteInventoryItem(id) {
   }
 
   const { error } = await supabase
-    .from("cater_inventory")
+    .from("cater_providers")
     .delete()
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("source", INVENTORY_SOURCE)
     .eq("id", id);
 
   if (error) {
@@ -303,16 +324,20 @@ async function saveInventoryItem(event) {
   const fileImage = await fileToDataUrl(inventoryImageFile?.files?.[0]);
   const payload = {
     workspace_id: DEFAULT_WORKSPACE_ID,
-    name: inventoryName.value.trim(),
-    category: inventoryCategory.value,
-    quantity_available: Number(inventoryQuantity.value || 0),
-    price_label: inventoryPrice.value.trim() || null,
+    provider_name: inventoryName.value.trim(),
+    provider_type: "rental",
+    service_category: inventoryCategory.value,
+    availability: `Cantidad: ${Number(inventoryQuantity.value || 0)}`,
+    base_prices: inventoryPrice.value.trim() || null,
     image_url: fileImage || inventoryImageUrl.value.trim() || null,
-    description: inventoryDescription.value.trim() || null,
-    is_active: true,
+    public_description: inventoryDescription.value.trim() || null,
+    notes: inventoryDescription.value.trim() || null,
+    status: "active",
+    public_visible: true,
+    source: INVENTORY_SOURCE,
   };
 
-  if (!payload.name) {
+  if (!payload.provider_name) {
     setInventoryStatus("Agrega el nombre del articulo.");
     return;
   }
@@ -334,8 +359,19 @@ async function saveInventoryItem(event) {
 
   const id = inventoryItemId.value;
   const query = id
-    ? supabase.from("cater_inventory").update(payload).eq("workspace_id", DEFAULT_WORKSPACE_ID).eq("id", id).select().single()
-    : supabase.from("cater_inventory").insert({ ...payload, created_by: currentUser?.id || null }).select().single();
+    ? supabase
+        .from("cater_providers")
+        .update(payload)
+        .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+        .eq("source", INVENTORY_SOURCE)
+        .eq("id", id)
+        .select()
+        .single()
+    : supabase
+        .from("cater_providers")
+        .insert({ ...payload, created_by: currentUser?.id || null })
+        .select()
+        .single();
 
   const { error } = await query;
   if (error) {
