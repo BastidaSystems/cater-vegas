@@ -5037,26 +5037,57 @@ textarea:focus {
 }
 
 .admin-layout-simple .admin-header {
-  align-items: flex-start;
+  align-items: center;
   background:
     linear-gradient(135deg, rgba(255, 253, 248, 0.94), rgba(244, 238, 226, 0.82)),
     radial-gradient(circle at 82% 12%, rgba(185, 144, 91, 0.14), transparent 22rem);
-  padding: clamp(1.25rem, 2.4vw, 2rem);
+  border-radius: 1.15rem;
+  padding: clamp(0.75rem, 1.3vw, 1.05rem);
 }
 
 .admin-layout-simple .header-title h1 {
   color: var(--cv-public-text);
   font-family: var(--cv-serif);
-  font-size: clamp(3rem, 6vw, 5.4rem);
+  font-size: clamp(2rem, 3.6vw, 3.15rem);
   font-weight: 600;
-  line-height: 0.88;
+  line-height: 0.92;
 }
 
 .admin-layout-simple .header-title p:not(.eyebrow) {
-  max-width: 42rem;
+  max-width: 34rem;
   color: var(--cv-public-muted);
-  font-size: clamp(1rem, 1.4vw, 1.22rem);
-  line-height: 1.4;
+  font-size: clamp(0.9rem, 1vw, 1rem);
+  line-height: 1.25;
+}
+
+.admin-layout-simple .header-title .eyebrow {
+  margin-bottom: 0.12rem;
+  font-size: 0.62rem;
+}
+
+.admin-layout-simple .session-status {
+  margin-top: 0.45rem;
+  font-size: 0.92rem;
+}
+
+.admin-layout-simple .header-actions {
+  gap: 0.5rem;
+}
+
+.admin-layout-simple .home-button,
+.admin-layout-simple .logout-button {
+  min-height: 2.35rem;
+  padding: 0 0.85rem;
+}
+
+.admin-layout-simple .user-pill {
+  min-height: 2.6rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.admin-layout-simple .user-pill .avatar {
+  width: 2.15rem;
+  height: 2.15rem;
 }
 
 .dashboard-panel {
@@ -5521,11 +5552,20 @@ textarea:focus {
 
 @media (max-width: 760px) {
   .admin-layout-simple .admin-header {
-    padding: 1rem;
+    padding: 0.85rem;
   }
 
   .admin-layout-simple .header-title h1 {
-    font-size: clamp(2.35rem, 13vw, 3.5rem);
+    font-size: clamp(1.9rem, 9vw, 2.55rem);
+  }
+
+  .admin-layout-simple .header-title p:not(.eyebrow) {
+    font-size: 0.9rem;
+  }
+
+  .admin-layout-simple .header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .dashboard-metrics {
