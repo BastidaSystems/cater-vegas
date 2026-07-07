@@ -100,6 +100,9 @@
       }
 
       .auth-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
         min-height: 48px;
         border: 1px solid var(--ink);
         border-radius: 999px;
@@ -110,6 +113,7 @@
         font-weight: 900;
         letter-spacing: 0.14em;
         padding: 0.9rem 1rem;
+        text-decoration: none;
         text-transform: uppercase;
         transition: background 160ms ease, color 160ms ease, transform 160ms ease;
       }
@@ -171,9 +175,8 @@
         </span>
       </a>
       <nav class="site-nav" aria-label="Principal">
-        <a href="index.html#about">About Us</a>
+        <a href="login.html" aria-current="page">Login</a>
         <a href="index.html#contact">Contact</a>
-        <a class="language-pill" href="index.html#contact">Language <strong>EN</strong></a>
       </nav>
     </header>
 
@@ -195,7 +198,7 @@
 
           <div class="auth-actions">
             <button class="auth-button" type="submit">Entrar</button>
-            <button class="auth-button secondary" id="signupButton" type="button">Crear cuenta</button>
+            <a class="auth-button secondary" href="create-account.html">Crear cuenta</a>
           </div>
 
           <button class="auth-button secondary" id="magicLinkButton" type="button">Enviar magic link</button>
@@ -225,7 +228,6 @@
       const authForm = document.querySelector("#authForm");
       const emailInput = document.querySelector("#authEmail");
       const passwordInput = document.querySelector("#authPassword");
-      const signupButton = document.querySelector("#signupButton");
       const magicLinkButton = document.querySelector("#magicLinkButton");
       const signoutButton = document.querySelector("#signoutButton");
       const authStatus = document.querySelector("#authStatus");
@@ -280,10 +282,6 @@
         } catch (routeError) {
           setStatus(routeError.message);
         }
-      });
-
-      signupButton.addEventListener("click", () => {
-        window.location.href = "create-account.html";
       });
 
       magicLinkButton.addEventListener("click", async () => {

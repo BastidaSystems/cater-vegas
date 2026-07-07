@@ -158,10 +158,8 @@
         </span>
       </a>
       <nav class="site-nav" aria-label="Principal">
-        <a href="index.html#about">About Us</a>
-        <a href="index.html#contact">Contact</a>
         <a href="login.html">Login</a>
-        <a class="language-pill" href="index.html#contact">Language <strong>EN</strong></a>
+        <a href="index.html#contact">Contact</a>
       </nav>
     </header>
 
@@ -275,7 +273,7 @@
           return;
         }
 
-        setStatus("Creando solicitud de colaborador...");
+        setStatus("Creando solicitud...");
 
         const { data, error } = await supabase.auth.signUp({
           email: email.value.trim(),
@@ -301,14 +299,19 @@
         if (data.user && data.session) {
           try {
             await createPendingAccess(data.user);
-            window.location.href = "pending.html";
+            window.setTimeout(() => {
+              window.location.href = "pending.html";
+            }, 500);
           } catch (requestError) {
             setStatus(requestError.message);
           }
           return;
         }
 
-        window.location.href = "pending.html?confirm=1";
+        setStatus("Revisa tu correo para confirmar tu cuenta.");
+        window.setTimeout(() => {
+          window.location.href = "pending.html?confirm=1";
+        }, 900);
       });
     </script>
   </body>
