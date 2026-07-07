@@ -5043,7 +5043,12 @@ textarea:focus {
 
 .admin-layout-simple .sidebar-nav {
   align-self: start;
-  margin-top: clamp(1.5rem, 4vh, 2.75rem);
+  margin-top: clamp(0.75rem, 2vh, 1.35rem);
+}
+
+.admin-layout-simple .sidebar-link {
+  justify-content: flex-start;
+  padding-left: 1.45rem;
 }
 
 .admin-layout-simple .sidebar-mini {
