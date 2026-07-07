@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Crear cuenta de colaborador para Cater Vegas." />
-    <title>Cater Vegas | Crear cuenta</title>
+    <meta name="description" content="Create a Cater Vegas collaborator account." />
+    <title>Cater Vegas | Create Account</title>
     <link rel="stylesheet" href="styles.css?v=20260703-catering-fit-2" />
     <style>
       body {
@@ -521,7 +521,7 @@
           <small>Events &amp; Hospitality</small>
         </span>
       </a>
-      <nav class="site-nav" aria-label="Principal">
+      <nav class="site-nav" aria-label="Primary">
         <a href="login.html">Login</a>
         <a href="index.html#contact">Contact</a>
       </nav>
@@ -541,7 +541,7 @@
 
           <form class="account-form" id="accountForm">
             <label class="field-group">
-              <span>Nombre</span>
+              <span>Name</span>
               <span class="field-shell">
                 <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M20 21a8 8 0 0 0-16 0" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
@@ -552,7 +552,7 @@
             </label>
 
             <label class="field-group">
-              <span>Correo</span>
+              <span>Email</span>
               <span class="field-shell">
                 <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="3.5" y="5.5" width="17" height="13" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7" />
@@ -563,7 +563,7 @@
             </label>
 
             <div class="field-group">
-              <label class="field-label" for="accountPassword">Contraseña</label>
+              <label class="field-label" for="accountPassword">Password</label>
               <span class="field-shell">
                 <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="5" y="10" width="14" height="10" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7" />
@@ -581,7 +581,7 @@
             </div>
 
             <div class="field-group">
-              <label class="field-label" for="confirmPassword">Confirmar contraseña</label>
+              <label class="field-label" for="confirmPassword">Confirm Password</label>
               <span class="field-shell">
                 <svg class="field-icon" viewBox="0 0 24 24" aria-hidden="true">
                   <rect x="5" y="10" width="14" height="10" rx="2.4" fill="none" stroke="currentColor" stroke-width="1.7" />
@@ -647,7 +647,7 @@
       const password = document.querySelector("#accountPassword");
       const status = document.querySelector("#accountStatus");
       const accountType = "collaborator";
-      const authConnectionMessage = "No se pudo conectar con Supabase. Revisa la URL del proyecto o tu conexion.";
+      const authConnectionMessage = "Could not connect to Supabase. Check the project URL or your connection.";
       let supabase = null;
 
       function setStatus(message) {
@@ -668,7 +668,7 @@
           return authConnectionMessage;
         }
 
-        return message || "No se pudo completar la solicitud.";
+        return message || "Could not complete the request.";
       }
 
       try {
@@ -707,11 +707,11 @@
       form.addEventListener("submit", async (event) => {
         event.preventDefault();
         if (!supabase) {
-          setStatus("Configura Supabase antes de crear cuentas.");
+          setStatus("Configure Supabase before creating accounts.");
           return;
         }
 
-        setStatus("Creando cuenta...");
+        setStatus("Creating account...");
 
         let data = null;
         let error = null;
@@ -752,7 +752,7 @@
           return;
         }
 
-        setStatus("Cuenta creada. Revisa tu correo si Supabase pide confirmacion y luego inicia sesion.");
+        setStatus("Account created. Check your email if Supabase requires confirmation, then sign in.");
         window.setTimeout(() => {
           window.location.href = "login.html?created=1";
         }, 900);
