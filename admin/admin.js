@@ -72,7 +72,10 @@ const sessionStatus = document.querySelector("#sessionStatus");
 const signoutButton = document.querySelector("#signoutButton");
 const dashboardEmail = document.querySelector("#dashboardEmail");
 const dashboardRole = document.querySelector("#dashboardRole");
+const dashboardMetrics = document.querySelector("#dashboardMetrics");
 const dashboardCalendar = document.querySelector("#dashboardCalendar");
+const dashboardUpcomingList = document.querySelector("#dashboardUpcomingList");
+const dashboardInventorySummary = document.querySelector("#dashboardInventorySummary");
 const calendarMonthLabel = document.querySelector("#calendarMonthLabel");
 const inventoryForm = document.querySelector("#inventoryForm");
 const inventoryItemId = document.querySelector("#inventoryItemId");
@@ -146,7 +149,7 @@ function setInventoryStatus(message) {
 
 function setAdminView(targetSelector, requestedView = "") {
   if (!adminLayout) return;
-  adminLayout.dataset.adminView = requestedView || (targetSelector === "#inventoryPanel" ? "inventory" : "calendar");
+  adminLayout.dataset.adminView = requestedView || (targetSelector === "#inventoryPanel" ? "inventory" : "dashboard");
 }
 
 function scrollToAdminTarget(targetSelector, requestedView = "") {
@@ -273,6 +276,102 @@ function fileToDataUrl(file) {
   });
 }
 
+function eventDateValue(event) {
+  if (!event?.event_date) return null;
+  const value = new Date(`${event.event_date}T00:00:00`);
+  return Number.isNaN(value.getTime()) ? null : value;
+}
+
+function renderDashboardStats(monthEvents, upcomingEvents) {
+  if (!dashboardMetrics) return;
+
+  const now = new Date();
+  const todayKey = now.toISOString().slice(0, 10);
+  const todayEvents = allEvents.filter((event) => event.event_date === todayKey).length;
+  const activeInventory = inventoryItems.reduce((sum, item) => sum + Number(item.quantity_available || 0), 0);
+  const nextEvent = upcomingEvents[0];
+  const nextEventLabel = nextEvent?.event_date
+    ? new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric" }).format(eventDateValue(nextEvent))
+    : "Sin fecha";
+
+  const cards = [
+    { label: "Eventos totales", value: allEvents.length, note: "Registrados en Cater Vegas" },
+    { label: "Este mes", value: monthEvents.length, note: "Eventos en calendario" },
+    { label: "Hoy", value: todayEvents, note: "Eventos programados" },
+    { label: "Proximo", value: nextEvent ? nextEventLabel : "-", note: nextEvent?.title || "Sin eventos proximos" },
+    { label: "Inventario", value: activeInventory, note: "Piezas disponibles" },
+  ];
+
+  dashboardMetrics.innerHTML = cards
+    .map(
+      (card) => `
+        <article class="dashboard-metric-card">
+          <span>${escapeHtml(card.label)}</span>
+          <strong>${escapeHtml(card.value)}</strong>
+          <small>${escapeHtml(card.note)}</small>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function renderDashboardSide(upcomingEvents) {
+  if (dashboardUpcomingList) {
+    dashboardUpcomingList.innerHTML = upcomingEvents.length
+      ? upcomingEvents
+          .slice(0, 5)
+          .map((event) => {
+            const date = eventDateValue(event);
+            const dateLabel = date
+              ? new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric" }).format(date)
+              : "Sin fecha";
+            return `
+              <article class="dashboard-upcoming-item">
+                <span>${escapeHtml(dateLabel)}</span>
+                <div>
+                  <strong>${escapeHtml(event.title || "Evento")}</strong>
+                  <small>${escapeHtml(event.event_type || event.status || "Evento")}</small>
+                </div>
+              </article>
+            `;
+          })
+          .join("")
+      : '<p class="empty-state">No hay eventos proximos todavia.</p>';
+  }
+
+  if (!dashboardInventorySummary) return;
+
+  if (!inventoryItems.length) {
+    dashboardInventorySummary.innerHTML = `
+      <div class="dashboard-summary-block">
+        <p class="eyebrow">Inventario</p>
+        <strong>Sin articulos publicados</strong>
+        <small>Agrega mesas, sillas o decoracion desde Inventario.</small>
+      </div>
+    `;
+    return;
+  }
+
+  const categoryCounts = inventoryItems.reduce((acc, item) => {
+    const category = normalizeInventoryCategory(item.category) || "tables";
+    acc[category] = (acc[category] || 0) + Number(item.quantity_available || 0);
+    return acc;
+  }, {});
+
+  dashboardInventorySummary.innerHTML = `
+    <div class="dashboard-summary-block">
+      <p class="eyebrow">Inventario publicado</p>
+      <strong>${inventoryItems.length} articulos</strong>
+      <div class="dashboard-inventory-tags">
+        ${Object.entries(categoryCounts)
+          .slice(0, 5)
+          .map(([category, count]) => `<span>${escapeHtml(inventoryCategoryLabel(category))}: ${Number(count)}</span>`)
+          .join("")}
+      </div>
+    </div>
+  `;
+}
+
 function renderCalendar() {
   if (!dashboardCalendar) return;
 
@@ -314,33 +413,19 @@ function renderCalendar() {
     `);
   }
 
-  const upcomingEvents = monthEvents
-    .filter((event) => new Date(`${event.event_date}T00:00:00`) >= new Date(year, month, now.getDate()))
+  const upcomingEvents = allEvents
+    .filter((event) => {
+      const date = eventDateValue(event);
+      return date && date >= new Date(year, month, now.getDate());
+    })
+    .sort((a, b) => eventDateValue(a) - eventDateValue(b))
     .slice(0, 6);
+
+  renderDashboardStats(monthEvents, upcomingEvents);
+  renderDashboardSide(upcomingEvents);
 
   dashboardCalendar.innerHTML = `
     <div class="calendar-grid" aria-label="Calendario mensual">${cells.join("")}</div>
-    <aside class="calendar-agenda">
-      <strong>Fechas proximas</strong>
-      ${
-        upcomingEvents.length
-          ? upcomingEvents
-              .map((event) => {
-                const eventDate = new Date(`${event.event_date}T00:00:00`);
-                return `
-                  <div class="calendar-agenda-row">
-                    <span>${eventDate.getDate()}</span>
-                    <div>
-                      <strong>${escapeHtml(event.title || "Evento")}</strong>
-                      <small>${escapeHtml(event.event_type || "Evento")}</small>
-                    </div>
-                  </div>
-                `;
-              })
-              .join("")
-          : '<p class="empty-state">Sin eventos proximos.</p>'
-      }
-    </aside>
   `;
 }
 
@@ -423,6 +508,7 @@ async function loadInventory() {
   if (!supabase) {
     inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
     renderInventory();
+    renderCalendar();
     setInventoryStatus("Modo local: conecta Supabase para que el comprador lo vea en otro dispositivo.");
     return;
   }
@@ -436,6 +522,7 @@ async function loadInventory() {
   if (error) {
     inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
     renderInventory();
+    renderCalendar();
     setInventoryStatus(`No se pudo leer inventario: ${error.message}.`);
     return;
   }
@@ -443,6 +530,7 @@ async function loadInventory() {
   inventoryItems = (data || []).map(providerToInventory).filter(Boolean);
   savePublicInventory(inventoryItems);
   renderInventory();
+  renderCalendar();
   setInventoryStatus("Inventario sincronizado.");
 }
 

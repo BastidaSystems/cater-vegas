@@ -3,15 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Administracion de calendario e inventario de Cater Vegas." />
+    <meta name="description" content="Dashboard de eventos e inventario de Cater Vegas." />
     <title>Cater Vegas | Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin.css?v=inventory-categories-20260706" />
+    <link rel="stylesheet" href="admin.css?v=dashboard-events-20260707" />
   </head>
   <body>
-    <div class="admin-layout admin-layout-simple" data-admin-view="calendar">
+    <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
       <aside class="admin-sidebar" aria-label="Menu de administrador">
         <a class="admin-logo" href="../index.html" aria-label="Cater Vegas home">
           <span>CV</span>
@@ -19,9 +19,9 @@
         </a>
 
         <nav class="sidebar-nav">
-          <button class="sidebar-link is-active" type="button" data-scroll-target="#calendarPanel" data-admin-view="calendar">
-            <span aria-hidden="true">Cal</span>
-            Calendario
+          <button class="sidebar-link is-active" type="button" data-scroll-target="#calendarPanel" data-admin-view="dashboard">
+            <span aria-hidden="true">Dash</span>
+            Dashboard
           </button>
           <button class="sidebar-link" type="button" data-scroll-target="#inventoryPanel" data-admin-view="inventory">
             <span aria-hidden="true">Inv</span>
@@ -42,8 +42,8 @@
         <header class="admin-header">
           <div class="header-title">
             <p class="eyebrow">Cater Vegas Admin</p>
-            <h1>Calendario e inventario</h1>
-            <p>Agrega mesas, sillas, manteleria, decoracion y equipo para que el comprador lo vea en su pagina.</p>
+            <h1>Dashboard</h1>
+            <p>Vista general de eventos, calendario e inventario publicado para compradores.</p>
             <p id="sessionStatus" class="session-status">Verificando sesion...</p>
           </div>
 
@@ -62,15 +62,26 @@
         </header>
 
         <section class="admin-clean-grid">
-          <section class="panel simple-panel calendar-panel" id="calendarPanel" aria-label="Calendario de eventos">
+          <section class="panel simple-panel dashboard-panel calendar-panel" id="calendarPanel" aria-label="Dashboard de eventos">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Eventos</p>
-                <h2>Calendario</h2>
+                <p class="eyebrow">Operacion general</p>
+                <h2>Dashboard de eventos</h2>
               </div>
               <span class="calendar-month-label" id="calendarMonthLabel">Este mes</span>
             </div>
-            <div class="dashboard-calendar" id="dashboardCalendar" aria-live="polite"></div>
+            <div class="dashboard-metrics" id="dashboardMetrics" aria-live="polite"></div>
+            <div class="dashboard-overview-grid">
+              <div class="dashboard-calendar" id="dashboardCalendar" aria-live="polite"></div>
+              <aside class="dashboard-side-panel">
+                <div>
+                  <p class="eyebrow">Agenda</p>
+                  <h3>Proximos eventos</h3>
+                </div>
+                <div class="dashboard-upcoming-list" id="dashboardUpcomingList" aria-live="polite"></div>
+                <div class="dashboard-inventory-summary" id="dashboardInventorySummary" aria-live="polite"></div>
+              </aside>
+            </div>
           </section>
 
           <section class="panel simple-panel inventory-panel" id="inventoryPanel" aria-label="Inventario de Cater Vegas">
@@ -137,6 +148,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=inventory-categories-20260706"></script>
+    <script type="module" src="admin.js?v=dashboard-events-20260707"></script>
   </body>
 </html>
