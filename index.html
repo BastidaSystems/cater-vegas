@@ -83,7 +83,7 @@
       </div>
     </section>
 
-    <section class="industry-hero is-hidden-step" id="industries" aria-label="Cater Vegas industries">
+    <section class="industry-hero is-hidden-step" id="event-type" aria-label="Event types">
       <a class="flow-back industry-back" href="#calendar" aria-label="Back to calendar">
         Back
       </a>
@@ -96,9 +96,9 @@
         </div>
         <div class="panel-copy">
           <span class="panel-number">01</span>
-          <h1>Set up</h1>
+          <h1>Wedding</h1>
           <i></i>
-          <a href="#catering">Start with Set up</a>
+          <a href="#setup" data-event-type="Wedding">Start Wedding</a>
         </div>
       </article>
 
@@ -110,9 +110,9 @@
         </div>
         <div class="panel-copy">
           <span class="panel-number">02</span>
-          <h2>F&amp;B</h2>
+          <h2>Corporate</h2>
           <i></i>
-          <a href="#start" data-start-option="F&B">Start with F&amp;B</a>
+          <a href="#setup" data-event-type="Corporate">Start Corporate</a>
         </div>
       </article>
 
@@ -124,9 +124,9 @@
         </div>
         <div class="panel-copy">
           <span class="panel-number">03</span>
-          <h2>Entertainment</h2>
+          <h2>Private</h2>
           <i></i>
-          <a href="#start" data-start-option="Entertainment">Start with Entertainment</a>
+          <a href="#setup" data-event-type="Private Event">Start Private</a>
         </div>
       </article>
 
@@ -138,20 +138,29 @@
         </div>
         <div class="panel-copy">
           <span class="panel-number">04</span>
-          <h2>Hospedaje</h2>
+          <h2>Convention</h2>
           <i></i>
-          <a href="#start" data-start-option="Hospedaje">Start with Hospedaje</a>
+          <a href="#setup" data-event-type="Convention">Start Convention</a>
         </div>
       </article>
     </section>
 
-    <section class="catering-showroom is-hidden-step" id="catering" aria-label="Set up categories">
-      <a class="flow-back" href="#industries" aria-label="Back to industries">
+    <section class="catering-showroom is-hidden-step" id="setup" aria-label="Set up categories">
+      <a class="flow-back" href="#event-type" aria-label="Back to event type">
         Back
       </a>
+      <nav class="flow-breadcrumb" aria-label="Event flow">
+        <span>Date</span>
+        <span>Event Type</span>
+        <strong>Set up</strong>
+        <span>F&amp;B</span>
+        <span>Entertainment</span>
+        <span>Hospedaje</span>
+        <span>Review</span>
+      </nav>
 
-      <div class="category-strip" aria-label="Catering categories">
-        <a class="category-item" href="#tables" data-builder-category="tables">
+      <div class="category-strip" aria-label="Set up categories">
+        <a class="category-item" href="#inventory" data-builder-category="tables">
           <span class="category-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64">
               <path d="M17 25c0-6 30-6 30 0s-30 6-30 0zM20 28c2 4 22 4 24 0M32 31v20M24 51h16"></path>
@@ -160,7 +169,7 @@
           <strong>Tables</strong>
         </a>
 
-        <a class="category-item" href="#catering" data-builder-category="chairs">
+        <a class="category-item" href="#inventory" data-builder-category="chairs">
           <span class="category-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64">
               <path d="M21 17h22v18H21zM18 35h28M23 35l-3 18M41 35l3 18M24 24h16"></path>
@@ -169,7 +178,7 @@
           <strong>Chairs</strong>
         </a>
 
-        <a class="category-item" href="#start" data-start-option="Catering">
+        <a class="category-item" href="#inventory" data-builder-category="linen">
           <span class="category-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64">
               <path d="M22 16l20 8-10 24-20-8 10-24zM36 20l12 8-10 24-12-8M24 26l13 6M20 36l13 6"></path>
@@ -178,7 +187,7 @@
           <strong>Linen</strong>
         </a>
 
-        <a class="category-item" href="#start" data-start-option="Catering">
+        <a class="category-item" href="#inventory" data-builder-category="decor">
           <span class="category-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64">
               <path d="M21 49h22M32 16v33M22 28h20M22 28l-5 13M42 28l5 13M26 16h12M25 22h14"></path>
@@ -188,7 +197,7 @@
           <strong>Decor</strong>
         </a>
 
-        <a class="category-item" href="#start" data-start-option="Catering">
+        <a class="category-item" href="#inventory" data-builder-category="tents">
           <span class="category-icon" aria-hidden="true">
             <svg viewBox="0 0 64 64">
               <path d="M14 49V26l18-11 18 11v23M14 26h36M20 49V31M44 49V31M25 31h14"></path>
@@ -196,27 +205,23 @@
           </span>
           <strong>Tents</strong>
         </a>
-
       </div>
     </section>
 
-    <section class="table-builder is-hidden-step" id="tables" aria-labelledby="tables-title">
-      <a class="flow-back" href="#catering" aria-label="Back to catering">
+    <section class="table-builder is-hidden-step" id="inventory" aria-labelledby="inventory-title">
+      <a class="flow-back" href="#setup" aria-label="Back to set up">
         Back
       </a>
+      <nav class="flow-breadcrumb" id="inventory-breadcrumb" aria-label="Event flow"></nav>
 
       <div class="table-builder-layout">
         <div class="table-builder-copy">
-          <p class="eyebrow">Step 01</p>
-          <h2 id="tables-title">Choose your table</h2>
-          <p>Select the table first. Your choice will stay saved, then we continue with chairs.</p>
+          <p class="eyebrow" id="inventory-step-label">Set up</p>
+          <h2 id="inventory-title">Choose your table</h2>
+          <p id="inventory-copy">Select an item. Your choice stays saved by category.</p>
         </div>
 
-        <div class="table-choice-grid" id="publicTableInventory" aria-label="Table options">
-          <div class="empty-state">
-            Tables will appear here when the administrator adds inventory.
-          </div>
-        </div>
+        <div class="table-choice-grid inventory-grid" id="inventory-grid" aria-live="polite"></div>
       </div>
 
       <aside class="builder-preview" aria-live="polite">
@@ -227,26 +232,67 @@
         </span>
         <div>
           <small>Saved design</small>
-          <strong id="table-preview">No table selected yet</strong>
-          <p id="table-preview-note">Choose a table to unlock chairs.</p>
+          <strong id="inventory-preview">No selection yet</strong>
+          <p id="inventory-preview-note">Choose an item to save this category.</p>
         </div>
       </aside>
+      <div class="selected-summary" id="selected-summary" aria-live="polite"></div>
+      <div class="flow-actions">
+        <a class="contact-button" id="inventory-next-link" href="#fnb">Continue</a>
+      </div>
     </section>
 
-    <section class="start-section is-hidden-step" id="start" aria-labelledby="start-title">
+    <section class="start-section is-hidden-step flow-service-section" id="fnb" aria-labelledby="fnb-title">
       <div>
-        <p class="eyebrow">Choose where to start</p>
-        <h2 id="start-title">Your event path starts with <span id="selected-path">Catering</span>.</h2>
-        <p id="selected-path-copy">
-          We will begin with menu direction, guest count, service flow and staffing needs, then connect the rest of the event around it.
-        </p>
+        <p class="eyebrow">F&amp;B</p>
+        <h2 id="fnb-title">Choose food and beverages.</h2>
+        <p>Review food and beverage inventory after the setup pieces are selected.</p>
       </div>
 
       <div class="start-options" aria-label="Starting options">
-        <button type="button" class="is-active" data-path="Catering">Catering</button>
-        <button type="button" data-path="F&B">F&amp;B</button>
-        <button type="button" data-path="Entertainment">Entertainment</button>
-        <button type="button" data-path="Hospedaje">Hospedaje</button>
+        <a href="#inventory" data-builder-category="food">Food</a>
+        <a href="#inventory" data-builder-category="beverages">Beverages</a>
+        <a href="#entertainment">Continue to Entertainment</a>
+      </div>
+    </section>
+
+    <section class="start-section is-hidden-step flow-service-section" id="entertainment" aria-labelledby="entertainment-title">
+      <div>
+        <p class="eyebrow">Entertainment</p>
+        <h2 id="entertainment-title">Add entertainment.</h2>
+        <p>Choose talent, music or production support for the event flow.</p>
+      </div>
+
+      <div class="start-options" aria-label="Entertainment options">
+        <a href="#inventory" data-builder-category="entertainment">Entertainment</a>
+        <a href="#lodging">Continue to Hospedaje</a>
+      </div>
+    </section>
+
+    <section class="start-section is-hidden-step flow-service-section" id="lodging" aria-labelledby="lodging-title">
+      <div>
+        <p class="eyebrow">Hospedaje</p>
+        <h2 id="lodging-title">Add lodging.</h2>
+        <p>Connect hotel blocks, suites or guest stay details before review.</p>
+      </div>
+
+      <div class="start-options" aria-label="Lodging options">
+        <a href="#inventory" data-builder-category="lodging">Hospedaje</a>
+        <a href="#review">Review event</a>
+      </div>
+    </section>
+
+    <section class="start-section is-hidden-step flow-service-section" id="review" aria-labelledby="review-title">
+      <div>
+        <p class="eyebrow">Review</p>
+        <h2 id="review-title">Review your event path.</h2>
+        <p>Confirm the saved selections before contacting Cater Vegas.</p>
+      </div>
+
+      <div class="review-summary" id="review-summary" aria-live="polite"></div>
+      <div class="flow-actions">
+        <a class="contact-button" href="#setup">Edit Set up</a>
+        <a class="contact-button" href="#contact">Contact</a>
       </div>
     </section>
 
@@ -270,6 +316,6 @@
     <p>Events, F&amp;B, Entertainment &amp; Hospitality.</p>
   </footer>
 
-  <script type="module" src="app.js?v=public-inventory-20260706"></script>
+  <script type="module" src="app.js?v=public-inventory-flow-20260706"></script>
 </body>
 </html>

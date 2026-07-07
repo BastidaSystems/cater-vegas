@@ -15,6 +15,10 @@ create table if not exists public.cater_providers (
   state text,
   status text not null default 'active' check (status in ('active', 'preferred', 'inactive', 'archived')),
   notes text,
+  service_category text,
+  public_visible boolean not null default false,
+  public_description text,
+  image_url text,
   created_by uuid references public.cater_profiles(id) on delete set null default auth.uid(),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -35,6 +39,10 @@ alter table public.cater_providers add column if not exists state text;
 alter table public.cater_providers add column if not exists status text not null default 'active';
 alter table public.cater_providers alter column status set default 'active';
 alter table public.cater_providers add column if not exists notes text;
+alter table public.cater_providers add column if not exists service_category text;
+alter table public.cater_providers add column if not exists public_visible boolean not null default false;
+alter table public.cater_providers add column if not exists public_description text;
+alter table public.cater_providers add column if not exists image_url text;
 alter table public.cater_providers add column if not exists created_by uuid;
 alter table public.cater_providers alter column created_by set default auth.uid();
 alter table public.cater_providers drop constraint if exists cater_providers_provider_type_check;

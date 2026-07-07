@@ -605,6 +605,37 @@ svg {
     var(--bone);
 }
 
+.flow-breadcrumb {
+  display: flex;
+  position: relative;
+  z-index: 2;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  padding: 18px clamp(18px, 4vw, 54px) 0;
+  color: #69756f;
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.flow-breadcrumb span,
+.flow-breadcrumb strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flow-breadcrumb span::after {
+  content: "/";
+  color: #b8c0ba;
+}
+
+.flow-breadcrumb strong {
+  color: #111614;
+}
+
 .category-strip::before {
   display: none;
 }
@@ -964,6 +995,51 @@ svg {
   font-weight: 700;
 }
 
+.selected-summary,
+.review-summary {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: min(100%, 980px);
+  justify-self: center;
+}
+
+.selected-summary span,
+.review-summary article {
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  border: 1px solid rgba(17, 22, 20, 0.13);
+  border-radius: 16px;
+  background: rgba(255, 253, 248, 0.78);
+}
+
+.selected-summary small,
+.review-summary small {
+  color: #667069;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.selected-summary strong,
+.review-summary strong {
+  color: #111614;
+  font-family: var(--serif);
+  font-size: clamp(1.05rem, 1.5vw, 1.45rem);
+  line-height: 1;
+}
+
+.flow-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
 .start-section {
   display: grid;
   grid-template-columns: minmax(300px, 0.9fr) minmax(320px, 1.1fr);
@@ -1001,7 +1077,10 @@ svg {
   gap: 12px;
 }
 
-.start-options button {
+.start-options button,
+.start-options a {
+  display: grid;
+  align-items: center;
   min-height: 96px;
   padding: 18px;
   border: 1px solid var(--line);
@@ -1011,9 +1090,11 @@ svg {
   font-size: clamp(1.05rem, 1.8vw, 1.45rem);
   font-weight: 950;
   text-align: left;
+  text-decoration: none;
 }
 
-.start-options button.is-active {
+.start-options button.is-active,
+.start-options a:hover {
   border-color: rgba(23, 73, 50, 0.28);
   background: var(--green);
   color: var(--white);
@@ -1196,6 +1277,11 @@ svg {
   .table-choice-grid {
     grid-template-columns: minmax(0, 1fr);
     width: 100%;
+  }
+
+  .selected-summary,
+  .review-summary {
+    grid-template-columns: 1fr;
   }
 
   .table-choice {

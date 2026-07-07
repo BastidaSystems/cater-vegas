@@ -231,7 +231,7 @@ function pickKnownPayload(payload: Record<string, unknown>, allowedColumns: Set<
 function isSchemaCacheError(error: unknown) {
   const typed = error as { code?: string; message?: string } | null;
   const message = String(typed?.message || "").toLowerCase();
-  return typed?.code === "PGRST204" || message.includes("schema cache");
+  return typed?.code === "PGRST204" || typed?.code === "42703" || message.includes("schema cache") || message.includes("column");
 }
 
 function localBeoflow(message: string, currentPlan: CaterPlan): BeoflowResult {

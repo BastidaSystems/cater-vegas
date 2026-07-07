@@ -12,6 +12,60 @@ const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", 
 const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
 const PUBLIC_INVENTORY_KEY = "caterVegasPublicInventory";
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
+const INVENTORY_CATEGORY_IDS = ["tables", "chairs", "linen", "decor", "tents", "food", "beverages", "entertainment", "lodging"];
+const INVENTORY_CATEGORY_LABELS = {
+  tables: "Tables",
+  chairs: "Chairs",
+  linen: "Linen",
+  decor: "Decor",
+  tents: "Tents",
+  food: "Food",
+  beverages: "Beverages",
+  entertainment: "Entertainment",
+  lodging: "Hospedaje",
+};
+const INVENTORY_CATEGORY_ALIASES = {
+  table: "tables",
+  tables: "tables",
+  mesa: "tables",
+  mesas: "tables",
+  chair: "chairs",
+  chairs: "chairs",
+  silla: "chairs",
+  sillas: "chairs",
+  linen: "linen",
+  linens: "linen",
+  manteleria: "linen",
+  decor: "decor",
+  decoration: "decor",
+  decoracion: "decor",
+  tent: "tents",
+  tents: "tents",
+  carpa: "tents",
+  carpas: "tents",
+  food: "food",
+  catering: "food",
+  beverage: "beverages",
+  beverages: "beverages",
+  bar: "beverages",
+  entertainment: "entertainment",
+  music: "entertainment",
+  lodging: "lodging",
+  hotel: "lodging",
+  venue: "lodging",
+  hospedaje: "lodging",
+};
+const PROVIDER_TYPE_BY_CATEGORY = {
+  tables: "rental",
+  chairs: "rental",
+  linen: "rental",
+  decor: "decor",
+  tents: "rental",
+  food: "food",
+  beverages: "beverage",
+  entertainment: "entertainment",
+  lodging: "venue",
+};
 
 const adminLayout = document.querySelector(".admin-layout-simple");
 const sessionStatus = document.querySelector("#sessionStatus");
@@ -47,6 +101,24 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function normalizeInventoryCategory(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+  return INVENTORY_CATEGORY_ALIASES[normalized] || "";
+}
+
+function inventoryCategoryLabel(category) {
+  return INVENTORY_CATEGORY_LABELS[normalizeInventoryCategory(category)] || "Inventario";
+}
+
+function providerTypeForCategory(category) {
+  return PROVIDER_TYPE_BY_CATEGORY[normalizeInventoryCategory(category)] || "vendor";
+}
+
+function isMissingSchemaColumnError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return error?.code === "PGRST204" || error?.code === "42703" || message.includes("schema cache") || message.includes("column");
 }
 
 function setStatus(message) {
@@ -97,9 +169,10 @@ function parseInventoryNotes(notes) {
 }
 
 function buildInventoryNotes(item) {
+  const category = normalizeInventoryCategory(item.category);
   return `${INVENTORY_NOTE_PREFIX}${JSON.stringify({
     kind: "inventory",
-    category: item.category,
+    category,
     quantity_available: item.quantity_available,
     price_label: item.price_label,
     image_url: item.image_url,
@@ -110,11 +183,13 @@ function buildInventoryNotes(item) {
 function providerToInventory(row) {
   const meta = parseInventoryNotes(row.notes);
   if (!meta || meta.kind !== "inventory") return null;
+  const category = normalizeInventoryCategory(meta.category);
+  if (!category) return null;
 
   return {
     id: row.id,
     name: row.provider_name || "",
-    category: meta.category || "Tables",
+    category,
     description: meta.description || "",
     quantity_available: Number(meta.quantity_available || 0),
     price_label: meta.price_label || "",
@@ -228,7 +303,7 @@ function renderInventory() {
             }
           </div>
           <div class="inventory-card-body">
-            <p class="eyebrow">${escapeHtml(item.category || "Inventario")}</p>
+            <p class="eyebrow">${escapeHtml(inventoryCategoryLabel(item.category))}</p>
             <h3>${escapeHtml(item.name)}</h3>
             <p>${escapeHtml(item.description || "Sin descripcion.")}</p>
             <div class="inventory-meta">
@@ -281,7 +356,6 @@ async function loadInventory() {
     .from("cater_providers")
     .select("id,provider_name,provider_type,status,notes,created_at")
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
-    .eq("provider_type", "rental")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -309,7 +383,7 @@ function editInventoryItem(id) {
 
   inventoryItemId.value = item.id;
   inventoryName.value = item.name || "";
-  inventoryCategory.value = item.category || "Tables";
+  inventoryCategory.value = normalizeInventoryCategory(item.category) || "tables";
   inventoryQuantity.value = Number(item.quantity_available ?? 0);
   inventoryPrice.value = item.price_label || "";
   inventoryImageUrl.value = item.image_url || "";
@@ -347,22 +421,35 @@ async function saveInventoryItem(event) {
   event.preventDefault();
 
   const fileImage = await fileToDataUrl(inventoryImageFile?.files?.[0]);
+  const selectedCategory = normalizeInventoryCategory(inventoryCategory.value);
   const itemPayload = {
-    category: inventoryCategory.value,
+    category: selectedCategory,
     quantity_available: Number(inventoryQuantity.value || 0),
     price_label: inventoryPrice.value.trim() || null,
     image_url: fileImage || inventoryImageUrl.value.trim() || null,
     description: inventoryDescription.value.trim() || null,
   };
-  const payload = {
+  const basePayload = {
     workspace_id: DEFAULT_WORKSPACE_ID,
     provider_name: inventoryName.value.trim(),
-    provider_type: "rental",
+    provider_type: providerTypeForCategory(selectedCategory),
     status: "active",
     notes: buildInventoryNotes(itemPayload),
   };
+  const payload = {
+    ...basePayload,
+    service_category: selectedCategory,
+    public_visible: true,
+    public_description: itemPayload.description,
+    image_url: itemPayload.image_url,
+  };
 
-  if (!payload.provider_name) {
+  if (!selectedCategory) {
+    setInventoryStatus("Selecciona una categoria de inventario.");
+    return;
+  }
+
+  if (!basePayload.provider_name) {
     setInventoryStatus("Agrega el nombre del articulo.");
     return;
   }
@@ -383,21 +470,26 @@ async function saveInventoryItem(event) {
   }
 
   const id = inventoryItemId.value;
-  const query = id
-    ? supabase
-        .from("cater_providers")
-        .update(payload)
-        .eq("workspace_id", DEFAULT_WORKSPACE_ID)
-        .eq("id", id)
-        .select()
-        .single()
-    : supabase
-        .from("cater_providers")
-        .insert({ ...payload, created_by: currentUser?.id || null })
-        .select()
-        .single();
+  const savePayload = (nextPayload) =>
+    id
+      ? supabase
+          .from("cater_providers")
+          .update(nextPayload)
+          .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+          .eq("id", id)
+          .select()
+          .single()
+      : supabase
+          .from("cater_providers")
+          .insert({ ...nextPayload, created_by: currentUser?.id || null })
+          .select()
+          .single();
 
-  const { error } = await query;
+  let { error } = await savePayload(payload);
+  if (isMissingSchemaColumnError(error)) {
+    ({ error } = await savePayload(basePayload));
+  }
+
   if (error) {
     setInventoryStatus(error.message);
     return;

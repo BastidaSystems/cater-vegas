@@ -1,101 +1,191 @@
-import {
-  DEFAULT_WORKSPACE_ID,
-  isSupabaseConfigured,
-  supabase,
-} from "./lib/supabaseClient.js?v=supabase-auth-loader-20260619";
-
-const stepIds = ["calendar", "industries", "catering", "tables", "start", "about", "contact"];
+const stepIds = ["calendar", "event-type", "setup", "inventory", "fnb", "entertainment", "lodging", "review", "about", "contact"];
+const setupCategoryIds = ["tables", "chairs", "linen", "decor", "tents"];
+const flowCategoryIds = ["tables", "chairs", "linen", "decor", "tents", "food", "beverages", "entertainment", "lodging"];
+const storageKey = "caterVegasBuild";
 const LOCAL_INVENTORY_KEY = "caterVegasPublicInventory";
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
-const cateringBuild = {
-  table: "",
-  tableNote: ""
+const notesCategoryLabel = "Inventory category";
+
+const categoryCopy = {
+  tables: {
+    label: "Tables",
+    savedLabel: "Selected table",
+    title: "Choose your table",
+    copy: "Select the table first. Chair recommendations can use this choice, but chairs remain browseable.",
+    empty: "No tables added yet",
+    step: "Set up",
+  },
+  chairs: {
+    label: "Chairs",
+    savedLabel: "Selected chairs",
+    title: "Choose your chairs",
+    copy: "Choose a table first to recommend matching chairs. You can still view available chairs.",
+    empty: "No chairs added yet",
+    step: "Set up",
+  },
+  linen: {
+    label: "Linen",
+    savedLabel: "Selected linen",
+    title: "Choose your linen",
+    copy: "Select linen colors, textures or rental packages for the event setup.",
+    empty: "No linen added yet",
+    step: "Set up",
+  },
+  decor: {
+    label: "Decor",
+    savedLabel: "Selected decor",
+    title: "Choose your decor",
+    copy: "Select decor pieces, accents or production elements.",
+    empty: "No decor added yet",
+    step: "Set up",
+  },
+  tents: {
+    label: "Tents",
+    savedLabel: "Selected tents",
+    title: "Choose your tents",
+    copy: "Select tenting or outdoor coverage options.",
+    empty: "No tents added yet",
+    step: "Set up",
+  },
+  food: {
+    label: "Food",
+    savedLabel: "Selected food",
+    title: "Choose food",
+    copy: "Select food providers, menus or catering packages.",
+    empty: "No food added yet",
+    step: "F&B",
+  },
+  beverages: {
+    label: "Beverages",
+    savedLabel: "Selected beverages",
+    title: "Choose beverages",
+    copy: "Select bar, beverage or service packages.",
+    empty: "No beverages added yet",
+    step: "F&B",
+  },
+  entertainment: {
+    label: "Entertainment",
+    savedLabel: "Selected entertainment",
+    title: "Choose entertainment",
+    copy: "Select talent, music or production support.",
+    empty: "No entertainment added yet",
+    step: "Entertainment",
+  },
+  lodging: {
+    label: "Hospedaje",
+    savedLabel: "Selected lodging",
+    title: "Choose hospedaje",
+    copy: "Select hotel, suite or guest stay support.",
+    empty: "No lodging added yet",
+    step: "Hospedaje",
+  },
 };
-const savedBuild = window.localStorage.getItem("caterVegasBuild");
 
-if (savedBuild) {
+const categoryAliases = {
+  table: "tables",
+  tables: "tables",
+  mesa: "tables",
+  mesas: "tables",
+  chair: "chairs",
+  chairs: "chairs",
+  silla: "chairs",
+  sillas: "chairs",
+  linen: "linen",
+  linens: "linen",
+  manteleria: "linen",
+  decor: "decor",
+  decoration: "decor",
+  decoracion: "decor",
+  tent: "tents",
+  tents: "tents",
+  carpa: "tents",
+  carpas: "tents",
+  food: "food",
+  catering: "food",
+  chef: "food",
+  beverage: "beverages",
+  beverages: "beverages",
+  bar: "beverages",
+  entertainment: "entertainment",
+  music: "entertainment",
+  lodging: "lodging",
+  hotel: "lodging",
+  venue: "lodging",
+  hospedaje: "lodging",
+};
+
+const providerTypeByCategory = {
+  tables: "rental",
+  chairs: "rental",
+  linen: "rental",
+  decor: "decor",
+  tents: "rental",
+  food: "food",
+  beverages: "beverage",
+  entertainment: "entertainment",
+  lodging: "venue",
+};
+
+let publicInventory = [];
+let activeCategory = "";
+let build = loadBuild();
+let supabaseClientPromise = null;
+
+async function getPublicSupabaseClient() {
+  if (!supabaseClientPromise) {
+    supabaseClientPromise = import("./lib/supabaseClient.js?v=supabase-auth-loader-20260619")
+      .then((module) => ({
+        workspaceId: module.DEFAULT_WORKSPACE_ID,
+        isConfigured: module.isSupabaseConfigured,
+        client: module.supabase,
+      }))
+      .catch(() => ({
+        workspaceId: "cater-vegas",
+        isConfigured: false,
+        client: null,
+      }));
+  }
+
+  return supabaseClientPromise;
+}
+
+function loadBuild() {
+  const fallback = {
+    eventDate: "",
+    eventType: "",
+    selections: {},
+  };
+
   try {
-    Object.assign(cateringBuild, JSON.parse(savedBuild));
-  } catch (error) {
-    window.localStorage.removeItem("caterVegasBuild");
-  }
-}
-
-function showStep(stepId) {
-  const activeStep = stepIds.includes(stepId) ? stepId : "calendar";
-
-  stepIds.forEach((id) => {
-    document.getElementById(id)?.classList.toggle("is-hidden-step", id !== activeStep);
-  });
-
-  document.querySelector(".site-footer")?.classList.toggle("is-hidden-step", activeStep !== "contact");
-
-  document.querySelectorAll('.site-nav a[href^="#"]').forEach((link) => {
-    const isActive = link.getAttribute("href") === `#${activeStep}`;
-    if (isActive) {
-      link.setAttribute("aria-current", "page");
-    } else {
-      link.removeAttribute("aria-current");
+    const saved = JSON.parse(window.localStorage.getItem(storageKey) || "{}");
+    if (saved.table && !saved.selections?.tables) {
+      saved.selections = {
+        ...(saved.selections || {}),
+        tables: {
+          id: "legacy-table",
+          title: saved.table,
+          note: saved.tableNote || "",
+        },
+      };
     }
-  });
-
-  if (window.location.hash !== `#${activeStep}`) {
-    window.history.replaceState(null, "", `#${activeStep}`);
+    return {
+      ...fallback,
+      ...saved,
+      selections: saved.selections || fallback.selections,
+    };
+  } catch {
+    window.localStorage.removeItem(storageKey);
+    return fallback;
   }
-
-  window.scrollTo({ top: 0, behavior: "smooth" });
-  updateBuilderPreview();
 }
 
-function markIndustryPanel(link) {
-  const panel = link.closest(".industry-panel");
-  if (!panel) return false;
-
-  document.querySelectorAll(".industry-panel").forEach((item) => item.classList.remove("is-selected"));
-  panel.classList.add("is-selected");
-  return true;
+function saveBuild() {
+  window.localStorage.setItem(storageKey, JSON.stringify(build));
 }
 
-function updateBuilderPreview() {
-  const builderSummary = document.getElementById("builder-summary");
-  const tablePreview = document.getElementById("table-preview");
-  const tablePreviewNote = document.getElementById("table-preview-note");
-  const tablesCategory = document.querySelector('[data-builder-category="tables"]');
-  const chairsCategory = document.querySelector('[data-builder-category="chairs"]');
-
-  if (builderSummary) {
-    builderSummary.textContent = cateringBuild.table
-      ? `Table saved: ${cateringBuild.table}. Next: Chairs.`
-      : "Start with a table.";
-  }
-
-  if (tablePreview) {
-    tablePreview.textContent = cateringBuild.table || "No table selected yet";
-  }
-
-  if (tablePreviewNote) {
-    tablePreviewNote.textContent = cateringBuild.tableNote || "Choose a table to unlock chairs.";
-  }
-
-  tablesCategory?.classList.toggle("is-complete", Boolean(cateringBuild.table));
-  chairsCategory?.classList.toggle("is-next", Boolean(cateringBuild.table));
-
-  document.querySelectorAll("[data-table-choice]").forEach((choice) => {
-    choice.classList.toggle("is-selected", choice.dataset.tableChoice === cateringBuild.table);
-  });
-}
-
-function saveBuilder() {
-  window.localStorage.setItem("caterVegasBuild", JSON.stringify(cateringBuild));
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+function normalizeInventoryCategory(value) {
+  const normalized = String(value || "").trim().toLowerCase().replace(/[\s_]+/g, "-");
+  return categoryAliases[normalized] || "";
 }
 
 function parseInventoryNotes(notes) {
@@ -109,6 +199,257 @@ function parseInventoryNotes(notes) {
   }
 }
 
+function notesCategory(notes = "") {
+  const categoryLine = String(notes || "")
+    .split(/\r?\n/)
+    .find((line) => line.trim().toLowerCase().startsWith(`${notesCategoryLabel.toLowerCase()}:`));
+  if (!categoryLine) return "";
+  return normalizeInventoryCategory(categoryLine.split(":").slice(1).join(":"));
+}
+
+function cleanProviderNotes(notes = "") {
+  const raw = String(notes || "");
+  if (raw.startsWith(INVENTORY_NOTE_PREFIX)) return "";
+  return raw
+    .split(/\r?\n/)
+    .filter((line) => !line.trim().toLowerCase().startsWith(`${notesCategoryLabel.toLowerCase()}:`))
+    .join("\n")
+    .trim();
+}
+
+function isMissingSchemaColumnError(error) {
+  const message = String(error?.message || "").toLowerCase();
+  return error?.code === "PGRST204" || error?.code === "42703" || message.includes("schema cache") || message.includes("column");
+}
+
+function providerMeta(provider) {
+  return parseInventoryNotes(provider?.notes) || {};
+}
+
+function providerCategory(provider) {
+  const meta = providerMeta(provider);
+  return normalizeInventoryCategory(
+    provider?.service_category ||
+      provider?.category ||
+      provider?.inventory_type ||
+      provider?.type ||
+      meta.category ||
+      notesCategory(provider?.notes) ||
+      provider?.provider_type
+  );
+}
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function itemTitle(item) {
+  return item.provider_name || item.title || item.name || "Inventory item";
+}
+
+function itemNote(item) {
+  const meta = providerMeta(item);
+  return item.public_description || meta.description || cleanProviderNotes(item.notes) || meta.price_label || providerTypeByCategory[item.category] || "";
+}
+
+function itemImage(item) {
+  const meta = providerMeta(item);
+  return item.image_url || meta.image_url || "";
+}
+
+function nextStepForCategory(category) {
+  if (setupCategoryIds.includes(category)) return "fnb";
+  if (category === "food" || category === "beverages") return "entertainment";
+  if (category === "entertainment") return "lodging";
+  return "review";
+}
+
+function updateBreadcrumb(container, category = activeCategory) {
+  if (!container) return;
+  const categoryLabel = categoryCopy[category]?.label || "Category";
+  const crumbs = ["Date", "Event Type", "Set up"];
+
+  if (setupCategoryIds.includes(category)) {
+    if (category === "chairs") crumbs.push("Tables");
+    crumbs.push(categoryLabel);
+  } else {
+    crumbs.push("F&B");
+    if (category === "entertainment" || category === "lodging") crumbs.push("Entertainment");
+    if (category === "lodging") crumbs.push("Hospedaje");
+  }
+
+  container.innerHTML = crumbs
+    .map((crumb, index) => (index === crumbs.length - 1 ? `<strong>${escapeHtml(crumb)}</strong>` : `<span>${escapeHtml(crumb)}</span>`))
+    .join("");
+}
+
+function showStep(stepId) {
+  const activeStep = stepIds.includes(stepId) ? stepId : "calendar";
+
+  if (activeStep === "inventory" && !activeCategory) {
+    showStep("setup");
+    return;
+  }
+
+  stepIds.forEach((id) => {
+    document.getElementById(id)?.classList.toggle("is-hidden-step", id !== activeStep);
+  });
+
+  document.querySelector(".site-footer")?.classList.toggle("is-hidden-step", activeStep !== "contact");
+
+  document.querySelectorAll('.site-nav a[href^="#"]').forEach((link) => {
+    const isActive = link.getAttribute("href") === `#${activeStep}`;
+    if (isActive) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  });
+
+  if (activeStep === "inventory") renderInventoryCategory(activeCategory);
+  if (activeStep === "review") renderReview();
+
+  if (window.location.hash !== `#${activeStep}`) {
+    window.history.replaceState(null, "", `#${activeStep}`);
+  }
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  updateBuilderPreview();
+}
+
+function inventoryItemsFor(category) {
+  return publicInventory.filter((item) => item.category === category);
+}
+
+function renderInventoryCategory(category) {
+  const normalizedCategory = normalizeInventoryCategory(category);
+  if (normalizedCategory) activeCategory = normalizedCategory;
+  const copy = categoryCopy[activeCategory];
+  if (!copy) return;
+
+  const items = inventoryItemsFor(activeCategory);
+  const selected = build.selections[activeCategory];
+  const inventoryTitle = document.getElementById("inventory-title");
+  const inventoryCopy = document.getElementById("inventory-copy");
+  const inventoryStepLabel = document.getElementById("inventory-step-label");
+  const inventoryGrid = document.getElementById("inventory-grid");
+  const inventoryNextLink = document.getElementById("inventory-next-link");
+
+  if (inventoryTitle) inventoryTitle.textContent = copy.title;
+  if (inventoryCopy) inventoryCopy.textContent = copy.copy;
+  if (inventoryStepLabel) inventoryStepLabel.textContent = copy.step;
+  if (inventoryNextLink) {
+    const nextStep = nextStepForCategory(activeCategory);
+    inventoryNextLink.href = `#${nextStep}`;
+    inventoryNextLink.textContent = nextStep === "review" ? "Review" : `Continue to ${nextStep === "fnb" ? "F&B" : categoryCopy[nextStep]?.label || "next step"}`;
+  }
+
+  updateBreadcrumb(document.getElementById("inventory-breadcrumb"), activeCategory);
+
+  if (!inventoryGrid) return;
+
+  if (!items.length) {
+    inventoryGrid.innerHTML = `<div class="empty-state inventory-empty">${escapeHtml(copy.empty)}</div>`;
+  } else {
+    inventoryGrid.innerHTML = items
+      .map((item) => {
+        const title = itemTitle(item);
+        const note = itemNote(item);
+        const imageUrl = itemImage(item);
+        const selectedClass = selected?.id === item.id ? " is-selected" : "";
+        return `
+          <button class="table-choice inventory-choice${selectedClass}" type="button" data-inventory-id="${escapeHtml(item.id)}">
+            <span class="table-choice-image inventory-choice-image" aria-hidden="true">
+              ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="">` : ""}
+            </span>
+            <strong>${escapeHtml(title)}</strong>
+            <small>${escapeHtml(note || copy.label)}</small>
+          </button>
+        `;
+      })
+      .join("");
+  }
+
+  inventoryGrid.querySelectorAll("[data-inventory-id]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const item = publicInventory.find((entry) => String(entry.id) === button.dataset.inventoryId);
+      if (!item) return;
+      build.selections[activeCategory] = {
+        id: item.id,
+        title: itemTitle(item),
+        note: itemNote(item),
+      };
+      saveBuild();
+      renderInventoryCategory(activeCategory);
+    });
+  });
+
+  updateBuilderPreview();
+}
+
+function updateBuilderPreview() {
+  const selected = build.selections[activeCategory];
+  const preview = document.getElementById("inventory-preview");
+  const previewNote = document.getElementById("inventory-preview-note");
+  const summary = document.getElementById("selected-summary");
+  const copy = categoryCopy[activeCategory];
+
+  if (preview) preview.textContent = selected?.title || `No ${copy?.label.toLowerCase() || "selection"} selected yet`;
+  if (previewNote) {
+    if (activeCategory === "chairs" && !build.selections.tables) {
+      previewNote.textContent = "Choose a table first to recommend matching chairs";
+    } else {
+      previewNote.textContent = selected?.note || "Choose an item to save this category.";
+    }
+  }
+
+  document.querySelectorAll("[data-builder-category]").forEach((link) => {
+    const category = normalizeInventoryCategory(link.dataset.builderCategory);
+    link.classList.toggle("is-complete", Boolean(build.selections[category]));
+    link.classList.toggle("is-next", category === "chairs" && Boolean(build.selections.tables) && !build.selections.chairs);
+  });
+
+  if (summary) {
+    summary.innerHTML = ["tables", "chairs", "linen"]
+      .map((category) => {
+        const selection = build.selections[category];
+        return `<span><small>${escapeHtml(categoryCopy[category].savedLabel)}</small><strong>${escapeHtml(selection?.title || "Not selected")}</strong></span>`;
+      })
+      .join("");
+  }
+}
+
+function renderReview() {
+  const reviewSummary = document.getElementById("review-summary");
+  if (!reviewSummary) return;
+
+  const rows = flowCategoryIds
+    .map((category) => {
+      const selection = build.selections[category];
+      return `
+        <article>
+          <small>${escapeHtml(categoryCopy[category].savedLabel)}</small>
+          <strong>${escapeHtml(selection?.title || categoryCopy[category].empty)}</strong>
+        </article>
+      `;
+    })
+    .join("");
+
+  reviewSummary.innerHTML = `
+    <article>
+      <small>Date</small>
+      <strong>${escapeHtml(build.eventDate || "Not selected")}</strong>
+    </article>
+    <article>
+      <small>Event Type</small>
+      <strong>${escapeHtml(build.eventType || "Not selected")}</strong>
+    </article>
+    ${rows}
+  `;
+}
+
 function localInventoryRows() {
   try {
     return JSON.parse(window.localStorage.getItem(LOCAL_INVENTORY_KEY) || "[]");
@@ -117,94 +458,82 @@ function localInventoryRows() {
   }
 }
 
-function renderPublicTables(items, message = "") {
-  const container = document.getElementById("publicTableInventory");
-  if (!container) return;
-
-  if (!items.length) {
-    container.innerHTML = `
-      <div class="empty-state">
-        ${escapeHtml(message || "Tables will appear here when the administrator adds inventory.")}
-      </div>
-    `;
-    return;
-  }
-
-  container.innerHTML = items
-    .map(
-      (item) => `
-        <button class="table-choice" type="button" data-table-choice="${escapeHtml(item.name)}" data-table-note="${escapeHtml(item.description || item.price_label || "Inventory item")}">
-          <span class="table-choice-image" aria-hidden="true">
-            ${item.image_url ? `<img src="${escapeHtml(item.image_url)}" alt="">` : ""}
-          </span>
-          <strong>${escapeHtml(item.name)}</strong>
-          <small>${escapeHtml(item.price_label || `${Number(item.quantity_available || 0)} available`)}</small>
-          ${item.description ? `<span class="table-choice-description">${escapeHtml(item.description)}</span>` : ""}
-        </button>
-      `
-    )
-    .join("");
-
-  bindTableChoices();
-  updateBuilderPreview();
+function normalizeProviderRow(row) {
+  const category = providerCategory(row);
+  if (!category) return null;
+  return {
+    ...row,
+    id: String(row.id),
+    category,
+  };
 }
 
 async function loadPublicInventory() {
-  const localItems = localInventoryRows();
-  if (localItems.length) {
-    renderPublicTables(localItems);
-  }
+  const localItems = localInventoryRows().map(normalizeProviderRow).filter(Boolean);
+  const { workspaceId, isConfigured, client } = await getPublicSupabaseClient();
 
-  if (!isSupabaseConfigured || !supabase) {
-    if (!localItems.length) renderPublicTables([], "Inventory is loading locally.");
+  if (!isConfigured || !client) {
+    publicInventory = localItems.filter((item) => flowCategoryIds.includes(item.category));
+    if (activeCategory) renderInventoryCategory(activeCategory);
+    renderReview();
     return;
   }
 
-  const { data, error } = await supabase
-    .from("cater_providers")
-    .select("id,provider_name,provider_type,status,notes,created_at")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
-    .eq("provider_type", "rental")
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
+  try {
+    let result = await client
+      .from("cater_providers")
+      .select("id,provider_name,provider_type,service_category,public_description,notes,image_url,status,created_at")
+      .eq("workspace_id", workspaceId)
+      .eq("status", "active")
+      .eq("public_visible", true)
+      .order("created_at", { ascending: false })
+      .limit(200);
 
-  if (error) {
-    if (!localItems.length) renderPublicTables([], "Inventory will appear here after it is published.");
-    return;
+    if (isMissingSchemaColumnError(result.error)) {
+      result = await client
+        .from("cater_providers")
+        .select("id,provider_name,provider_type,notes,status,created_at")
+        .eq("workspace_id", workspaceId)
+        .eq("status", "active")
+        .ilike("notes", `${INVENTORY_NOTE_PREFIX}%`)
+        .order("created_at", { ascending: false })
+        .limit(200);
+    }
+
+    const { data, error } = result;
+    if (error) throw error;
+
+    const remoteItems = (data || []).map(normalizeProviderRow).filter(Boolean);
+    publicInventory = (remoteItems.length ? remoteItems : localItems).filter((item) => flowCategoryIds.includes(item.category));
+  } catch {
+    publicInventory = localItems.filter((item) => flowCategoryIds.includes(item.category));
   }
 
-  const items = (data || [])
-    .map((row) => {
-      const meta = parseInventoryNotes(row.notes);
-      if (meta?.kind !== "inventory") return null;
-      return {
-        id: row.id,
-        name: row.provider_name,
-        category: meta.category,
-        description: meta.description,
-        quantity_available: Number(meta.quantity_available || 0),
-        price_label: meta.price_label || "",
-        image_url: meta.image_url || "",
-      };
-    })
-    .filter(Boolean);
-
-  if (items.length) {
-    window.localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(items));
-  }
-
-  renderPublicTables(items.length ? items : localItems);
+  if (activeCategory) renderInventoryCategory(activeCategory);
+  renderReview();
 }
+
+document.querySelectorAll("[data-event-type]").forEach((link) => {
+  link.addEventListener("click", () => {
+    build.eventType = link.dataset.eventType || "";
+    saveBuild();
+  });
+});
+
+document.querySelectorAll("[data-builder-category]").forEach((link) => {
+  link.addEventListener("click", () => {
+    activeCategory = normalizeInventoryCategory(link.dataset.builderCategory) || activeCategory;
+  });
+});
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
   link.addEventListener("click", (event) => {
     const href = link.getAttribute("href");
     const targetId = href.slice(1);
-    const isIndustrySelection = markIndustryPanel(link);
 
     if (stepIds.includes(targetId)) {
       event.preventDefault();
-      window.setTimeout(() => showStep(targetId), isIndustrySelection ? 180 : 0);
+      showStep(targetId);
       return;
     }
 
@@ -219,68 +548,19 @@ document.querySelectorAll('a[href^="#"]').forEach((link) => {
 document.querySelectorAll(".industry-panel").forEach((panel) => {
   panel.addEventListener("click", (event) => {
     if (event.target.closest("a")) return;
-
     panel.querySelector('a[href^="#"]')?.click();
   });
 });
-
-const pathCopy = {
-  Catering: "We will begin with menu direction, guest count, service flow and staffing needs, then connect the rest of the event around it.",
-  "F&B": "We will begin with beverage service, food operations, venue requirements and daily service rhythm, then connect the rest of the event around it.",
-  Entertainment: "We will begin with talent, music, production timing and guest energy, then connect food, service and hospitality around the show flow.",
-  Hospedaje: "We will begin with hotel blocks, arrivals, transportation notes and VIP hospitality, then connect the event plan around guest movement."
-};
-
-function setStartPath(path) {
-  const selectedPath = document.getElementById("selected-path");
-  const selectedCopy = document.getElementById("selected-path-copy");
-
-  if (!selectedPath || !selectedCopy || !pathCopy[path]) return;
-
-  selectedPath.textContent = path;
-  selectedCopy.textContent = pathCopy[path];
-
-  document.querySelectorAll("[data-path]").forEach((button) => {
-    button.classList.toggle("is-active", button.dataset.path === path);
-  });
-}
-
-document.querySelectorAll("[data-start-option]").forEach((link) => {
-  link.addEventListener("click", () => setStartPath(link.dataset.startOption));
-});
-
-document.querySelectorAll("[data-path]").forEach((button) => {
-  button.addEventListener("click", () => setStartPath(button.dataset.path));
-});
-
-function bindTableChoices() {
-  document.querySelectorAll("[data-table-choice]").forEach((button) => {
-    if (button.dataset.choiceBound === "true") return;
-    button.dataset.choiceBound = "true";
-    button.addEventListener("click", () => {
-      cateringBuild.table = button.dataset.tableChoice;
-      cateringBuild.tableNote = button.dataset.tableNote;
-      saveBuilder();
-
-      document.querySelectorAll("[data-table-choice]").forEach((choice) => {
-        choice.classList.toggle("is-selected", choice === button);
-      });
-
-      updateBuilderPreview();
-      window.setTimeout(() => showStep("catering"), 420);
-    });
-  });
-}
-
-bindTableChoices();
 
 document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) => {
   button.addEventListener("click", () => {
     document.querySelectorAll(".calendar-grid button").forEach((day) => day.classList.remove("is-selected"));
     button.classList.add("is-selected");
-    window.setTimeout(() => showStep("industries"), 260);
+    build.eventDate = `June ${button.textContent.trim()}, 2026`;
+    saveBuild();
+    window.setTimeout(() => showStep("event-type"), 260);
   });
 });
 
-showStep(window.location.hash.slice(1));
 loadPublicInventory();
+showStep(window.location.hash.slice(1));
