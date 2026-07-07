@@ -12,7 +12,7 @@ const sessionStatus = document.querySelector("#sessionStatus");
 const eventsList = document.querySelector("#eventsList");
 const inventoryCatalog = document.querySelector("#inventoryCatalog");
 const signoutButton = document.querySelector("#signoutButton");
-const INVENTORY_SOURCE = "inventory";
+const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 
 let supabase = null;
 
@@ -23,6 +23,17 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function parseInventoryNotes(notes) {
+  const raw = String(notes || "");
+  if (!raw.startsWith(INVENTORY_NOTE_PREFIX)) return null;
+
+  try {
+    return JSON.parse(raw.slice(INVENTORY_NOTE_PREFIX.length));
+  } catch {
+    return null;
+  }
 }
 
 async function loadClientEvents() {
@@ -58,10 +69,9 @@ async function loadClientEvents() {
 async function loadInventoryCatalog() {
   const { data, error } = await supabase
     .from("cater_providers")
-    .select("id,provider_name,provider_type,service_category,public_description,availability,base_prices,image_url,updated_at")
+    .select("id,provider_name,provider_type,status,notes,updated_at,created_at")
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
-    .eq("source", INVENTORY_SOURCE)
-    .eq("public_visible", true)
+    .eq("provider_type", "rental")
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
@@ -70,32 +80,35 @@ async function loadInventoryCatalog() {
     return;
   }
 
-  if (!data?.length) {
+  const items = (data || [])
+    .map((item) => ({ row: item, meta: parseInventoryNotes(item.notes) }))
+    .filter((item) => item.meta?.kind === "inventory");
+
+  if (!items.length) {
     inventoryCatalog.innerHTML = "<p>El inventario disponible aparecera aqui cuando el administrador agregue articulos.</p>";
     return;
   }
 
-  inventoryCatalog.innerHTML = data
+  inventoryCatalog.innerHTML = items
     .map(
-      (item) => {
-        const quantityMatch = String(item.availability || "").match(/Cantidad:\s*(\d+)/i);
-        const quantity = quantityMatch ? Number(quantityMatch[1]) : 0;
+      ({ row, meta }) => {
+        const quantity = Number(meta.quantity_available || 0);
         return `
         <article class="catalog-item">
           <div class="catalog-photo">
             ${
-              item.image_url
-                ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.provider_name)}">`
+              meta.image_url
+                ? `<img src="${escapeHtml(meta.image_url)}" alt="${escapeHtml(row.provider_name)}">`
                 : "<span>Sin foto</span>"
             }
           </div>
           <div class="catalog-copy">
-            <span>${escapeHtml(item.service_category || item.provider_type || "Inventario")}</span>
-            <h3>${escapeHtml(item.provider_name)}</h3>
-            <p>${escapeHtml(item.public_description || "Disponible para cotizacion.")}</p>
+            <span>${escapeHtml(meta.category || "Inventario")}</span>
+            <h3>${escapeHtml(row.provider_name)}</h3>
+            <p>${escapeHtml(meta.description || "Disponible para cotizacion.")}</p>
             <div class="catalog-meta">
               <strong>${quantity} disponibles</strong>
-              ${item.base_prices ? `<strong>${escapeHtml(item.base_prices)}</strong>` : ""}
+              ${meta.price_label ? `<strong>${escapeHtml(meta.price_label)}</strong>` : ""}
             </div>
           </div>
         </article>

@@ -10,7 +10,7 @@ import {
 
 const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
 const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
-const INVENTORY_SOURCE = "inventory";
+const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 
 const adminLayout = document.querySelector(".admin-layout-simple");
 const sessionStatus = document.querySelector("#sessionStatus");
@@ -80,20 +80,40 @@ function saveLocalInventory(rows) {
   window.localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(rows));
 }
 
-function quantityFromAvailability(value) {
-  const match = String(value || "").match(/Cantidad:\s*(\d+)/i);
-  return match ? Number(match[1]) : 0;
+function parseInventoryNotes(notes) {
+  const raw = String(notes || "");
+  if (!raw.startsWith(INVENTORY_NOTE_PREFIX)) return null;
+
+  try {
+    return JSON.parse(raw.slice(INVENTORY_NOTE_PREFIX.length));
+  } catch {
+    return null;
+  }
+}
+
+function buildInventoryNotes(item) {
+  return `${INVENTORY_NOTE_PREFIX}${JSON.stringify({
+    kind: "inventory",
+    category: item.category,
+    quantity_available: item.quantity_available,
+    price_label: item.price_label,
+    image_url: item.image_url,
+    description: item.description,
+  })}`;
 }
 
 function providerToInventory(row) {
+  const meta = parseInventoryNotes(row.notes);
+  if (!meta || meta.kind !== "inventory") return null;
+
   return {
     id: row.id,
-    name: row.provider_name || row.name || "",
-    category: row.service_category || row.provider_type || row.category || "Tables",
-    description: row.public_description || row.notes || row.description || "",
-    quantity_available: quantityFromAvailability(row.availability) || Number(row.quantity_available || 0),
-    price_label: row.base_prices || row.price_label || "",
-    image_url: row.image_url || "",
+    name: row.provider_name || "",
+    category: meta.category || "Tables",
+    description: meta.description || "",
+    quantity_available: Number(meta.quantity_available || 0),
+    price_label: meta.price_label || "",
+    image_url: meta.image_url || "",
     status: row.status || "active",
   };
 }
@@ -254,9 +274,9 @@ async function loadInventory() {
 
   const { data, error } = await supabase
     .from("cater_providers")
-    .select("id,provider_name,provider_type,service_category,public_description,notes,availability,base_prices,image_url,status,source,created_at")
+    .select("id,provider_name,provider_type,status,notes,created_at")
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
-    .eq("source", INVENTORY_SOURCE)
+    .eq("provider_type", "rental")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -266,7 +286,7 @@ async function loadInventory() {
     return;
   }
 
-  inventoryItems = (data || []).map(providerToInventory);
+  inventoryItems = (data || []).map(providerToInventory).filter(Boolean);
   renderInventory();
   setInventoryStatus("Inventario sincronizado.");
 }
@@ -306,7 +326,6 @@ async function deleteInventoryItem(id) {
     .from("cater_providers")
     .delete()
     .eq("workspace_id", DEFAULT_WORKSPACE_ID)
-    .eq("source", INVENTORY_SOURCE)
     .eq("id", id);
 
   if (error) {
@@ -322,19 +341,19 @@ async function saveInventoryItem(event) {
   event.preventDefault();
 
   const fileImage = await fileToDataUrl(inventoryImageFile?.files?.[0]);
+  const itemPayload = {
+    category: inventoryCategory.value,
+    quantity_available: Number(inventoryQuantity.value || 0),
+    price_label: inventoryPrice.value.trim() || null,
+    image_url: fileImage || inventoryImageUrl.value.trim() || null,
+    description: inventoryDescription.value.trim() || null,
+  };
   const payload = {
     workspace_id: DEFAULT_WORKSPACE_ID,
     provider_name: inventoryName.value.trim(),
     provider_type: "rental",
-    service_category: inventoryCategory.value,
-    availability: `Cantidad: ${Number(inventoryQuantity.value || 0)}`,
-    base_prices: inventoryPrice.value.trim() || null,
-    image_url: fileImage || inventoryImageUrl.value.trim() || null,
-    public_description: inventoryDescription.value.trim() || null,
-    notes: inventoryDescription.value.trim() || null,
     status: "active",
-    public_visible: true,
-    source: INVENTORY_SOURCE,
+    notes: buildInventoryNotes(itemPayload),
   };
 
   if (!payload.provider_name) {
@@ -363,7 +382,6 @@ async function saveInventoryItem(event) {
         .from("cater_providers")
         .update(payload)
         .eq("workspace_id", DEFAULT_WORKSPACE_ID)
-        .eq("source", INVENTORY_SOURCE)
         .eq("id", id)
         .select()
         .single()
