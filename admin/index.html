@@ -3,21 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Panel administrativo visual de Cater Vegas." />
-    <title>Cater Vegas | Dashboard Admin</title>
-    <script>
-      if (window.location.hash) {
-        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
-        window.addEventListener("load", () => window.scrollTo(0, 0), { once: true });
-      }
-    </script>
+    <meta name="description" content="Administracion de calendario e inventario de Cater Vegas." />
+    <title>Cater Vegas | Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin.css?v=cater-bone-refresh-20260706" />
+    <link rel="stylesheet" href="admin.css?v=inventory-reset-20260706" />
   </head>
   <body>
-    <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
+    <div class="admin-layout admin-layout-simple" data-admin-view="calendar">
       <aside class="admin-sidebar" aria-label="Menu de administrador">
         <a class="admin-logo" href="../index.html" aria-label="Cater Vegas home">
           <span>CV</span>
@@ -25,12 +19,14 @@
         </a>
 
         <nav class="sidebar-nav">
-          <button class="sidebar-link is-active" type="button" data-scroll-target="#overview" data-admin-view="dashboard"><span>⌂</span>Dashboard</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#event-tools" data-admin-view="events"><span>□</span>Eventos</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#requestsSection" data-admin-view="clients"><span>○</span>Clientes</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#team-tools" data-admin-view="team"><span>○</span>Equipo</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#event-tools" data-admin-view="quotes"><span>▤</span>Cotizaciones</button>
-          <button class="sidebar-link" type="button" data-scroll-target="#settings" data-admin-view="settings"><span>⚙</span>Ajustes</button>
+          <button class="sidebar-link is-active" type="button" data-scroll-target="#calendarPanel" data-admin-view="calendar">
+            <span aria-hidden="true">Cal</span>
+            Calendario
+          </button>
+          <button class="sidebar-link" type="button" data-scroll-target="#inventoryPanel" data-admin-view="inventory">
+            <span aria-hidden="true">Inv</span>
+            Inventario
+          </button>
         </nav>
 
         <div class="sidebar-mini">
@@ -45,17 +41,19 @@
       <main class="admin-main simple-main">
         <header class="admin-header">
           <div class="header-title">
-            <h1>Hola, David</h1>
-            <p>Aquí tienes un resumen de tu operación.</p>
+            <p class="eyebrow">Cater Vegas Admin</p>
+            <h1>Calendario e inventario</h1>
+            <p>Agrega mesas, sillas, manteleria, decoracion y equipo para que el comprador lo vea en su pagina.</p>
+            <p id="sessionStatus" class="session-status">Verificando sesion...</p>
           </div>
 
           <div class="header-actions">
-            <a class="home-button" href="../index.html" aria-label="Regresar al inicio"><span>🏠</span> Home</a>
-            <span class="workspace-badge-inline"><span class="status-dot"></span>Workspace activo</span>
+            <a class="home-button" href="../index.html" aria-label="Regresar al inicio">Home</a>
+            <a class="home-button" href="../client/" aria-label="Ver pagina del comprador">Ver comprador</a>
             <div class="user-pill" aria-label="Usuario activo">
-              <span class="avatar">DV</span>
+              <span class="avatar">CV</span>
               <div>
-                <strong id="dashboardEmail">exmarquesado@gmail.com</strong>
+                <strong id="dashboardEmail">Admin</strong>
                 <small id="dashboardRole">Owner</small>
               </div>
             </div>
@@ -63,446 +61,78 @@
           </div>
         </header>
 
-        <section class="simple-hero admin-utility-hero" aria-hidden="true">
-          <article class="command-card simple-command">
-            <div>
-              <h2>Acciones rápidas</h2>
-            </div>
-            <p id="sessionStatus" class="session-status">Verificando sesion...</p>
-            <div class="quick-actions" aria-label="Acciones rapidas">
-              <button type="button" data-scroll-target="#event-tools">Nuevo evento</button>
-              <button type="button" data-scroll-target="#requestsSection">Nueva solicitud</button>
-              <button type="button" data-scroll-target="#team-tools">Nuevo proveedor</button>
-              <button type="button" data-scroll-target="#team-tools">Asignar staff</button>
-            </div>
-          </article>
-
-          <article class="ai-card simple-ai" aria-label="AI Admin Assistant">
-            <div class="ai-card-copy">
-              <p class="eyebrow">Workspace</p>
-              <h2>Enfocado en lo importante</h2>
-            </div>
-            <div class="ai-avatar" aria-hidden="true">
-              <div class="ai-halo"></div>
-              <div class="ai-hat"></div>
-              <div class="ai-head">
-                <span class="ai-eye"></span>
-                <span class="ai-eye"></span>
-              </div>
-              <div class="ai-body"></div>
-              <div class="ai-bowtie"></div>
-              <div class="ai-cloche"></div>
-              <div class="ai-activity"></div>
-            </div>
-            <div class="ai-actions">
-              <button type="button" data-scroll-target="#overview">Resumen</button>
-              <button type="button" data-scroll-target="#event-tools">Nuevo</button>
-            </div>
-          </article>
-        </section>
-
-        <section class="dashboard-state-shell" aria-label="Estado del dashboard">
-          <article class="dashboard-state-card dashboard-empty-card" data-dashboard-state="empty" hidden>
-            <div class="state-copy">
-              <p class="eyebrow">Inicio</p>
-              <h2>Bienvenido a Cater Vegas</h2>
-              <p>Todavía no tienes información en este workspace.</p>
-              <button class="primary-button" type="button" data-scroll-target="#event-tools">Crear primer evento</button>
-            </div>
-            <div class="onboarding-panel" aria-label="Checklist inicial">
-              <p class="eyebrow">Checklist</p>
-              <ol class="onboarding-checklist">
-                <li>Configurar perfil</li>
-                <li>Crear primer cliente</li>
-                <li>Crear primer evento</li>
-                <li>Invitar colaborador</li>
-                <li>Generar primera cotización</li>
-              </ol>
-            </div>
-          </article>
-
-          <article class="dashboard-state-card dashboard-growing-card" data-dashboard-state="growing" hidden>
-            <div class="state-heading">
-              <button class="primary-button" type="button" data-scroll-target="#event-tools">Crear cotización</button>
-            </div>
-            <div class="state-columns">
-              <section class="state-mini-panel">
-                <h3>Eventos recientes</h3>
-                <div class="state-list" data-state-list="recent-events"></div>
-              </section>
-              <section class="state-mini-panel">
-                <h3>Clientes</h3>
-                <div class="state-list" data-state-list="recent-clients"></div>
-              </section>
-              <section class="state-mini-panel">
-                <h3>Cotizaciones</h3>
-                <div class="state-list" data-state-list="recent-quotes"></div>
-              </section>
-            </div>
-          </article>
-
-          <article class="dashboard-state-card dashboard-active-card" data-dashboard-state="active" hidden>
-            <div class="state-heading">
-              <div>
-                <p class="eyebrow">Negocio activo</p>
-                <h2>Resumen operativo</h2>
-              </div>
-              <button class="primary-button" type="button" data-scroll-target="#event-tools">Crear evento</button>
-            </div>
-            <div class="state-summary-grid" aria-label="Resumen del negocio activo">
-              <div><strong data-state-value="month-events">0</strong><span>Eventos este mes</span></div>
-              <div><strong data-state-value="active-clients">0</strong><span>Clientes activos</span></div>
-              <div><strong data-state-value="pending-quotes">0</strong><span>Cotizaciones pendientes</span></div>
-              <div><strong data-state-value="team-members">0</strong><span>Miembros del equipo</span></div>
-            </div>
-            <div class="state-columns state-columns-two">
-              <section class="state-mini-panel">
-                <h3>Próximos eventos</h3>
-                <div class="state-list" data-state-list="active-events"></div>
-              </section>
-              <section class="state-mini-panel state-requests-panel">
-                <h3>Solicitudes recientes</h3>
-                <div class="state-list" data-state-list="active-requests"></div>
-              </section>
-            </div>
-          </article>
-        </section>
-
-        <section class="metric-grid metric-grid-simple" id="overview" aria-label="Resumen principal">
-          <article class="metric-card metric-card-premium">
-            <button class="kpi-card-action" type="button" data-scroll-target="#event-tools" data-admin-view="events" aria-label="Ver eventos este mes">
-              <span class="metric-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <rect x="4" y="5" width="16" height="15" rx="3"></rect>
-                  <path d="M8 3v4M16 3v4M4 10h16M9 15h3M14 15h1"></path>
-                </svg>
-              </span>
-              <span class="kpi-copy">
-                <span class="kpi-topline"><strong id="statActiveEvents">0</strong><span class="kpi-arrow" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M7 4l6 6-6 6"></path></svg></span></span>
-                <small>Eventos este mes</small>
-                <span class="kpi-status kpi-status-positive"><span aria-hidden="true">↗</span> +1 vs mes pasado</span>
-              </span>
-            </button>
-          </article>
-          <article class="metric-card metric-card-premium">
-            <button class="kpi-card-action" type="button" data-scroll-target="#requestsSection" data-admin-view="clients" aria-label="Ver clientes activos">
-              <span class="metric-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path>
-                  <path d="M3 21a6 6 0 0 1 12 0"></path>
-                  <path d="M17 11a3 3 0 1 0 0-6M16 16a5 5 0 0 1 5 5"></path>
-                </svg>
-              </span>
-              <span class="kpi-copy">
-                <span class="kpi-topline"><strong id="statPending">0</strong><span class="kpi-arrow" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M7 4l6 6-6 6"></path></svg></span></span>
-                <small>Clientes activos</small>
-                <span class="kpi-status kpi-status-positive"><span aria-hidden="true">↗</span> +2 vs mes pasado</span>
-              </span>
-            </button>
-          </article>
-          <article class="metric-card metric-card-premium" id="providers">
-            <button class="kpi-card-action" type="button" data-scroll-target="#event-tools" data-admin-view="quotes" aria-label="Ver cotizaciones pendientes">
-              <span class="metric-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M7 3h7l4 4v14H7z"></path>
-                  <path d="M14 3v5h5M10 12h6M10 16h6M12 19v-9"></path>
-                </svg>
-              </span>
-              <span class="kpi-copy">
-                <span class="kpi-topline"><strong id="statProviders">0</strong><span class="kpi-arrow" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M7 4l6 6-6 6"></path></svg></span></span>
-                <small>Cotizaciones pendientes</small>
-                <span class="kpi-status kpi-status-pending"><span aria-hidden="true">○</span> Pendiente de respuesta</span>
-              </span>
-            </button>
-          </article>
-          <article class="metric-card metric-card-premium" id="finance">
-            <button class="kpi-card-action" type="button" data-scroll-target="#team-tools" data-admin-view="team" aria-label="Ver miembros del equipo">
-              <span class="metric-icon" aria-hidden="true">
-                <svg viewBox="0 0 24 24" focusable="false">
-                  <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z"></path>
-                  <path d="M5 21a7 7 0 0 1 14 0"></path>
-                </svg>
-              </span>
-              <span class="kpi-copy">
-                <span class="kpi-topline"><strong id="statRevenue">0</strong><span class="kpi-arrow" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M7 4l6 6-6 6"></path></svg></span></span>
-                <small>Miembros del equipo</small>
-                <span class="kpi-status kpi-status-neutral"><span aria-hidden="true">•</span> Equipo actualizado</span>
-              </span>
-            </button>
-          </article>
-        </section>
-
-        <section class="simple-dashboard-grid">
-          <section class="panel simple-panel calendar-panel" aria-label="Calendario de eventos">
+        <section class="admin-clean-grid">
+          <section class="panel simple-panel calendar-panel" id="calendarPanel" aria-label="Calendario de eventos">
             <div class="panel-heading">
-              <div><span>📆</span><h2>Calendario</h2></div>
+              <div>
+                <p class="eyebrow">Eventos</p>
+                <h2>Calendario</h2>
+              </div>
               <span class="calendar-month-label" id="calendarMonthLabel">Este mes</span>
             </div>
             <div class="dashboard-calendar" id="dashboardCalendar" aria-live="polite"></div>
           </section>
 
-          <article class="panel simple-panel" id="events">
+          <section class="panel simple-panel inventory-panel" id="inventoryPanel" aria-label="Inventario de Cater Vegas">
             <div class="panel-heading">
-              <div><span>📅</span><h2>Próximos eventos</h2></div>
-              <button id="refreshEventsButton" type="button">Actualizar</button>
-            </div>
-            <div class="event-list-mini" id="upcomingEventsList" aria-live="polite"></div>
-          </article>
-
-          <section class="panel simple-panel requests-admin" id="requestsSection">
-            <div class="panel-heading">
-              <div><span>🧾</span><h2>Solicitudes recientes</h2></div>
-              <button id="refreshRequestsButton" type="button">Actualizar</button>
-            </div>
-            <div class="request-preview-list" id="pendingRequestsPreview" aria-live="polite"></div>
-            <p class="admin-status" id="requestsStatus" aria-live="polite"></p>
-          </section>
-
-        </section>
-
-        <details class="admin-tools-accordion" id="settings">
-          <summary>Herramientas avanzadas</summary>
-
-          <section class="panel simple-panel beoflow-workspace-card admin-workspace-strip" id="beoflow">
-            <div class="workspace-topline">
               <div>
-                <p class="eyebrow">Workspace</p>
-                <h2>🌊 BEOFlow</h2>
+                <p class="eyebrow">Catalogo visible para compradores</p>
+                <h2>Inventario</h2>
               </div>
-              <span class="state-badge">Active</span>
+              <button class="secondary-button" id="refreshInventoryButton" type="button">Actualizar</button>
             </div>
-            <div class="workspace-summary" id="workspaceSummary" aria-live="polite"></div>
-            <button id="refreshWorkspaceButton" class="primary-button" type="button">Administrar</button>
+
+            <form class="inventory-form" id="inventoryForm">
+              <input id="inventoryItemId" type="hidden" />
+              <label>
+                <span>Nombre del articulo</span>
+                <input id="inventoryName" type="text" placeholder="Mesa redonda 60 pulgadas" required />
+              </label>
+              <label>
+                <span>Categoria</span>
+                <select id="inventoryCategory">
+                  <option value="Tables">Mesas</option>
+                  <option value="Chairs">Sillas</option>
+                  <option value="Linens">Manteleria</option>
+                  <option value="Decor">Decoracion</option>
+                  <option value="Tents">Carpas</option>
+                  <option value="Equipment">Equipo</option>
+                </select>
+              </label>
+              <label>
+                <span>Cantidad disponible</span>
+                <input id="inventoryQuantity" type="number" min="0" placeholder="12" required />
+              </label>
+              <label>
+                <span>Precio base</span>
+                <input id="inventoryPrice" type="text" placeholder="$18 renta por pieza" />
+              </label>
+              <label class="full-field">
+                <span>Foto por URL</span>
+                <input id="inventoryImageUrl" type="url" placeholder="https://..." />
+              </label>
+              <label class="full-field">
+                <span>O subir foto desde tu computadora</span>
+                <input id="inventoryImageFile" type="file" accept="image/*" />
+              </label>
+              <label class="full-field">
+                <span>Descripcion para el comprador</span>
+                <textarea id="inventoryDescription" rows="4" placeholder="Ideal para cenas, bodas y eventos VIP."></textarea>
+              </label>
+              <div class="form-actions full-field">
+                <button class="primary-button" type="submit">Guardar inventario</button>
+                <button class="secondary-button" id="resetInventoryButton" type="button">Limpiar</button>
+                <p class="admin-status" id="inventoryStatus" aria-live="polite"></p>
+              </div>
+            </form>
+
+            <div class="inventory-grid" id="inventoryList" aria-live="polite"></div>
           </section>
-
-          <section class="admin-tools-grid provider-tools-grid">
-            <section class="panel event-admin" id="event-tools">
-              <div class="panel-heading">
-                <div><span>📅</span><h2>Agregar eventos</h2></div>
-              </div>
-
-              <form class="event-form event-create-form" id="eventForm">
-                <label><span>Nombre</span><input id="eventTitle" type="text" placeholder="Cena VIP en Las Vegas" required /></label>
-                <label>
-                  <span>Tipo</span>
-                  <select id="eventType">
-                    <option value="Boda">Boda</option>
-                    <option value="Corporativo">Corporativo</option>
-                    <option value="VIP">VIP</option>
-                    <option value="Social">Social</option>
-                  </select>
-                </label>
-                <label>
-                  <span>Presupuesto</span>
-                  <select id="eventBudget">
-                    <option value="$2K - $5K">Esencial · $2K - $5K</option>
-                    <option value="$5K - $10K" selected>Premium · $5K - $10K</option>
-                    <option value="$10K - $25K">Completo · $10K - $25K</option>
-                    <option value="$25K+">Luxury · $25K+</option>
-                  </select>
-                </label>
-                <label><span>Fecha</span><input id="eventDate" type="date" /></label>
-                <label><span>Invitados</span><input id="guestCount" type="number" min="1" placeholder="80" /></label>
-                <div class="form-actions">
-                  <button class="primary-button" type="submit">Guardar evento</button>
-                  <p class="admin-status" id="eventFormStatus" aria-live="polite"></p>
-                </div>
-              </form>
-
-              <section class="quote-assistant-panel" id="quoteAssistant" aria-label="Cotización asistida">
-                <div class="quote-assistant-header">
-                  <div>
-                    <p class="eyebrow">Cotización asistida</p>
-                    <h3>Borrador inteligente</h3>
-                  </div>
-                  <span class="quote-assistant-note">No guarda ni envía nada automáticamente.</span>
-                </div>
-
-                <div class="quote-assistant-controls">
-                  <label class="quote-event-picker">
-                    <span>Evento base</span>
-                    <select id="quoteDraftEventSelect">
-                      <option value="__current_form">Usar formulario actual</option>
-                    </select>
-                  </label>
-                  <button class="secondary-button" id="quoteDraftUseCurrentButton" type="button">Usar formulario</button>
-                  <button class="primary-button" id="quoteDraftGenerateButton" type="button">Generar borrador</button>
-                </div>
-
-                <p class="admin-status" id="quoteDraftStatus" aria-live="polite"></p>
-
-                <div class="quote-draft-preview" id="quoteDraftPreview" hidden>
-                  <div class="quote-draft-brief">
-                    <div>
-                      <p class="eyebrow">Resumen</p>
-                      <p id="quoteDraftSummary"></p>
-                    </div>
-                    <div>
-                      <p class="eyebrow">Servicios sugeridos</p>
-                      <ul id="quoteDraftServices"></ul>
-                    </div>
-                    <div>
-                      <p class="eyebrow">Preguntas faltantes</p>
-                      <ul id="quoteDraftQuestions"></ul>
-                    </div>
-                  </div>
-
-                  <label class="quote-draft-message">
-                    <span>Mensaje editable para el cliente</span>
-                    <textarea id="quoteDraftMessage" rows="8"></textarea>
-                  </label>
-
-                  <div class="quote-draft-actions">
-                    <button class="secondary-button" id="quoteDraftResetButton" type="button">Limpiar</button>
-                    <button class="primary-button" id="quoteDraftCopyButton" type="button">Copiar mensaje</button>
-                  </div>
-                </div>
-              </section>
-            </section>
-
-            <section class="panel provider-admin" id="team-tools">
-              <div class="panel-heading">
-                <div><span>🏢</span><h2>Agregar proveedores</h2></div>
-                <button id="refreshCollaboratorsButton" type="button">Actualizar</button>
-              </div>
-
-              <div class="provider-intake-layout">
-                <form class="collaborator-form provider-form" id="collaboratorForm">
-                  <input id="collaboratorId" type="hidden" />
-                  <label><span>Proveedor / empresa</span><input id="collaboratorName" type="text" placeholder="Cater Vegas Rentals" required /></label>
-                  <label><span>Contacto</span><input id="providerContactName" type="text" placeholder="Nombre contacto" /></label>
-                  <label><span>Email</span><input id="collaboratorEmail" type="email" placeholder="contacto@proveedor.com" /></label>
-                  <label><span>Telefono</span><input id="collaboratorPhone" type="tel" placeholder="+1 702..." /></label>
-                  <label><span>Website</span><input id="providerWebsite" type="url" placeholder="https://..." /></label>
-                  <label><span>Ciudad</span><input id="providerCity" type="text" placeholder="Las Vegas" /></label>
-                  <label><span>Estado</span><input id="providerState" type="text" placeholder="NV" /></label>
-                  <label>
-                    <span>Categoria</span>
-                    <select id="collaboratorRole">
-                      <option value="food" selected>Catering / Cocina</option>
-                      <option value="service">Servicio</option>
-                      <option value="transportation">Logistica / Delivery</option>
-                      <option value="staffing">Staff extra</option>
-                      <option value="venue">Venue</option>
-                      <option value="rental">Rental</option>
-                      <option value="floral">Floral</option>
-                      <option value="decor">Decor</option>
-                      <option value="entertainment">Entertainment</option>
-                      <option value="vendor">Vendor</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Status</span>
-                    <select id="collaboratorStatus">
-                      <option value="active" selected>Activo</option>
-                      <option value="preferred">Preferido</option>
-                      <option value="inactive">Inactivo</option>
-                      <option value="archived">Archivado</option>
-                    </select>
-                  </label>
-                  <label><span>Zona de cobertura</span><input id="providerCoverage" type="text" placeholder="Las Vegas, Henderson..." /></label>
-                  <label><span>Disponibilidad</span><input id="providerAvailability" type="text" placeholder="Weekends, evenings..." /></label>
-                  <label><span>Precios base</span><input id="providerBasePricing" type="text" placeholder="$500 setup, $45 pp..." /></label>
-                  <label><span>Licencia / seguro</span><input id="providerLicenseInsurance" type="text" placeholder="Health permit, liability..." /></label>
-                  <label class="wide-field"><span>Servicios y notas</span><textarea id="collaboratorNotes" rows="4" placeholder="Menu, zona, disponibilidad, precios base, licencia o seguro"></textarea></label>
-                  <div class="form-actions">
-                    <button class="primary-button" type="submit">Guardar proveedor</button>
-                    <button class="secondary-button" id="resetCollaboratorButton" type="button">Limpiar</button>
-                  </div>
-                  <p class="admin-status" id="collaboratorFormStatus" aria-live="polite"></p>
-                </form>
-
-                <aside class="provider-info-card" aria-label="Informacion necesaria para proveedores">
-                  <p class="eyebrow">Datos necesarios</p>
-                  <div class="provider-checklist">
-                    <span>Empresa o contacto</span>
-                    <span>Categoria</span>
-                    <span>Email y telefono</span>
-                    <span>Servicio principal</span>
-                    <span>Zona de cobertura</span>
-                    <span>Disponibilidad</span>
-                    <span>Precios base</span>
-                    <span>Licencia / seguro</span>
-                  </div>
-                </aside>
-              </div>
-
-              <div class="provider-directory">
-                <div>
-                  <p class="eyebrow">Lista</p>
-                  <h3>Proveedores guardados</h3>
-                </div>
-                <div class="collaborator-list provider-list" id="collaboratorsList" aria-live="polite"></div>
-              </div>
-
-              <div class="assignment-panel" hidden>
-                <div>
-                  <p class="eyebrow">Asignacion</p>
-                  <h3>Proveedor a evento</h3>
-                </div>
-
-                <form class="assignment-form" id="assignmentForm">
-                  <label><span>Evento</span><select id="assignmentEvent"></select></label>
-                  <label><span>Proveedor</span><select id="assignmentCollaborator"></select></label>
-                  <label>
-                    <span>Funcion</span>
-                    <select id="assignmentRole">
-                      <option value="food" selected>Catering</option>
-                      <option value="service">Servicio</option>
-                      <option value="transportation">Delivery</option>
-                      <option value="staffing">Staff extra</option>
-                      <option value="vendor">Vendor</option>
-                    </select>
-                  </label>
-                  <label>
-                    <span>Status</span>
-                    <select id="assignmentStatus">
-                      <option value="active" selected>Activo</option>
-                      <option value="invited">Pendiente</option>
-                      <option value="inactive">Inactivo</option>
-                    </select>
-                  </label>
-                  <label class="wide-field"><span>Notas</span><input id="assignmentNotes" type="text" placeholder="Horario, punto de entrega, contacto onsite" /></label>
-                  <button class="primary-button" type="submit">Asignar</button>
-                  <p class="admin-status" id="assignmentStatusText" aria-live="polite"></p>
-                </form>
-
-                <div class="assignment-list" id="assignmentsList" aria-live="polite"></div>
-              </div>
-            </section>
-
-            <section class="panel beoflow-admin" id="beoflow-command">
-              <div class="panel-heading">
-                <div><span>🌊</span><h2>BEOFlow Command</h2></div>
-              </div>
-              <p id="selectedEventLabel">Selecciona un evento para enviar instrucciones.</p>
-              <form id="adminBeoflowForm">
-                <textarea id="adminBeoflowPrompt" rows="5" placeholder="Agrega transporte, hospedaje y staff para un evento VIP."></textarea>
-                <button class="primary-button" type="submit">Enviar a BEOFlow</button>
-              </form>
-              <pre id="beoflowResult"></pre>
-            </section>
-
-            <section class="utility-sinks" hidden aria-hidden="true">
-              <span id="statUsers">0</span>
-              <span id="statCompleted">0</span>
-              <div id="analyticsLine"></div>
-              <div id="analyticsBars"></div>
-              <div id="categoryDonut"></div>
-              <div id="categoryLegend"></div>
-              <div id="requestProgress"><strong>0%</strong><span>resueltas</span></div>
-              <div id="activityTimeline"></div>
-              <div id="eventsList"></div>
-              <div id="userRequestsList"></div>
-              <div id="customersList"></div>
-            </section>
-          </section>
-        </details>
+        </section>
       </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=quote-assistant-20260621"></script>
+    <script type="module" src="admin.js?v=inventory-reset-20260706"></script>
   </body>
 </html>

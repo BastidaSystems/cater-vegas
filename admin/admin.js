@@ -6,282 +6,37 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-  subscribeToEvents,
 } from "../lib/supabaseClient.js?v=supabase-auth-loader-20260619";
 
-const WORKSPACE_ID = DEFAULT_WORKSPACE_ID;
-const REALTIME_ENABLED =
-  window.CATER_VEGAS_ENABLE_REALTIME === true ||
-  new URLSearchParams(window.location.search).get("realtime") === "1";
-const ADMIN_REFRESH_INTERVAL_MS = 60000;
-const ADMIN_PREVIEW_MODE = new URLSearchParams(window.location.search).get("preview") === "1";
-const PENDING_PROFILE_ROLES = [
-  "workspace_pending",
-  "organizer_pending",
-  "collaborator_pending",
-  "client_pending",
-];
-const WORKSPACE_MANAGER_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
-const EVENT_MANAGER_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
-const ADMIN_WRITE_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
-const EVENT_INSERT_TABLE = "cater_events";
-const PROVIDER_INSERT_TABLE = "cater_providers";
-const PROVIDER_NOTE_LABELS = {
-  services: "Servicios y notas",
-  coverage: "Zona de cobertura",
-  availability: "Disponibilidad",
-  pricing: "Precios base",
-  license: "Licencia / seguro",
-};
-
-function keepDashboardPinned() {
-  if (window.location.hash) {
-    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
-  }
-  window.scrollTo(0, 0);
-}
-
-keepDashboardPinned();
-
-function clearAdminHash() {
-  if (window.location.hash) {
-    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
-  }
-}
-
-function syncAdminStickyOffset() {
-  const header = document.querySelector(".admin-header");
-  if (!header) return;
-
-  const headerStyle = window.getComputedStyle(header);
-  const isSticky = headerStyle.position === "sticky";
-  const offset = isSticky ? Math.ceil(header.getBoundingClientRect().height + 24) : 16;
-  document.documentElement.style.setProperty("--admin-sticky-offset", `${offset}px`);
-}
+const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
+const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
 
 const adminLayout = document.querySelector(".admin-layout-simple");
-
-function adminViewForTarget(targetSelector, requestedView) {
-  if (requestedView) return requestedView;
-  if (targetSelector === "#overview") return "dashboard";
-  if (targetSelector === "#event-tools" || targetSelector === "#events") return "events";
-  if (targetSelector === "#quoteAssistant") return "quotes";
-  if (targetSelector === "#team-tools") return "team";
-  if (targetSelector === "#requestsSection") return "clients";
-  if (targetSelector === "#settings" || targetSelector === "#beoflow" || targetSelector === "#beoflow-command") return "settings";
-  return "dashboard";
-}
-
-function setAdminView(targetSelector, requestedView) {
-  if (!adminLayout) return;
-  adminLayout.dataset.adminView = adminViewForTarget(targetSelector, requestedView);
-}
-
-function setActiveSidebarTarget(targetSelector, activeLink = null, activeView = "") {
-  document.querySelectorAll(".sidebar-link").forEach((link) => {
-    const sameTarget = link.dataset.scrollTarget === targetSelector;
-    const sameView = !activeView || link.dataset.adminView === activeView;
-    link.classList.toggle("is-active", activeLink ? link === activeLink : sameTarget && sameView);
-  });
-}
-
-function scrollToAdminTarget(targetSelector, requestedView = "") {
-  setAdminView(targetSelector, requestedView);
-  const target = document.querySelector(targetSelector);
-  if (!target) return;
-
-  const parentDetails = target.matches("details") ? target : target.closest("details");
-  if (parentDetails && !parentDetails.open) {
-    parentDetails.open = true;
-  }
-
-  clearAdminHash();
-  syncAdminStickyOffset();
-  window.requestAnimationFrame(() => {
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
-    target.classList.add("is-pulsing");
-    window.setTimeout(() => target.classList.remove("is-pulsing"), 700);
-  });
-}
-
 const sessionStatus = document.querySelector("#sessionStatus");
 const signoutButton = document.querySelector("#signoutButton");
-const workspaceSummary = document.querySelector("#workspaceSummary");
-const refreshWorkspaceButton = document.querySelector("#refreshWorkspaceButton");
-const requestsSection = document.querySelector("#requestsSection");
-const requestsStatus = document.querySelector("#requestsStatus");
-const refreshRequestsButton = document.querySelector("#refreshRequestsButton");
-const userRequestsList = document.querySelector("#userRequestsList");
-const pendingRequestsPreview = document.querySelector("#pendingRequestsPreview");
-const customersList = document.querySelector("#customersList");
 const dashboardEmail = document.querySelector("#dashboardEmail");
 const dashboardRole = document.querySelector("#dashboardRole");
-
-const eventForm = document.querySelector("#eventForm");
-const eventTitle = document.querySelector("#eventTitle");
-const eventType = document.querySelector("#eventType");
-const eventBudget = document.querySelector("#eventBudget");
-const eventDate = document.querySelector("#eventDate");
-const guestCount = document.querySelector("#guestCount");
-const eventFormStatus = document.querySelector("#eventFormStatus");
-const eventsList = document.querySelector("#eventsList");
-const refreshEventsButton = document.querySelector("#refreshEventsButton");
-const selectedEventLabel = document.querySelector("#selectedEventLabel");
-const quoteDraftEventSelect = document.querySelector("#quoteDraftEventSelect");
-const quoteDraftUseCurrentButton = document.querySelector("#quoteDraftUseCurrentButton");
-const quoteDraftGenerateButton = document.querySelector("#quoteDraftGenerateButton");
-const quoteDraftStatus = document.querySelector("#quoteDraftStatus");
-const quoteDraftPreview = document.querySelector("#quoteDraftPreview");
-const quoteDraftSummary = document.querySelector("#quoteDraftSummary");
-const quoteDraftServices = document.querySelector("#quoteDraftServices");
-const quoteDraftQuestions = document.querySelector("#quoteDraftQuestions");
-const quoteDraftMessage = document.querySelector("#quoteDraftMessage");
-const quoteDraftCopyButton = document.querySelector("#quoteDraftCopyButton");
-const quoteDraftResetButton = document.querySelector("#quoteDraftResetButton");
-const adminBeoflowForm = document.querySelector("#adminBeoflowForm");
-const adminBeoflowPrompt = document.querySelector("#adminBeoflowPrompt");
-const beoflowResult = document.querySelector("#beoflowResult");
-
-const collaboratorForm = document.querySelector("#collaboratorForm");
-const collaboratorId = document.querySelector("#collaboratorId");
-const collaboratorName = document.querySelector("#collaboratorName");
-const providerContactName = document.querySelector("#providerContactName");
-const collaboratorEmail = document.querySelector("#collaboratorEmail");
-const collaboratorPhone = document.querySelector("#collaboratorPhone");
-const providerWebsite = document.querySelector("#providerWebsite");
-const providerCity = document.querySelector("#providerCity");
-const providerState = document.querySelector("#providerState");
-const collaboratorRole = document.querySelector("#collaboratorRole");
-const collaboratorStatus = document.querySelector("#collaboratorStatus");
-const providerCoverage = document.querySelector("#providerCoverage");
-const providerAvailability = document.querySelector("#providerAvailability");
-const providerBasePricing = document.querySelector("#providerBasePricing");
-const providerLicenseInsurance = document.querySelector("#providerLicenseInsurance");
-const collaboratorNotes = document.querySelector("#collaboratorNotes");
-const collaboratorFormStatus = document.querySelector("#collaboratorFormStatus");
-const resetCollaboratorButton = document.querySelector("#resetCollaboratorButton");
-const refreshCollaboratorsButton = document.querySelector("#refreshCollaboratorsButton");
-const collaboratorsList = document.querySelector("#collaboratorsList");
-
-const assignmentForm = document.querySelector("#assignmentForm");
-const assignmentEvent = document.querySelector("#assignmentEvent");
-const assignmentCollaborator = document.querySelector("#assignmentCollaborator");
-const assignmentRole = document.querySelector("#assignmentRole");
-const assignmentSelectStatus = document.querySelector("#assignmentStatus");
-const assignmentNotes = document.querySelector("#assignmentNotes");
-const assignmentStatusText = document.querySelector("#assignmentStatusText");
-const assignmentsList = document.querySelector("#assignmentsList");
-
-const statActiveEvents = document.querySelector("#statActiveEvents");
-const statPending = document.querySelector("#statPending");
-const statProviders = document.querySelector("#statProviders");
-const statUsers = document.querySelector("#statUsers");
-const statRevenue = document.querySelector("#statRevenue");
-const statCompleted = document.querySelector("#statCompleted");
-const analyticsLine = document.querySelector("#analyticsLine");
-const analyticsBars = document.querySelector("#analyticsBars");
-const categoryDonut = document.querySelector("#categoryDonut");
-const categoryLegend = document.querySelector("#categoryLegend");
-const requestProgress = document.querySelector("#requestProgress");
-const upcomingEventsList = document.querySelector("#upcomingEventsList");
 const dashboardCalendar = document.querySelector("#dashboardCalendar");
 const calendarMonthLabel = document.querySelector("#calendarMonthLabel");
-const activityTimeline = document.querySelector("#activityTimeline");
-const dashboardStateCards = Array.from(document.querySelectorAll("[data-dashboard-state]"));
-const dashboardStateLists = new Map(
-  Array.from(document.querySelectorAll("[data-state-list]")).map((element) => [element.dataset.stateList, element])
-);
-const dashboardStateValues = new Map(
-  Array.from(document.querySelectorAll("[data-state-value]")).map((element) => [element.dataset.stateValue, element])
-);
+const inventoryForm = document.querySelector("#inventoryForm");
+const inventoryItemId = document.querySelector("#inventoryItemId");
+const inventoryName = document.querySelector("#inventoryName");
+const inventoryCategory = document.querySelector("#inventoryCategory");
+const inventoryQuantity = document.querySelector("#inventoryQuantity");
+const inventoryPrice = document.querySelector("#inventoryPrice");
+const inventoryImageUrl = document.querySelector("#inventoryImageUrl");
+const inventoryImageFile = document.querySelector("#inventoryImageFile");
+const inventoryDescription = document.querySelector("#inventoryDescription");
+const inventoryStatus = document.querySelector("#inventoryStatus");
+const inventoryList = document.querySelector("#inventoryList");
+const refreshInventoryButton = document.querySelector("#refreshInventoryButton");
+const resetInventoryButton = document.querySelector("#resetInventoryButton");
 
 let supabase = null;
 let currentUser = null;
-let currentProfile = null;
-let currentMembership = null;
-let currentRole = null;
-let currentWorkspace = null;
-let selectedEvent = null;
-let selectedCollaborator = null;
-let authReady = false;
-let adminBootPromise = null;
-let eventsChannel = null;
-let adminRefreshTimer = null;
+let currentRole = "";
 let allEvents = [];
-let allCollaborators = [];
-let allAssignments = [];
-let allCustomers = [];
-let allRequests = [];
-let currentQuoteDraft = null;
-
-function setSessionStatus(message) {
-  sessionStatus.textContent = message;
-}
-
-function setEventStatus(message) {
-  eventFormStatus.textContent = message;
-}
-
-function setCollaboratorStatus(message) {
-  collaboratorFormStatus.textContent = message;
-}
-
-function isPermissionError(error) {
-  const message = String(error?.message || "").toLowerCase();
-  const code = String(error?.code || "");
-  const status = Number(error?.status || error?.statusCode || 0);
-  return (
-    code === "42501" ||
-    status === 401 ||
-    status === 403 ||
-    message.includes("row-level security") ||
-    message.includes("permission denied") ||
-    message.includes("not authorized")
-  );
-}
-
-function isWorkspaceError(error) {
-  const message = String(error?.message || "").toLowerCase();
-  const details = String(error?.details || "").toLowerCase();
-  const code = String(error?.code || "");
-  return (
-    (code === "23503" && (message.includes("workspace") || details.includes("workspace"))) ||
-    details.includes("workspace_id") ||
-    details.includes("beoflow_workspaces")
-  );
-}
-
-function saveErrorMessage(error, entityLabel) {
-  if (isPermissionError(error)) {
-    return "Tu usuario no tiene permisos para guardar en este workspace.";
-  }
-
-  if (isMissingSchemaColumnError(error)) {
-    return "La estructura de la tabla no coincide con el formulario.";
-  }
-
-  if (isWorkspaceError(error)) {
-    return "No se encontro el workspace Cater Vegas.";
-  }
-
-  return error?.message || `No se pudo guardar el ${entityLabel}. Revisa la conexion o las politicas de Supabase.`;
-}
-
-function eventSaveErrorMessage(error) {
-  return saveErrorMessage(error, "evento");
-}
-
-function providerSaveErrorMessage(error) {
-  return saveErrorMessage(error, "proveedor");
-}
-
-function setAssignmentStatus(message) {
-  assignmentStatusText.textContent = message;
-}
-
-function setRequestsStatus(message) {
-  requestsStatus.textContent = message;
-}
+let inventoryItems = [];
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -292,2198 +47,369 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function normalizeRole(role) {
-  return String(role || "").trim().toLowerCase();
+function setStatus(message) {
+  if (sessionStatus) sessionStatus.textContent = message;
 }
 
-function currentUserRoles() {
-  return [
-    currentRole,
-    currentMembership?.role,
-    currentProfile?.role,
-    currentProfile?.platform_role,
-    currentProfile?.platformRole,
-  ]
-    .map(normalizeRole)
-    .filter(Boolean);
+function setInventoryStatus(message) {
+  if (inventoryStatus) inventoryStatus.textContent = message;
 }
 
-function hasAnyRole(allowedRoles) {
-  return currentUserRoles().some((role) => allowedRoles.has(role));
+function setAdminView(targetSelector, requestedView = "") {
+  if (!adminLayout) return;
+  adminLayout.dataset.adminView = requestedView || (targetSelector === "#inventoryPanel" ? "inventory" : "calendar");
 }
 
-function canManageEvents() {
-  return Boolean(currentUser) && hasAnyRole(EVENT_MANAGER_ROLES);
+function scrollToAdminTarget(targetSelector, requestedView = "") {
+  setAdminView(targetSelector, requestedView);
+  const target = document.querySelector(targetSelector);
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function canManageCollaborators() {
-  return Boolean(currentUser) && hasAnyRole(WORKSPACE_MANAGER_ROLES);
-}
-
-function canManageRequests() {
-  return Boolean(currentUser) && hasAnyRole(WORKSPACE_MANAGER_ROLES);
-}
-
-function canWriteWorkspaceData() {
-  return Boolean(currentUser) && hasAnyRole(ADMIN_WRITE_ROLES);
-}
-
-async function readActiveSession(setStatus) {
-  let data = null;
-  let sessionError = null;
-
+function localInventoryRows() {
   try {
-    const result = await supabase.auth.getSession();
-    data = result.data;
-    sessionError = result.error;
-  } catch (error) {
-    sessionError = error;
-  }
-
-  const session = data?.session || null;
-  console.log("Supabase session:", session);
-
-  if (sessionError) {
-    console.error("Supabase session error:", sessionError);
-    setStatus("Tu sesion expiro. Inicia sesion nuevamente.");
-    return null;
-  }
-
-  if (!session) {
-    setStatus("Tu sesion expiro. Inicia sesion nuevamente.");
-    return null;
-  }
-
-  console.log("Current user:", session.user);
-  currentUser = session.user;
-  return session;
-}
-
-function logSaveContext(resourceLabel, tableName, payload, session) {
-  console.log(`Saving ${resourceLabel}...`);
-  console.log("Supabase session:", session);
-  console.log("Current user:", session?.user);
-  console.log("Current role:", currentRole);
-  console.log("Current workspace/client:", currentWorkspace || null);
-  console.log(`${resourceLabel === "event" ? "Event" : "Provider"} payload:`, payload);
-  console.log("Insert table:", tableName);
-}
-
-function logSupabaseInsertResult(result) {
-  console.log("Insert data:", result?.data || null);
-
-  if (result?.error) {
-    console.error("Insert error:", result.error);
-    console.error("Insert error message:", result.error.message);
-    console.error("Insert error code:", result.error.code);
-    console.error("Insert error details:", result.error.details);
-    console.error("Insert error hint:", result.error.hint);
+    return JSON.parse(window.localStorage.getItem(LOCAL_INVENTORY_KEY) || "[]");
+  } catch {
+    return [];
   }
 }
 
-function functionInvokeError(data, error) {
-  if (error) return error;
-  if (data?.error) return { message: data.error, details: data.details };
-  return null;
+function saveLocalInventory(rows) {
+  window.localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(rows));
 }
 
-async function saveEventThroughFunction(basePayload) {
-  try {
-    const { data, error } = await supabase.functions.invoke("beoflow", {
-      body: {
-        action: "save-event",
-        workspaceId: WORKSPACE_ID,
-        payload: basePayload,
-      },
-    });
-    const invokeError = functionInvokeError(data, error);
-    if (invokeError) return { data: null, error: invokeError };
-    return { data: data?.record || null, error: null, beoflowSync: data?.beoflowSync || null };
-  } catch (error) {
-    return { data: null, error: { message: error instanceof Error ? error.message : String(error) } };
-  }
-}
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
 
-async function saveProviderThroughFunction(basePayload, providerId = null) {
-  try {
-    const { data, error } = await supabase.functions.invoke("beoflow", {
-      body: {
-        action: "save-provider",
-        workspaceId: WORKSPACE_ID,
-        providerId: providerId ? Number(providerId) : null,
-        payload: basePayload,
-      },
-    });
-    const invokeError = functionInvokeError(data, error);
-    if (invokeError) return { data: null, error: invokeError };
-    return { data: data?.record || null, error: null, beoflowSync: data?.beoflowSync || null };
-  } catch (error) {
-    return { data: null, error: { message: error instanceof Error ? error.message : String(error) } };
-  }
-}
-
-function profileRoleForMembershipRole(role) {
-  const roleMap = {
-    owner: "admin",
-    admin: "admin",
-    super_admin: "admin",
-    platform_admin: "admin",
-    organizer: "organizer",
-    collaborator: "collaborator",
-    viewer: "client",
-  };
-
-  return roleMap[role] || "client";
-}
-
-function eventPlanFromRow(row) {
-  return {
-    budgetLabel: row.budget_label,
-    eventType: row.event_type,
-    menuStyle: row.menu_style,
-    services: row.services || [],
-    ...(row.plan || {}),
-  };
-}
-
-function buildEventPayload() {
-  const budgetLabel = eventBudget.value;
-  const title = eventTitle.value.trim();
-  const eventTypeValue = eventType.value;
-
-  return {
-    workspace_id: WORKSPACE_ID,
-    title,
-    event_type: eventTypeValue,
-    budget_label: budgetLabel,
-    status: "draft",
-    event_date: eventDate.value || null,
-    guest_count: guestCount.value ? Number(guestCount.value) : null,
-    plan: {
-      budgetLabel,
-      eventType: eventTypeValue,
-      menuStyle: null,
-      services: [],
-    },
-  };
-}
-
-async function insertEventPayload(basePayload, session) {
-  const payloads = [
-    session?.user?.id ? { ...basePayload, created_by: session.user.id } : null,
-    basePayload,
-  ].filter(Boolean);
-
-  for (const payload of payloads) {
-    logSaveContext("event", EVENT_INSERT_TABLE, payload, session);
-    const result = await supabase.from(EVENT_INSERT_TABLE).insert(payload).select("*").single();
-    logSupabaseInsertResult(result);
-    if (isPermissionError(result.error)) return saveEventThroughFunction(basePayload);
-    if (!isMissingSchemaColumnError(result.error)) return result;
-  }
-
-  logSaveContext("event", EVENT_INSERT_TABLE, basePayload, session);
-  const fallbackResult = await supabase.from(EVENT_INSERT_TABLE).insert(basePayload).select("*").single();
-  logSupabaseInsertResult(fallbackResult);
-  if (isPermissionError(fallbackResult.error)) return saveEventThroughFunction(basePayload);
-  return fallbackResult;
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(Math.max(0, Number(value) || 0));
-}
-
-function formatShortDate(value) {
-  if (!value) return "Sin fecha";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sin fecha";
-  return new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric" }).format(date);
-}
-
-function eventAmount(event) {
-  if (Number.isFinite(Number(event.budget))) return Number(event.budget);
-  const label = String(event.budget_label || "");
-  if (label.includes("25K")) return 25000;
-  if (label.includes("10K") && label.includes("25K")) return 17500;
-  if (label.includes("5K") && label.includes("10K")) return 7500;
-  if (label.includes("2K") && label.includes("5K")) return 3500;
-  return 0;
-}
-
-function normalizedStatus(status) {
-  return String(status || "draft").toLowerCase();
-}
-
-function statusBadge(status) {
-  const value = normalizedStatus(status);
-  const danger = ["cancelled", "inactive", "disabled", "rejected"].includes(value);
-  const pending = ["draft", "pending", "invited", "proposal", "review"].includes(value);
-  const className = danger ? " is-danger" : pending ? " is-pending" : "";
-  return `<span class="status-badge${className}">${escapeHtml(value)}</span>`;
-}
-
-function setQuoteDraftStatus(message) {
-  if (quoteDraftStatus) quoteDraftStatus.textContent = message;
-}
-
-function servicesFromValue(value) {
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (typeof value === "string") {
-    return value
-      .split(/[,;\n]/)
-      .map((item) => item.trim())
-      .filter(Boolean);
-  }
-  return [];
-}
-
-function quoteSourceFromForm() {
-  const budgetLabel = eventBudget?.value || "$5K - $10K";
-  const eventTypeValue = eventType?.value || "VIP";
-
-  return {
-    id: "__current_form",
-    title: eventTitle?.value.trim() || "Evento sin nombre",
-    event_type: eventTypeValue,
-    budget_label: budgetLabel,
-    status: "draft",
-    event_date: eventDate?.value || null,
-    guest_count: guestCount?.value ? Number(guestCount.value) : null,
-    services: [],
-    plan: {
-      budgetLabel,
-      eventType: eventTypeValue,
-      menuStyle: null,
-      services: [],
-    },
-  };
-}
-
-function selectedQuoteEvent() {
-  if (!quoteDraftEventSelect || quoteDraftEventSelect.value === "__current_form") {
-    return quoteSourceFromForm();
-  }
-
-  return allEvents.find((event) => String(event.id) === quoteDraftEventSelect.value) || selectedEvent || quoteSourceFromForm();
-}
-
-function quoteEventOptionLabel(event) {
-  const title = event.title || `Evento #${event.id}`;
-  const date = formatQuoteShortDate(event.event_date || event.updated_at);
-  const budget = event.budget_label || event.plan?.budgetLabel || "Sin presupuesto";
-  return `${title} · ${date} · ${budget}`;
-}
-
-function renderQuoteDraftEventOptions() {
-  if (!quoteDraftEventSelect) return;
-
-  const previousValue = quoteDraftEventSelect.value;
-  const eventOptions = allEvents
-    .map((event) => `<option value="${escapeHtml(event.id)}">${escapeHtml(quoteEventOptionLabel(event))}</option>`)
-    .join("");
-
-  quoteDraftEventSelect.innerHTML = `
-    <option value="__current_form">Usar formulario actual</option>
-    ${eventOptions}
-  `;
-
-  const hasPreviousEvent = previousValue !== "__current_form" && allEvents.some((event) => String(event.id) === previousValue);
-  const selectedEventId = selectedEvent?.id ? String(selectedEvent.id) : "";
-  const hasSelectedEvent = selectedEventId && allEvents.some((event) => String(event.id) === selectedEventId);
-  const preferredEvent = pendingQuoteRows()[0] || allEvents[0];
-  const preferredEventId = preferredEvent?.id ? String(preferredEvent.id) : "";
-
-  quoteDraftEventSelect.value = hasPreviousEvent
-    ? previousValue
-    : hasSelectedEvent
-      ? selectedEventId
-      : preferredEventId || "__current_form";
-}
-
-function quoteBudgetLabel(event) {
-  if (event?.budget_label) return event.budget_label;
-  if (event?.plan?.budgetLabel) return event.plan.budgetLabel;
-  if (Number.isFinite(Number(event?.budget))) return formatCurrency(event.budget);
-  return "Presupuesto por definir";
-}
-
-function quoteGuestLabel(event) {
-  return event?.guest_count ? `${event.guest_count} personas` : "Invitados por confirmar";
-}
-
-function quoteDateLabel(event) {
-  return event?.event_date ? formatQuoteShortDate(event.event_date) : "Fecha por confirmar";
-}
-
-function formatQuoteShortDate(value) {
-  if (!value) return "Sin fecha";
-  const dateOnly = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  const date = dateOnly
-    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
-    : new Date(value);
-  if (Number.isNaN(date.getTime())) return "Sin fecha";
-  return new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric" }).format(date);
-}
-
-function quoteCustomerName(event) {
-  const customerId = Number(event?.customer_id);
-  const customer = allCustomers.find((item) => Number(item.id) === customerId);
-  return customer?.full_name || customer?.name || customer?.email || "";
-}
-
-function suggestedServicesForEvent(event) {
-  const type = String(event?.event_type || event?.plan?.eventType || "VIP").toLowerCase();
-  const budget = String(quoteBudgetLabel(event)).toLowerCase();
-  const existingServices = [
-    ...servicesFromValue(event?.services),
-    ...servicesFromValue(event?.plan?.services),
-  ];
-  const serviceMap = {
-    boda: ["Menú de recepción y cena", "Coordinación de timeline", "Staff de servicio", "Montaje y desmontaje"],
-    corporativo: ["Menú ejecutivo", "Bebidas y coffee station", "Staff de atención", "Logística de montaje"],
-    social: ["Menú familiar premium", "Servicio de bebidas", "Staff de apoyo", "Renta básica sugerida"],
-    vip: ["Chef privado", "Servicio personalizado", "Bebidas premium", "Coordinación onsite"],
-  };
-  const base = serviceMap[type] || serviceMap.vip;
-  const premium = budget.includes("25k") || budget.includes("10k")
-    ? ["Degustación previa", "Coordinador dedicado", "Detalle de hospitalidad premium"]
-    : ["Confirmación de menú", "Checklist operativo"];
-
-  return [...new Set([...existingServices, ...base, ...premium])].slice(0, 6);
-}
-
-function missingQuestionsForQuote(event) {
-  const existingServices = [
-    ...servicesFromValue(event?.services),
-    ...servicesFromValue(event?.plan?.services),
-  ];
-  const questions = [];
-
-  if (!event?.event_date) questions.push("Confirmar fecha y horario exacto.");
-  if (!event?.guest_count) questions.push("Confirmar número final de invitados.");
-  if (!event?.customer_id) questions.push("Confirmar nombre y contacto del cliente.");
-  questions.push("Confirmar venue, dirección y acceso de carga.");
-  if (!existingServices.length) questions.push("Definir menú, bebidas, staff y rentas necesarias.");
-  questions.push("Confirmar restricciones alimentarias y nivel de servicio esperado.");
-
-  return questions.slice(0, 5);
-}
-
-function buildQuoteDraft(event) {
-  const eventTypeLabel = event?.event_type || event?.plan?.eventType || "Evento";
-  const clientName = quoteCustomerName(event);
-  const title = event?.title || "Evento sin nombre";
-  const budget = quoteBudgetLabel(event);
-  const services = suggestedServicesForEvent(event);
-  const questions = missingQuestionsForQuote(event);
-  const summary = `${title} · ${eventTypeLabel} · ${quoteGuestLabel(event)} · ${quoteDateLabel(event)} · ${budget}`;
-  const serviceLines = services.map((service) => `- ${service}`).join("\n");
-  const questionLines = questions.map((question) => `- ${question}`).join("\n");
-  const greeting = clientName ? `Hola ${clientName},` : "Hola,";
-  const message = `${greeting}
-
-Gracias por compartir la información de tu evento. Con los datos actuales, puedo preparar una cotización preliminar para:
-
-${summary}
-
-Servicios sugeridos:
-${serviceLines}
-
-Para cerrar una propuesta más precisa, me ayudas a confirmar:
-${questionLines}
-
-Con eso te preparo una cotización clara con alcance, tiempos y siguientes pasos.`;
-
-  return {
-    title,
-    summary,
-    services,
-    questions,
-    message,
-  };
-}
-
-function renderQuoteDraft(draft) {
-  if (!quoteDraftPreview || !quoteDraftSummary || !quoteDraftServices || !quoteDraftQuestions || !quoteDraftMessage) return;
-
-  quoteDraftSummary.textContent = draft.summary;
-  quoteDraftServices.innerHTML = draft.services.map((service) => `<li>${escapeHtml(service)}</li>`).join("");
-  quoteDraftQuestions.innerHTML = draft.questions.map((question) => `<li>${escapeHtml(question)}</li>`).join("");
-  quoteDraftMessage.value = draft.message;
-  quoteDraftPreview.hidden = false;
-}
-
-function generateQuoteDraft() {
-  const quoteEvent = selectedQuoteEvent();
-  currentQuoteDraft = buildQuoteDraft(quoteEvent);
-  renderQuoteDraft(currentQuoteDraft);
-  setQuoteDraftStatus("Borrador generado. Revísalo antes de copiarlo o enviarlo.");
-}
-
-async function copyQuoteDraftMessage() {
-  if (!quoteDraftMessage?.value.trim()) {
-    setQuoteDraftStatus("Genera un borrador antes de copiar.");
-    return;
-  }
-
-  try {
-    await navigator.clipboard.writeText(quoteDraftMessage.value);
-    setQuoteDraftStatus("Mensaje copiado.");
-  } catch (error) {
-    quoteDraftMessage.focus();
-    quoteDraftMessage.select();
-    document.execCommand("copy");
-    setQuoteDraftStatus("Mensaje copiado.");
-  }
-}
-
-function resetQuoteDraft() {
-  currentQuoteDraft = null;
-  if (quoteDraftPreview) quoteDraftPreview.hidden = true;
-  if (quoteDraftMessage) quoteDraftMessage.value = "";
-  setQuoteDraftStatus("Borrador limpio.");
-}
-
-function providerRoleLabel(role) {
-  const labels = {
-    food: "Catering / Cocina",
-    beverage: "Bebidas",
-    service: "Servicio",
-    transportation: "Logistica / Delivery",
-    staffing: "Staff extra",
-    venue: "Venue",
-    rental: "Rental",
-    floral: "Floral",
-    decor: "Decor",
-    entertainment: "Entertainment",
-    vendor: "Vendor",
-    other: "Other",
-    chef: "Catering / Cocina",
-    server: "Servicio",
-    driver: "Logistica / Delivery",
-    organizer: "Coordinacion",
-    staff: "Staff extra",
-    viewer: "Viewer",
-    admin: "Admin",
-    owner: "Owner",
-  };
-  const value = String(role || "staff").toLowerCase();
-  return labels[value] || role || "Proveedor";
-}
-
-function providerDisplayName(provider) {
-  return provider?.provider_name || provider?.full_name || "";
-}
-
-function providerDisplayType(provider) {
-  return provider?.provider_type || provider?.service_category || provider?.role || "vendor";
-}
-
-function userInitials(value) {
-  const text = String(value || "CV").trim();
-  const pieces = text.includes("@") ? text.split("@")[0].split(/[._-]/) : text.split(/\s+/);
-  return pieces
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((piece) => piece[0]?.toUpperCase())
-    .join("") || "CV";
-}
-
-function monthKey(dateValue) {
-  const date = dateValue ? new Date(dateValue) : new Date();
-  if (Number.isNaN(date.getTime())) return monthKey(new Date());
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-}
-
-function lastSixMonths() {
-  const now = new Date();
-  return Array.from({ length: 6 }, (_, index) => {
-    const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
-    return {
-      key: monthKey(date),
-      label: new Intl.DateTimeFormat("es-US", { month: "short" }).format(date),
-    };
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("No se pudo leer la imagen."));
+    reader.readAsDataURL(file);
   });
 }
 
-function syncStatusCopy(syncStatus) {
-  const status = String(syncStatus?.status || "unknown").toLowerCase();
-
-  if (status === "connected" || status === "synced") {
-    return {
-      title: "BEOFlow sync conectado",
-      meta: syncStatus?.clientId ? `Client ID: ${syncStatus.clientId}` : "Listo para enviar eventos y proveedores.",
-    };
-  }
-
-  if (status === "pending" || status === "skipped") {
-    return {
-      title: "BEOFlow sync pendiente",
-      meta: syncStatus?.reason || "Faltan secretos o configuracion de la Edge Function.",
-    };
-  }
-
-  if (status === "failed") {
-    return {
-      title: "BEOFlow sync con error",
-      meta: syncStatus?.reason || "No se pudo verificar la conexion externa.",
-    };
-  }
-
-  return {
-    title: "BEOFlow sync no verificado",
-    meta: "Usa Administrar para abrir BEOFlow Command.",
-  };
-}
-
-function renderWorkspaceSummary(stats = {}, syncStatus = null) {
-  if (!currentWorkspace) {
-    workspaceSummary.innerHTML = '<div class="empty-state">No se pudo leer el workspace activo.</div>';
-    return;
-  }
-
-  const connection = syncStatusCopy(syncStatus);
-
-  workspaceSummary.innerHTML = `
-    <article class="workspace-stat">
-      <strong>${escapeHtml(currentWorkspace.name || "Cater Vegas")}</strong>
-      <span class="workspace-meta">
-        ${escapeHtml(currentWorkspace.slug || WORKSPACE_ID)} · ${escapeHtml(currentWorkspace.status || "active")}
-      </span>
-    </article>
-    <article class="workspace-stat">
-      <strong>${stats.events || 0} eventos · ${stats.collaborators || 0} proveedores · ${stats.customers || 0} clientes</strong>
-      <span class="workspace-meta">Workspace ID: ${escapeHtml(WORKSPACE_ID)}</span>
-    </article>
-    <article class="workspace-stat">
-      <strong>${escapeHtml(connection.title)}</strong>
-      <span class="workspace-meta">${escapeHtml(connection.meta)}</span>
-    </article>
-  `;
-}
-
-function renderMetricCards() {
-  const monthEvents = currentMonthEvents().length;
-  const pendingQuotes = pendingQuoteRows().length;
-  const completedEvents = allEvents.filter((event) => ["completed", "done"].includes(normalizedStatus(event.status))).length;
-  const revenue = allEvents.reduce((sum, event) => sum + eventAmount(event), 0);
-  const teamMembers = teamMemberRows().length;
-  const activeClients = allCustomers.length;
-  const users = teamMembers + activeClients;
-
-  statActiveEvents.textContent = String(monthEvents);
-  statPending.textContent = String(activeClients);
-  statProviders.textContent = String(pendingQuotes);
-  statUsers.textContent = String(users);
-  statRevenue.textContent = String(teamMembers);
-  statCompleted.textContent = String(completedEvents);
-  statRevenue.dataset.revenueValue = formatCurrency(revenue);
-}
-
-function isActiveRecord(row) {
-  const status = normalizedStatus(row?.status || "active");
-  return status !== "archived" && status !== "deleted";
-}
-
-function currentMonthEvents() {
-  const now = new Date();
-  const currentKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  return allEvents.filter((event) => monthKey(event.event_date || event.created_at || event.updated_at) === currentKey);
-}
-
-function scheduledEventDate(event) {
-  const value = event?.event_date || event?.updated_at || event?.created_at;
-  const date = value ? new Date(value) : null;
-  return date && !Number.isNaN(date.getTime()) ? date : null;
-}
-
-function dashboardCalendarBaseDate() {
-  const today = new Date();
-  const todayKey = monthKey(today);
-  const eventDates = allEvents
-    .map(scheduledEventDate)
-    .filter(Boolean)
-    .sort((a, b) => a - b);
-
-  if (!eventDates.length || eventDates.some((date) => monthKey(date) === todayKey)) return today;
-
-  return eventDates.find((date) => date >= today) || eventDates[0] || today;
-}
-
-function pendingQuoteRows() {
-  return allEvents.filter((event) => ["draft", "pending", "proposal", "review"].includes(normalizedStatus(event.status)));
-}
-
-function teamMemberRows() {
-  return allCollaborators.filter((collaborator) => isActiveRecord(collaborator) && normalizedStatus(collaborator.status) !== "inactive");
-}
-
-function dashboardRecordTotal() {
-  return allEvents.length + allCustomers.length + pendingQuoteRows().length + teamMemberRows().length + allRequests.length;
-}
-
-function dashboardStateName() {
-  const total = dashboardRecordTotal();
-  if (!total) return "empty";
-  if (total < 8 && allEvents.length < 4 && allCustomers.length < 4 && teamMemberRows().length < 4) return "growing";
-  return "active";
-}
-
-function setDashboardStateValue(name, value) {
-  const element = dashboardStateValues.get(name);
-  if (element) element.textContent = String(value);
-}
-
-function stateItemActions(actions = []) {
-  return `
-    <div class="state-actions">
-      ${actions
-        .map(
-          (action) =>
-            `<button class="tiny-button" type="button" data-state-scroll="${escapeHtml(action.target)}">${escapeHtml(action.label)}</button>`
-        )
-        .join("")}
-    </div>
-  `;
-}
-
-function renderStateList(name, rows, emptyText, renderer) {
-  const container = dashboardStateLists.get(name);
-  if (!container) return;
-
-  container.innerHTML = rows.length
-    ? rows.map(renderer).join("")
-    : `<div class="empty-state">${escapeHtml(emptyText)}</div>`;
-}
-
-function renderStateEventItem(event) {
-  return `
-    <article class="state-item-card">
-      <div>
-        <strong>${escapeHtml(event.title || "Evento sin nombre")}</strong>
-        <span>${formatShortDate(event.event_date || event.updated_at)} · ${statusBadge(event.status)}</span>
-      </div>
-      ${stateItemActions([
-        { label: "Ver", target: "#event-tools" },
-        { label: "Editar", target: "#event-tools" },
-        { label: "Crear cotización", target: "#event-tools" },
-      ])}
-    </article>
-  `;
-}
-
-function renderStateClientItem(customer) {
-  return `
-    <article class="state-item-card">
-      <div>
-        <strong>${escapeHtml(customer.full_name || "Cliente sin nombre")}</strong>
-        <span>${escapeHtml(customer.email || customer.phone || "Sin contacto")}</span>
-      </div>
-      ${stateItemActions([{ label: "Ver", target: "#requestsSection" }])}
-    </article>
-  `;
-}
-
-function renderStateQuoteItem(event) {
-  return `
-    <article class="state-item-card">
-      <div>
-        <strong>${escapeHtml(event.title || "Cotización pendiente")}</strong>
-        <span>${escapeHtml(event.budget_label || "Sin presupuesto")} · ${statusBadge(event.status)}</span>
-      </div>
-      ${stateItemActions([
-        { label: "Ver", target: "#event-tools" },
-        { label: "Editar", target: "#event-tools" },
-      ])}
-    </article>
-  `;
-}
-
-function renderStateRequestItem(request) {
-  const profile = request.profile || {};
-  const membership = request.membership || {};
-  const name = profile.full_name || profile.email || request.userId || "Solicitud";
-
-  return `
-    <article class="state-item-card">
-      <div>
-        <strong>${escapeHtml(name)}</strong>
-        <span>${escapeHtml(membership.role || profile.role || "pending")} · ${statusBadge(membership.status || profile.role || "pending")}</span>
-      </div>
-      ${stateItemActions([{ label: "Ver", target: "#requestsSection" }])}
-    </article>
-  `;
-}
-
-function renderDashboardState() {
-  const stateName = dashboardStateName();
-  const quotes = pendingQuoteRows();
-  const teamMembers = teamMemberRows();
-
-  dashboardStateCards.forEach((card) => {
-    card.hidden = card.dataset.dashboardState !== stateName;
-  });
-
-  setDashboardStateValue("month-events", currentMonthEvents().length);
-  setDashboardStateValue("active-clients", allCustomers.length);
-  setDashboardStateValue("pending-quotes", quotes.length);
-  setDashboardStateValue("team-members", teamMembers.length);
-
-  renderStateList("recent-events", allEvents.slice(0, 3), "Sin eventos recientes.", renderStateEventItem);
-  renderStateList("recent-clients", allCustomers.slice(0, 3), "Sin clientes todavia.", renderStateClientItem);
-  renderStateList("recent-quotes", quotes.slice(0, 3), "Sin cotizaciones pendientes.", renderStateQuoteItem);
-  renderStateList("active-events", allEvents.slice(0, 4), "Sin eventos programados.", renderStateEventItem);
-  renderStateList("active-requests", allRequests.slice(0, 4), "Sin solicitudes recientes.", renderStateRequestItem);
-}
-
-function renderLineChart() {
-  const months = lastSixMonths();
-  const counts = new Map(months.map((month) => [month.key, 0]));
-  allEvents.forEach((event) => {
-    const key = monthKey(event.event_date || event.created_at || event.updated_at);
-    if (counts.has(key)) counts.set(key, counts.get(key) + 1);
-  });
-
-  const values = months.map((month) => counts.get(month.key) || 0);
-  const max = Math.max(1, ...values);
-  const width = 640;
-  const height = 190;
-  const pad = 18;
-  const step = (width - pad * 2) / Math.max(1, values.length - 1);
-  const points = values.map((value, index) => {
-    const x = pad + index * step;
-    const y = height - pad - (value / max) * (height - pad * 2);
-    return [x, y];
-  });
-  const line = points.map(([x, y]) => `${x},${y}`).join(" ");
-  const area = `${pad},${height - pad} ${line} ${width - pad},${height - pad}`;
-
-  analyticsLine.innerHTML = `
-    <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Eventos por mes">
-      ${[0.25, 0.5, 0.75].map((ratio) => `<line class="chart-grid-line" x1="${pad}" x2="${width - pad}" y1="${height * ratio}" y2="${height * ratio}"></line>`).join("")}
-      <polygon class="chart-area" points="${area}"></polygon>
-      <polyline class="chart-line" points="${line}"></polyline>
-      ${points.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="5" fill="#d6b27c"></circle>`).join("")}
-    </svg>
-    <div class="chart-labels">${months.map((month) => `<span>${escapeHtml(month.label)}</span>`).join("")}</div>
-  `;
-}
-
-function renderBarChart() {
-  const months = lastSixMonths();
-  const revenueByMonth = new Map(months.map((month) => [month.key, 0]));
-  allEvents.forEach((event) => {
-    const key = monthKey(event.event_date || event.created_at || event.updated_at);
-    if (revenueByMonth.has(key)) revenueByMonth.set(key, revenueByMonth.get(key) + eventAmount(event));
-  });
-
-  const values = months.map((month) => revenueByMonth.get(month.key) || 0);
-  const max = Math.max(1, ...values);
-
-  analyticsBars.innerHTML = months
-    .map((month, index) => {
-      const value = values[index];
-      const height = Math.max(8, Math.round((value / max) * 100));
-      return `
-        <div class="bar-item">
-          <span class="bar-track"><span class="bar-fill" style="height:${height}%"></span></span>
-          <span class="bar-label">${escapeHtml(month.label)}</span>
-          <span class="bar-label">${formatCurrency(value)}</span>
-        </div>
-      `;
-    })
-    .join("");
-}
-
-function renderCategoryDonut() {
-  const categories = new Map();
-  allEvents.forEach((event) => {
-    const label = event.event_type || "Sin tipo";
-    categories.set(label, (categories.get(label) || 0) + 1);
-  });
-
-  const entries = [...categories.entries()].sort((a, b) => b[1] - a[1]).slice(0, 4);
-  const total = entries.reduce((sum, [, count]) => sum + count, 0);
-  const value = total ? Math.round(((entries[0]?.[1] || 0) / total) * 100) : 0;
-  const colors = ["#d6b27c", "#b9905b", "#d8c6aa", "#8fc7a3"];
-
-  categoryDonut.style.setProperty("--value", `${value}%`);
-  categoryLegend.innerHTML = entries.length
-    ? entries
-        .map(([label, count], index) => `<span style="--legend-color:${colors[index]}">${escapeHtml(label)} · ${count}</span>`)
-        .join("")
-    : '<div class="empty-state">Sin categorias.</div>';
-}
-
-function renderRequestProgress() {
-  const pending = allRequests.length;
-  const activeUsers = allCollaborators.filter((item) => normalizedStatus(item.status) === "active").length + allCustomers.length;
-  const total = pending + activeUsers;
-  const resolved = total ? Math.round((activeUsers / total) * 100) : 0;
-  requestProgress.style.setProperty("--value", `${resolved}%`);
-  requestProgress.querySelector("strong").textContent = `${resolved}%`;
-}
-
-function renderDashboardCalendar() {
+function renderCalendar() {
   if (!dashboardCalendar) return;
 
-  const baseDate = dashboardCalendarBaseDate();
-  const year = baseDate.getFullYear();
-  const month = baseDate.getMonth();
-  const monthStart = new Date(year, month, 1);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const firstDay = new Date(year, month, 1);
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const firstWeekday = (monthStart.getDay() + 6) % 7;
-  const today = new Date();
-  const currentMonthKey = monthKey(monthStart);
-  const monthEvents = allEvents
-    .map((event) => ({ event, date: scheduledEventDate(event) }))
-    .filter((item) => item.date && monthKey(item.date) === currentMonthKey)
-    .sort((a, b) => a.date - b.date);
-  const eventsByDay = new Map();
-
-  monthEvents.forEach((item) => {
-    const day = item.date.getDate();
-    const rows = eventsByDay.get(day) || [];
-    rows.push(item.event);
-    eventsByDay.set(day, rows);
+  const firstWeekday = (firstDay.getDay() + 6) % 7;
+  const monthEvents = allEvents.filter((event) => {
+    if (!event.event_date) return false;
+    const eventDate = new Date(`${event.event_date}T00:00:00`);
+    return eventDate.getMonth() === month && eventDate.getFullYear() === year;
   });
 
+  const formatter = new Intl.DateTimeFormat("es-US", { month: "long", year: "numeric" });
   if (calendarMonthLabel) {
-    const formattedMonth = new Intl.DateTimeFormat("es-US", {
-      month: "long",
-      year: "numeric",
-    }).format(monthStart);
-    calendarMonthLabel.textContent = formattedMonth.charAt(0).toUpperCase() + formattedMonth.slice(1);
+    const label = formatter.format(now);
+    calendarMonthLabel.textContent = label.charAt(0).toUpperCase() + label.slice(1);
   }
 
-  const weekdays = ["L", "M", "M", "J", "V", "S", "D"];
-  const cells = [];
-
-  for (let index = 0; index < firstWeekday; index += 1) {
-    cells.push('<span class="calendar-day is-empty" aria-hidden="true"></span>');
-  }
+  const weekdayLabels = ["L", "M", "M", "J", "V", "S", "D"];
+  const cells = [
+    ...weekdayLabels.map((day) => `<span class="calendar-weekday">${day}</span>`),
+    ...Array.from({ length: firstWeekday }, () => '<span class="calendar-day is-empty"></span>'),
+  ];
 
   for (let day = 1; day <= daysInMonth; day += 1) {
-    const dayEvents = eventsByDay.get(day) || [];
-    const isToday = year === today.getFullYear() && month === today.getMonth() && day === today.getDate();
-    const eventCopy = dayEvents.length
-      ? `<span class="calendar-dot" aria-label="${dayEvents.length} evento${dayEvents.length === 1 ? "" : "s"}"></span>`
-      : "";
+    const eventCount = monthEvents.filter((event) => {
+      const eventDate = new Date(`${event.event_date}T00:00:00`);
+      return eventDate.getDate() === day;
+    }).length;
+    const isToday = day === now.getDate();
     cells.push(`
-      <span class="calendar-day${isToday ? " is-today" : ""}${dayEvents.length ? " has-event" : ""}">
+      <span class="calendar-day ${isToday ? "is-today" : ""} ${eventCount ? "has-event" : ""}">
         <span>${day}</span>
-        ${eventCopy}
+        ${eventCount ? '<i class="calendar-dot"></i>' : ""}
       </span>
     `);
   }
 
-  const featuredEvents = monthEvents.slice(0, 4);
+  const upcomingEvents = monthEvents
+    .filter((event) => new Date(`${event.event_date}T00:00:00`) >= new Date(year, month, now.getDate()))
+    .slice(0, 6);
 
   dashboardCalendar.innerHTML = `
-    <div class="calendar-grid" aria-label="Mes de ${escapeHtml(calendarMonthLabel?.textContent || "calendario")}">
-      ${weekdays.map((day) => `<span class="calendar-weekday">${day}</span>`).join("")}
-      ${cells.join("")}
-    </div>
-    <div class="calendar-agenda">
-      <strong>Fechas próximas</strong>
+    <div class="calendar-grid" aria-label="Calendario mensual">${cells.join("")}</div>
+    <aside class="calendar-agenda">
+      <strong>Fechas proximas</strong>
       ${
-        featuredEvents.length
-          ? featuredEvents
-              .map(
-                ({ event, date }) => `
-                  <button class="calendar-agenda-row" type="button" data-state-scroll="#event-tools">
-                    <span>${date.getDate()}</span>
-                    <small>${escapeHtml(event.title || "Evento sin nombre")}</small>
-                  </button>
-                `
-              )
+        upcomingEvents.length
+          ? upcomingEvents
+              .map((event) => {
+                const eventDate = new Date(`${event.event_date}T00:00:00`);
+                return `
+                  <div class="calendar-agenda-row">
+                    <span>${eventDate.getDate()}</span>
+                    <div>
+                      <strong>${escapeHtml(event.title || "Evento")}</strong>
+                      <small>${escapeHtml(event.event_type || "Evento")}</small>
+                    </div>
+                  </div>
+                `;
+              })
               .join("")
-          : '<p>No hay eventos con fecha en este mes.</p>'
+          : '<p class="empty-state">Sin eventos proximos.</p>'
       }
-    </div>
+    </aside>
   `;
 }
 
-function renderAnalytics() {
-  renderMetricCards();
-  renderDashboardState();
-  renderLineChart();
-  renderBarChart();
-  renderCategoryDonut();
-  renderRequestProgress();
-  renderDashboardCalendar();
-  renderUpcomingEvents();
-  renderActivityTimeline();
-}
+function renderInventory() {
+  if (!inventoryList) return;
 
-function renderUpcomingEvents() {
-  const rows = [...allEvents]
-    .sort((a, b) => new Date(a.event_date || a.updated_at || a.created_at || 0) - new Date(b.event_date || b.updated_at || b.created_at || 0))
-    .slice(0, 5);
-
-  if (!rows.length) {
-    upcomingEventsList.innerHTML = '<div class="empty-state">No hay eventos visibles todavia.</div>';
+  if (!inventoryItems.length) {
+    inventoryList.innerHTML = '<div class="empty-state">No hay articulos en inventario todavia.</div>';
     return;
   }
 
-  upcomingEventsList.innerHTML = rows
-    .map(
-      (event) => `
-        <article class="mini-event-row">
-          <div>
-            <strong>${escapeHtml(event.title || "Evento sin nombre")}</strong>
-            <span class="event-meta">${formatShortDate(event.event_date || event.updated_at)} · ${statusBadge(event.status)}</span>
-          </div>
-          <span class="amount">${formatCurrency(eventAmount(event))}</span>
-        </article>
-      `
-    )
-    .join("");
-}
-
-function renderActivityTimeline() {
-  const items = [
-    ...allEvents.slice(0, 3).map((event) => ({
-      icon: "📅",
-      title: event.title || "Evento creado",
-      meta: `${formatShortDate(event.created_at || event.updated_at)} · ${event.status || "draft"}`,
-    })),
-    ...allCollaborators.slice(0, 2).map((collaborator) => ({
-      icon: collaborator.status === "active" ? "✅" : "⚠️",
-      title: providerDisplayName(collaborator) || "Proveedor",
-      meta: `${providerRoleLabel(providerDisplayType(collaborator))} · ${collaborator.status || "active"}`,
-    })),
-    ...allAssignments.slice(0, 2).map((assignment) => ({
-      icon: "💰",
-      title: `Asignacion #${assignment.id || assignment.event_id}`,
-      meta: `${providerRoleLabel(assignment.assignment_role)} · ${assignment.status || "active"}`,
-    })),
-  ].slice(0, 6);
-
-  if (!items.length) {
-    activityTimeline.innerHTML = '<div class="empty-state">Sin actividad reciente.</div>';
-    return;
-  }
-
-  activityTimeline.innerHTML = items
+  inventoryList.innerHTML = inventoryItems
     .map(
       (item) => `
-        <article class="timeline-item">
-          <span class="timeline-icon">${item.icon}</span>
-          <div>
-            <strong>${escapeHtml(item.title)}</strong>
-            <span class="event-meta">${escapeHtml(item.meta)}</span>
+        <article class="inventory-card">
+          <div class="inventory-photo">
+            ${
+              item.image_url
+                ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">`
+                : '<span>Sin foto</span>'
+            }
+          </div>
+          <div class="inventory-card-body">
+            <p class="eyebrow">${escapeHtml(item.category || "Inventario")}</p>
+            <h3>${escapeHtml(item.name)}</h3>
+            <p>${escapeHtml(item.description || "Sin descripcion.")}</p>
+            <div class="inventory-meta">
+              <span>${Number(item.quantity_available ?? 0)} disponibles</span>
+              ${item.price_label ? `<span>${escapeHtml(item.price_label)}</span>` : ""}
+            </div>
+            <div class="inventory-actions">
+              <button class="secondary-button" type="button" data-edit-inventory="${escapeHtml(item.id)}">Editar</button>
+              <button class="tiny-button" type="button" data-delete-inventory="${escapeHtml(item.id)}">Eliminar</button>
+            </div>
           </div>
         </article>
       `
     )
     .join("");
-}
-
-function renderEventOptions() {
-  const eventOptions = allEvents
-    .map((event) => `<option value="${event.id}">${escapeHtml(event.title || `Evento #${event.id}`)}</option>`)
-    .join("");
-
-  assignmentEvent.innerHTML = eventOptions || '<option value="">Sin eventos</option>';
-
-  if (selectedEvent?.id) {
-    assignmentEvent.value = String(selectedEvent.id);
-  }
-
-  renderQuoteDraftEventOptions();
-}
-
-function renderCollaboratorOptions() {
-  const collaboratorOptions = allCollaborators
-    .filter((collaborator) => collaborator.status !== "inactive")
-    .map(
-      (collaborator) =>
-        `<option value="${collaborator.id}">${escapeHtml(providerDisplayName(collaborator))} · ${escapeHtml(providerRoleLabel(providerDisplayType(collaborator)))}</option>`
-    )
-    .join("");
-
-  assignmentCollaborator.innerHTML = collaboratorOptions || '<option value="">Sin proveedores activos</option>';
-
-  if (selectedCollaborator?.id) {
-    assignmentCollaborator.value = String(selectedCollaborator.id);
-  }
-}
-
-function renderEvents(rows = []) {
-  if (!rows.length) {
-    eventsList.innerHTML = '<div class="empty-state">No hay eventos visibles todavia.</div>';
-    renderEventOptions();
-    renderAnalytics();
-    return;
-  }
-
-  eventsList.innerHTML = rows
-    .map((event) => {
-      const services = Array.isArray(event.services) && event.services.length
-        ? event.services.join(", ")
-        : "Sin servicios";
-      const selectedClass = selectedEvent?.id === event.id ? " is-selected" : "";
-      const customerLabel = event.customer_id ? ` · customer #${event.customer_id}` : "";
-
-      return `
-        <article class="event-row${selectedClass}">
-          <button type="button" data-event-id="${event.id}">
-            <strong>${escapeHtml(event.title || "Evento sin nombre")}</strong>
-            <span class="event-meta">
-              #${event.id}${customerLabel} · ${escapeHtml(event.event_type || "Sin tipo")} · ${statusBadge(event.status)} · ${escapeHtml(event.budget_label || "Sin presupuesto")}
-            </span>
-            <span class="event-meta">${escapeHtml(services)}</span>
-          </button>
-        </article>
-      `;
-    })
-    .join("");
-
-  eventsList.querySelectorAll("[data-event-id]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedEvent = rows.find((event) => String(event.id) === button.dataset.eventId);
-      selectedEventLabel.textContent = selectedEvent
-        ? `Evento seleccionado: ${selectedEvent.title || `#${selectedEvent.id}`}`
-        : "Selecciona un evento para enviar instrucciones.";
-      if (quoteDraftEventSelect && selectedEvent?.id) {
-        quoteDraftEventSelect.value = String(selectedEvent.id);
-        setQuoteDraftStatus("Evento seleccionado para cotización asistida.");
-      }
-      renderEvents(rows);
-      renderEventOptions();
-    });
-  });
-
-  renderEventOptions();
-  renderAnalytics();
-}
-
-function renderCollaborators(rows = []) {
-  if (!rows.length) {
-    collaboratorsList.innerHTML = '<div class="empty-state">No hay proveedores todavia.</div>';
-    renderCollaboratorOptions();
-    renderAnalytics();
-    return;
-  }
-
-  collaboratorsList.innerHTML = rows
-    .map((collaborator) => {
-      const selectedClass = selectedCollaborator?.id === collaborator.id ? " is-selected" : "";
-      const toggleLabel = collaborator.status === "inactive" ? "Activar" : "Desactivar";
-      const nextStatus = collaborator.status === "inactive" ? "active" : "inactive";
-
-      return `
-        <article class="collaborator-row${selectedClass}">
-          <button type="button" data-collaborator-select="${collaborator.id}">
-            <strong>${escapeHtml(providerDisplayName(collaborator))}</strong>
-            <span class="collaborator-meta">
-              #${collaborator.id} · ${escapeHtml(providerRoleLabel(providerDisplayType(collaborator)))} · ${statusBadge(collaborator.status)}
-            </span>
-            <span class="collaborator-meta">
-              ${escapeHtml(collaborator.email || "Sin email")} · ${escapeHtml(collaborator.phone || "Sin telefono")}
-            </span>
-          </button>
-          <div class="collaborator-actions">
-            <button class="tiny-button" type="button" data-collaborator-edit="${collaborator.id}">Editar</button>
-            <button class="tiny-button" type="button" data-collaborator-status="${collaborator.id}" data-next-status="${nextStatus}">
-              ${toggleLabel}
-            </button>
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
-  collaboratorsList.querySelectorAll("[data-collaborator-select]").forEach((button) => {
-    button.addEventListener("click", () => {
-      selectedCollaborator = rows.find((collaborator) => String(collaborator.id) === button.dataset.collaboratorSelect);
-      renderCollaborators(rows);
-      renderCollaboratorOptions();
-    });
-  });
-
-  collaboratorsList.querySelectorAll("[data-collaborator-edit]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const collaborator = rows.find((item) => String(item.id) === button.dataset.collaboratorEdit);
-      if (!collaborator) return;
-      selectedCollaborator = collaborator;
-      fillCollaboratorForm(collaborator);
-      renderCollaborators(rows);
-      renderCollaboratorOptions();
-    });
-  });
-
-  collaboratorsList.querySelectorAll("[data-collaborator-status]").forEach((button) => {
-    button.addEventListener("click", () => {
-      updateCollaboratorStatus(button.dataset.collaboratorStatus, button.dataset.nextStatus);
-    });
-  });
-
-  renderCollaboratorOptions();
-  renderAnalytics();
-}
-
-function renderAssignments(rows = []) {
-  if (!rows.length) {
-    assignmentsList.innerHTML = '<div class="empty-state">No hay asignaciones todavia.</div>';
-    renderAnalytics();
-    return;
-  }
-
-  const eventsById = new Map(allEvents.map((event) => [Number(event.id), event]));
-  const collaboratorsById = new Map(allCollaborators.map((collaborator) => [Number(collaborator.id), collaborator]));
-
-  assignmentsList.innerHTML = rows
-    .map((assignment) => {
-      const event = eventsById.get(Number(assignment.event_id));
-      const collaborator = collaboratorsById.get(Number(assignment.collaborator_id));
-
-      return `
-        <article class="assignment-row">
-          <strong>${escapeHtml(providerDisplayName(collaborator) || `Proveedor #${assignment.collaborator_id}`)}</strong>
-          <span class="assignment-meta">
-            ${escapeHtml(providerRoleLabel(assignment.assignment_role))} · ${statusBadge(assignment.status)} · ${escapeHtml(event?.title || `Evento #${assignment.event_id}`)}
-          </span>
-          <span class="assignment-meta">${escapeHtml(assignment.notes || "Sin notas")}</span>
-        </article>
-      `;
-    })
-    .join("");
-
-  renderAnalytics();
-}
-
-function renderCustomers(rows = []) {
-  allCustomers = rows;
-  if (!rows.length) {
-    customersList.innerHTML = '<div class="empty-state">No hay clientes registrados todavia.</div>';
-    renderAnalytics();
-    return;
-  }
-
-  customersList.innerHTML = rows
-    .map(
-      (customer) => `
-        <article class="customer-row">
-          <strong>${escapeHtml(customer.full_name)}</strong>
-          <span class="customer-meta">#${customer.id} · ${escapeHtml(customer.email || "Sin email")} · ${escapeHtml(customer.phone || "Sin telefono")}</span>
-        </article>
-      `
-    )
-    .join("");
-
-  renderAnalytics();
-}
-
-function approvalRoleForRequest(request) {
-  const role = request.membership?.role || request.profile?.role || "";
-  if (role.includes("client") || role === "viewer") return "viewer";
-  if (role.includes("collaborator")) return "collaborator";
-  if (role.includes("admin")) return "admin";
-  return "organizer";
-}
-
-function requestButtonsFor(request) {
-  const approvedRole = approvalRoleForRequest(request);
-  return `
-    <button class="tiny-button" type="button" data-approve-user="${request.userId}" data-approve-role="${approvedRole}">Aprobar</button>
-    <button class="tiny-button" type="button" data-disable-user="${request.userId}">Rechazar</button>
-  `;
-}
-
-function renderPendingRequestsPreview(requests = []) {
-  if (!requests.length) {
-    pendingRequestsPreview.innerHTML = '<div class="empty-state">Sin solicitudes pendientes.</div>';
-    return;
-  }
-
-  pendingRequestsPreview.innerHTML = requests
-    .slice(0, 4)
-    .map((request) => {
-      const profile = request.profile || {};
-      const membership = request.membership || {};
-      const name = profile.full_name || profile.email || request.userId;
-      const type = membership.role || profile.role || "pending";
-
-      return `
-        <article class="request-row">
-          <span class="request-avatar">${escapeHtml(userInitials(name))}</span>
-          <div>
-            <strong>${escapeHtml(name)}</strong>
-            <span class="request-meta">${escapeHtml(type)} · ${statusBadge(membership.status || profile.role || "pending")}</span>
-          </div>
-          <div class="request-actions">${requestButtonsFor(request)}</div>
-        </article>
-      `;
-    })
-    .join("");
-
-  bindRequestButtons(pendingRequestsPreview);
-}
-
-function bindRequestButtons(root) {
-  root.querySelectorAll("[data-approve-user]").forEach((button) => {
-    button.addEventListener("click", () => {
-      approveUserRequest(button.dataset.approveUser, button.dataset.approveRole);
-    });
-  });
-
-  root.querySelectorAll("[data-disable-user]").forEach((button) => {
-    button.addEventListener("click", () => {
-      disableUserRequest(button.dataset.disableUser);
-    });
-  });
-}
-
-function renderUserRequests(requests = []) {
-  allRequests = requests;
-  renderPendingRequestsPreview(requests);
-
-  if (!requests.length) {
-    userRequestsList.innerHTML = '<div class="empty-state">No hay solicitudes pendientes.</div>';
-    renderAnalytics();
-    return;
-  }
-
-  userRequestsList.innerHTML = requests
-    .map((request) => {
-      const profile = request.profile || {};
-      const membership = request.membership || {};
-      const status = membership.status || profile.role || "pending";
-
-      return `
-        <article class="request-row">
-          <strong>${escapeHtml(profile.full_name || profile.email || request.userId)}</strong>
-          <span class="request-meta">
-            ${escapeHtml(profile.email || "Sin email")} · profile ${escapeHtml(profile.role || "sin profile")} · membership ${escapeHtml(membership.role || "sin membership")} / ${statusBadge(status)}
-          </span>
-          <div class="request-actions">
-            ${requestButtonsFor(request)}
-          </div>
-        </article>
-      `;
-    })
-    .join("");
-
-  bindRequestButtons(userRequestsList);
-  renderAnalytics();
-}
-
-function providerDetailFields() {
-  return [
-    [PROVIDER_NOTE_LABELS.coverage, providerCoverage],
-    [PROVIDER_NOTE_LABELS.availability, providerAvailability],
-    [PROVIDER_NOTE_LABELS.pricing, providerBasePricing],
-    [PROVIDER_NOTE_LABELS.license, providerLicenseInsurance],
-  ];
-}
-
-function buildProviderNotes() {
-  const lines = [];
-  const services = collaboratorNotes.value.trim();
-  if (services) lines.push(`${PROVIDER_NOTE_LABELS.services}: ${services}`);
-
-  providerDetailFields().forEach(([label, field]) => {
-    const value = field?.value.trim();
-    if (value) lines.push(`${label}: ${value}`);
-  });
-
-  return lines.join("\n") || null;
-}
-
-function providerDetailPayload() {
-  return {
-    coverage_zone: providerCoverage?.value.trim() || null,
-    availability: providerAvailability?.value.trim() || null,
-    base_prices: providerBasePricing?.value.trim() || null,
-    service_category: collaboratorRole.value,
-    public_visible: true,
-    public_description: collaboratorNotes.value.trim() || null,
-    source: "cater_vegas_admin",
-    license_insurance: providerLicenseInsurance?.value.trim() || null,
-  };
-}
-
-function isMissingSchemaColumnError(error) {
-  return error?.code === "PGRST204" || String(error?.message || "").toLowerCase().includes("schema cache");
-}
-
-async function insertProviderPayload(basePayload, session) {
-  const detailPayload = providerDetailPayload();
-  const fullPayload = { ...basePayload, ...detailPayload };
-  const payloads = [
-    session?.user?.id ? { ...fullPayload, created_by: session.user.id } : null,
-    fullPayload,
-    basePayload,
-  ].filter(Boolean);
-
-  for (const payload of payloads) {
-    logSaveContext("provider", PROVIDER_INSERT_TABLE, payload, session);
-    const result = await supabase.from(PROVIDER_INSERT_TABLE).insert(payload).select("*").single();
-    logSupabaseInsertResult(result);
-    if (isPermissionError(result.error)) return saveProviderThroughFunction(fullPayload);
-    if (!isMissingSchemaColumnError(result.error)) return result;
-  }
-
-  logSaveContext("provider", PROVIDER_INSERT_TABLE, basePayload, session);
-  const fallbackResult = await supabase.from(PROVIDER_INSERT_TABLE).insert(basePayload).select("*").single();
-  logSupabaseInsertResult(fallbackResult);
-  if (isPermissionError(fallbackResult.error)) return saveProviderThroughFunction(fullPayload);
-  return fallbackResult;
-}
-
-async function updateProviderPayload(id, basePayload, session) {
-  const detailPayload = providerDetailPayload();
-  const fullPayload = { ...basePayload, ...detailPayload };
-  logSaveContext("provider", PROVIDER_INSERT_TABLE, fullPayload, session);
-  const firstResult = await supabase
-    .from(PROVIDER_INSERT_TABLE)
-    .update(fullPayload)
-    .eq("workspace_id", WORKSPACE_ID)
-    .eq("id", Number(id))
-    .select("*")
-    .single();
-  logSupabaseInsertResult(firstResult);
-
-  if (isPermissionError(firstResult.error)) return saveProviderThroughFunction(fullPayload, id);
-  if (!isMissingSchemaColumnError(firstResult.error)) return firstResult;
-
-  logSaveContext("provider", PROVIDER_INSERT_TABLE, basePayload, session);
-  const fallbackResult = await supabase
-    .from(PROVIDER_INSERT_TABLE)
-    .update(basePayload)
-    .eq("workspace_id", WORKSPACE_ID)
-    .eq("id", Number(id))
-    .select("*")
-    .single();
-  logSupabaseInsertResult(fallbackResult);
-  if (isPermissionError(fallbackResult.error)) return saveProviderThroughFunction(fullPayload, id);
-  return fallbackResult;
-}
-
-function splitProviderNotes(notes = "") {
-  const parsed = {
-    services: "",
-    details: new Map(),
-  };
-
-  String(notes || "")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .forEach((line) => {
-      const [label, ...valueParts] = line.split(":");
-      const value = valueParts.join(":").trim();
-      const normalizedLabel = label.trim();
-
-      if (normalizedLabel === PROVIDER_NOTE_LABELS.services) {
-        parsed.services = value;
-      } else if (Object.values(PROVIDER_NOTE_LABELS).includes(normalizedLabel)) {
-        parsed.details.set(normalizedLabel, value);
-      } else {
-        parsed.services = parsed.services ? `${parsed.services}\n${line}` : line;
-      }
-    });
-
-  return parsed;
-}
-
-function fillCollaboratorForm(collaborator) {
-  const availableRoles = ["food", "beverage", "service", "transportation", "staffing", "venue", "rental", "floral", "decor", "entertainment", "vendor", "other"];
-  const notes = splitProviderNotes(collaborator.notes);
-  collaboratorId.value = collaborator.id;
-  collaboratorName.value = providerDisplayName(collaborator);
-  if (providerContactName) providerContactName.value = collaborator.contact_name || "";
-  collaboratorEmail.value = collaborator.email || "";
-  collaboratorPhone.value = collaborator.phone || "";
-  if (providerWebsite) providerWebsite.value = collaborator.website || "";
-  if (providerCity) providerCity.value = collaborator.city || "";
-  if (providerState) providerState.value = collaborator.state || "";
-  collaboratorRole.value = availableRoles.includes(providerDisplayType(collaborator)) ? providerDisplayType(collaborator) : "vendor";
-  collaboratorStatus.value = collaborator.status || "active";
-  collaboratorNotes.value = notes.services;
-  if (providerCoverage) providerCoverage.value = collaborator.coverage_zone || collaborator.coverage_area || notes.details.get(PROVIDER_NOTE_LABELS.coverage) || "";
-  if (providerAvailability) providerAvailability.value = collaborator.availability || notes.details.get(PROVIDER_NOTE_LABELS.availability) || "";
-  if (providerBasePricing) providerBasePricing.value = collaborator.base_prices || collaborator.base_pricing || notes.details.get(PROVIDER_NOTE_LABELS.pricing) || "";
-  if (providerLicenseInsurance) {
-    providerLicenseInsurance.value = collaborator.license_insurance || notes.details.get(PROVIDER_NOTE_LABELS.license) || "";
-  }
-}
-
-function resetCollaboratorForm() {
-  collaboratorForm.reset();
-  collaboratorId.value = "";
-  collaboratorRole.value = "food";
-  collaboratorStatus.value = "active";
-  providerDetailFields().forEach(([, field]) => {
-    if (field) field.value = "";
-  });
-  selectedCollaborator = null;
-  renderCollaborators(allCollaborators);
-}
-
-async function loadWorkspace() {
-  if (!supabase) return;
-
-  const [workspaceResult, eventsResult, collaboratorsResult, customersResult, syncStatus] = await Promise.all([
-    supabase.from("beoflow_workspaces").select("*").eq("id", WORKSPACE_ID).maybeSingle(),
-    supabase.from("cater_events").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
-    supabase.from("cater_providers").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
-    supabase.from("cater_customers").select("id", { count: "exact", head: true }).eq("workspace_id", WORKSPACE_ID),
-    loadBeoflowSyncStatus(),
-  ]);
-
-  if (workspaceResult.error) {
-    workspaceSummary.innerHTML = `<div class="empty-state">${escapeHtml(workspaceResult.error.message)}</div>`;
-    return;
-  }
-
-  currentWorkspace = workspaceResult.data;
-  renderWorkspaceSummary({
-    events: eventsResult.count,
-    collaborators: collaboratorsResult.count,
-    customers: customersResult.count,
-  }, syncStatus);
-}
-
-async function loadBeoflowSyncStatus() {
-  if (!supabase) return null;
-
-  try {
-    const { data, error } = await supabase.functions.invoke("beoflow", {
-      body: {
-        action: "sync-status",
-        workspaceId: WORKSPACE_ID,
-      },
-    });
-
-    if (error) return { status: "failed", reason: error.message };
-    if (data?.error) return { status: "failed", reason: data.error };
-    return data?.beoflowSync || null;
-  } catch (error) {
-    return {
-      status: "failed",
-      reason: error instanceof Error ? error.message : String(error),
-    };
-  }
 }
 
 async function loadEvents() {
-  if (!supabase) return;
+  if (!supabase) {
+    allEvents = [];
+    renderCalendar();
+    return;
+  }
 
   const { data, error } = await supabase
     .from("cater_events")
-    .select(
-      "id,workspace_id,customer_id,title,event_type,status,budget,budget_label,menu_style,services,plan,event_date,guest_count,updated_at,created_at"
-    )
-    .eq("workspace_id", WORKSPACE_ID)
-    .order("updated_at", { ascending: false })
-    .limit(100);
+    .select("id,title,event_type,event_date,status,updated_at")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .order("event_date", { ascending: true });
 
   if (error) {
-    eventsList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
-    return;
+    setStatus(`Calendario: ${error.message}`);
+    allEvents = [];
+  } else {
+    allEvents = data || [];
   }
 
-  allEvents = data || [];
-  renderEvents(allEvents);
+  renderCalendar();
 }
 
-async function loadCollaborators() {
-  if (!supabase) return;
+async function loadInventory() {
+  if (!supabase) {
+    inventoryItems = localInventoryRows();
+    renderInventory();
+    setInventoryStatus("Modo local: conecta Supabase para que el comprador lo vea en otro dispositivo.");
+    return;
+  }
 
   const { data, error } = await supabase
-    .from("cater_providers")
+    .from("cater_inventory")
     .select("*")
-    .eq("workspace_id", WORKSPACE_ID)
-    .order("updated_at", { ascending: false })
-    .limit(200);
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .order("created_at", { ascending: false });
 
   if (error) {
-    collaboratorsList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
+    inventoryItems = localInventoryRows();
+    renderInventory();
+    setInventoryStatus(`No se pudo leer Supabase: ${error.message}. Revisa que exista la tabla cater_inventory.`);
     return;
   }
 
-  allCollaborators = data || [];
-  renderCollaborators(allCollaborators);
+  inventoryItems = data || [];
+  renderInventory();
+  setInventoryStatus("Inventario sincronizado.");
 }
 
-async function loadAssignments() {
-  if (!supabase) return;
-
-  const { data, error } = await supabase
-    .from("cater_event_assignments")
-    .select("*")
-    .eq("workspace_id", WORKSPACE_ID)
-    .order("created_at", { ascending: false })
-    .limit(200);
-
-  if (error) {
-    assignmentsList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
-    return;
-  }
-
-  allAssignments = data || [];
-  renderAssignments(allAssignments);
+function resetInventoryForm() {
+  inventoryForm?.reset();
+  if (inventoryItemId) inventoryItemId.value = "";
+  setInventoryStatus("");
 }
 
-async function loadCustomers() {
-  if (!supabase) return;
+function editInventoryItem(id) {
+  const item = inventoryItems.find((row) => String(row.id) === String(id));
+  if (!item) return;
 
-  const { data, error } = await supabase
-    .from("cater_customers")
-    .select("*")
-    .eq("workspace_id", WORKSPACE_ID)
-    .order("updated_at", { ascending: false })
-    .limit(100);
-
-  if (error) {
-    customersList.innerHTML = `<div class="empty-state">${escapeHtml(error.message)}</div>`;
-    return;
-  }
-
-  renderCustomers(data || []);
+  inventoryItemId.value = item.id;
+  inventoryName.value = item.name || "";
+  inventoryCategory.value = item.category || "Tables";
+  inventoryQuantity.value = Number(item.quantity_available ?? 0);
+  inventoryPrice.value = item.price_label || "";
+  inventoryImageUrl.value = item.image_url || "";
+  inventoryDescription.value = item.description || "";
+  scrollToAdminTarget("#inventoryPanel", "inventory");
+  setInventoryStatus("Editando articulo. Guarda para actualizarlo.");
 }
 
-async function loadUserRequests() {
-  if (!supabase || !canManageRequests()) {
-    userRequestsList.innerHTML = "<div class=\"empty-state\">Solo administradores pueden revisar solicitudes.</div>";
-    pendingRequestsPreview.innerHTML = "<div class=\"empty-state\">Solo administradores.</div>";
+async function deleteInventoryItem(id) {
+  if (!window.confirm("Eliminar este articulo del inventario?")) return;
+
+  if (!supabase) {
+    const nextRows = localInventoryRows().filter((item) => String(item.id) !== String(id));
+    saveLocalInventory(nextRows);
+    await loadInventory();
     return;
   }
-
-  setRequestsStatus("Cargando solicitudes...");
-
-  const [membershipsResult, profilesResult] = await Promise.all([
-    supabase
-      .from("beoflow_workspace_members")
-      .select("*")
-      .eq("workspace_id", WORKSPACE_ID)
-      .in("status", ["pending", "invited", "disabled"])
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("cater_profiles")
-      .select("*")
-      .eq("workspace_id", WORKSPACE_ID)
-      .in("role", PENDING_PROFILE_ROLES)
-      .order("created_at", { ascending: false }),
-  ]);
-
-  if (membershipsResult.error) {
-    setRequestsStatus(membershipsResult.error.message);
-    return;
-  }
-
-  if (profilesResult.error) {
-    setRequestsStatus(profilesResult.error.message);
-    return;
-  }
-
-  const memberships = membershipsResult.data || [];
-  const profiles = profilesResult.data || [];
-  const userIds = [...new Set([...memberships.map((item) => item.user_id), ...profiles.map((item) => item.id)])];
-  const profileMap = new Map(profiles.map((profile) => [profile.id, profile]));
-
-  if (userIds.length) {
-    const { data: activeProfiles } = await supabase
-      .from("cater_profiles")
-      .select("*")
-      .in("id", userIds);
-
-    (activeProfiles || []).forEach((profile) => profileMap.set(profile.id, profile));
-  }
-
-  const membershipMap = new Map(memberships.map((membership) => [membership.user_id, membership]));
-  const requests = userIds.map((userId) => ({
-    userId,
-    profile: profileMap.get(userId),
-    membership: membershipMap.get(userId),
-  }));
-
-  renderUserRequests(requests);
-  setRequestsStatus(requests.length ? `${requests.length} solicitud(es).` : "Sin solicitudes pendientes.");
-}
-
-async function refreshCollaboratorModule() {
-  await loadCollaborators();
-  await loadAssignments();
-}
-
-async function approveUserRequest(userId, approvedRole) {
-  if (!supabase || !canManageRequests()) return;
-
-  setRequestsStatus("Aprobando usuario...");
-
-  const { error: memberError } = await supabase.from("beoflow_workspace_members").upsert(
-    {
-      workspace_id: WORKSPACE_ID,
-      user_id: userId,
-      role: approvedRole,
-      status: "active",
-    },
-    { onConflict: "workspace_id,user_id" }
-  );
-
-  if (memberError) {
-    setRequestsStatus(memberError.message);
-    return;
-  }
-
-  const { error: profileError } = await supabase.from("cater_profiles").upsert(
-    {
-      id: userId,
-      workspace_id: WORKSPACE_ID,
-      role: profileRoleForMembershipRole(approvedRole),
-    },
-    { onConflict: "id" }
-  );
-
-  if (profileError) {
-    setRequestsStatus(profileError.message);
-    return;
-  }
-
-  setRequestsStatus("Usuario aprobado.");
-  await Promise.all([loadUserRequests(), loadWorkspace()]);
-}
-
-async function disableUserRequest(userId) {
-  if (!supabase || !canManageRequests()) return;
-
-  setRequestsStatus("Rechazando usuario...");
 
   const { error } = await supabase
-    .from("beoflow_workspace_members")
-    .upsert(
-      {
-        workspace_id: WORKSPACE_ID,
-        user_id: userId,
-        role: "viewer",
-        status: "disabled",
-      },
-      { onConflict: "workspace_id,user_id" }
-    );
+    .from("cater_inventory")
+    .delete()
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", id);
 
   if (error) {
-    setRequestsStatus(error.message);
+    setInventoryStatus(error.message);
     return;
   }
 
-  await supabase.from("cater_profiles").update({ role: "client_pending" }).eq("id", userId);
-  setRequestsStatus("Usuario rechazado.");
-  await loadUserRequests();
+  setInventoryStatus("Articulo eliminado.");
+  await loadInventory();
 }
 
-function syncAdminPermissionsUi() {
-  const displayRole = currentRole || currentUserRoles()[0] || "owner";
-  dashboardEmail.textContent = currentUser?.email || "exmarquesado@gmail.com";
-  dashboardRole.textContent = displayRole.replace(/^./, (char) => char.toUpperCase());
-  setSessionStatus(`${currentUser?.email || "exmarquesado@gmail.com"} · ${currentWorkspace?.name || WORKSPACE_ID} · rol ${displayRole}`);
-  eventForm.hidden = !canManageEvents();
-  collaboratorForm.hidden = !canManageCollaborators();
-  requestsSection.hidden = !canManageRequests();
-  assignmentForm.hidden = !canManageEvents();
-}
+async function saveInventoryItem(event) {
+  event.preventDefault();
 
-async function refreshAdminContext() {
-  supabase = supabase || requireSupabase();
-  const { user, profile, membership, workspace } = await getWorkspaceContext();
-  currentUser = user;
-  currentProfile = profile;
-  currentMembership = membership;
-  currentWorkspace = workspace;
-  currentRole = getEffectiveWorkspaceRole(profile, membership, user);
+  const fileImage = await fileToDataUrl(inventoryImageFile?.files?.[0]);
+  const payload = {
+    workspace_id: DEFAULT_WORKSPACE_ID,
+    name: inventoryName.value.trim(),
+    category: inventoryCategory.value,
+    quantity_available: Number(inventoryQuantity.value || 0),
+    price_label: inventoryPrice.value.trim() || null,
+    image_url: fileImage || inventoryImageUrl.value.trim() || null,
+    description: inventoryDescription.value.trim() || null,
+    is_active: true,
+  };
 
-  if (!currentUser) {
-    authReady = false;
-    return { ok: false, reason: "missing-user" };
-  }
-
-  if (currentMembership?.status === "disabled" || isPendingWorkspaceAccess(currentProfile, currentMembership, currentUser)) {
-    authReady = false;
-    return { ok: false, reason: "pending" };
-  }
-
-  authReady = true;
-  syncAdminPermissionsUi();
-  return { ok: true };
-}
-
-async function ensureAdminReady(setStatus) {
-  setStatus("Verificando permisos...");
-
-  if (adminBootPromise) {
-    await Promise.race([
-      adminBootPromise.catch(() => null),
-      new Promise((resolve) => window.setTimeout(resolve, 1800)),
-    ]);
-  }
-
-  try {
-    const context = await refreshAdminContext();
-
-    if (context.reason === "missing-user") {
-      navigateWithLoopGuard("../login.html", "admin-missing-user");
-      return false;
-    }
-
-    if (context.reason === "pending") {
-      navigateWithLoopGuard("../pending.html", "admin-pending");
-      return false;
-    }
-
-    if (!context.ok || (!canManageEvents() && !canManageCollaborators())) {
-      const detectedRole = currentRole || currentUserRoles()[0] || "sin rol";
-      setStatus(`No tienes permisos para este admin. Rol detectado: ${detectedRole}.`);
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error("Admin permission check failed:", error);
-    setStatus("No se pudo verificar permisos. Revisa la conexion o las politicas de Supabase.");
-    return false;
-  }
-}
-
-async function loadAdminData() {
-  await Promise.all([loadWorkspace(), loadEvents(), loadCollaborators(), loadCustomers(), loadUserRequests()]);
-  await loadAssignments();
-}
-
-function stopAdminLiveUpdates() {
-  if (adminRefreshTimer) {
-    window.clearInterval(adminRefreshTimer);
-    adminRefreshTimer = null;
-  }
-
-  if (eventsChannel && supabase) {
-    supabase.removeChannel(eventsChannel);
-    eventsChannel = null;
-  }
-}
-
-function refreshDashboardSnapshots() {
-  if (!authReady || document.hidden) return;
-
-  Promise.all([
-    loadEvents().then(loadAssignments),
-    loadWorkspace(),
-    loadUserRequests(),
-  ]).catch((error) => {
-    console.error("Admin background refresh failed:", error);
-  });
-}
-
-function startAdminLiveUpdates() {
-  stopAdminLiveUpdates();
-
-  if (REALTIME_ENABLED) {
-    eventsChannel = subscribeToEvents(
-      () => {
-        loadEvents().then(loadAssignments);
-        loadWorkspace();
-      },
-      {
-        workspaceId: WORKSPACE_ID,
-      }
-    );
+  if (!payload.name) {
+    setInventoryStatus("Agrega el nombre del articulo.");
     return;
   }
 
-  adminRefreshTimer = window.setInterval(refreshDashboardSnapshots, ADMIN_REFRESH_INTERVAL_MS);
+  setInventoryStatus("Guardando inventario...");
+
+  if (!supabase) {
+    const rows = localInventoryRows();
+    const id = inventoryItemId.value || `local-${Date.now()}`;
+    const nextRows = [
+      { ...payload, id, created_at: new Date().toISOString() },
+      ...rows.filter((item) => String(item.id) !== String(id)),
+    ];
+    saveLocalInventory(nextRows);
+    resetInventoryForm();
+    await loadInventory();
+    return;
+  }
+
+  const id = inventoryItemId.value;
+  const query = id
+    ? supabase.from("cater_inventory").update(payload).eq("workspace_id", DEFAULT_WORKSPACE_ID).eq("id", id).select().single()
+    : supabase.from("cater_inventory").insert({ ...payload, created_by: currentUser?.id || null }).select().single();
+
+  const { error } = await query;
+  if (error) {
+    setInventoryStatus(error.message);
+    return;
+  }
+
+  resetInventoryForm();
+  setInventoryStatus("Inventario guardado. El comprador ya lo puede ver.");
+  await loadInventory();
 }
 
 async function bootAdmin() {
-  if (ADMIN_PREVIEW_MODE) {
-    currentUser = { email: "preview@catervegas.com" };
-    currentProfile = { role: "owner" };
-    currentMembership = { role: "owner", status: "active" };
-    currentWorkspace = { name: "Cater Vegas Preview" };
-    currentRole = "owner";
-    authReady = false;
-    syncAdminPermissionsUi();
-    setSessionStatus("Vista previa del admin. No hay datos reales conectados.");
-    renderAnalytics();
-    return;
-  }
+  renderCalendar();
+
   if (!isSupabaseConfigured) {
-    setSessionStatus("Configura Supabase en lib/supabaseClient.js para usar el admin.");
+    setStatus("Configura Supabase para sincronizar inventario.");
+    await loadInventory();
     return;
   }
 
   supabase = requireSupabase();
-  const context = await refreshAdminContext();
+  const { user, profile, membership } = await getWorkspaceContext();
+  currentUser = user;
 
-  if (context.reason === "missing-user") {
-    navigateWithLoopGuard("../login.html", "admin-boot-missing-user");
+  if (!user) {
+    navigateWithLoopGuard("../login.html", "admin-missing-user");
     return;
   }
 
-  if (context.reason === "pending") {
-    navigateWithLoopGuard("../pending.html", "admin-boot-pending");
+  if (membership?.status === "disabled" || isPendingWorkspaceAccess(profile, membership, user)) {
+    navigateWithLoopGuard("../pending.html", "admin-pending");
     return;
   }
 
-  if (!canManageEvents() && !canManageCollaborators()) {
-    setSessionStatus("Sesion activa, pero Supabase no devolvio rol admin/owner para este workspace.");
+  currentRole = getEffectiveWorkspaceRole(profile, membership, user);
+  if (!ADMIN_ROLES.has(currentRole)) {
+    setStatus(`No tienes permisos para este admin. Rol detectado: ${currentRole || "sin rol"}.`);
     return;
   }
 
-  await loadAdminData();
-  startAdminLiveUpdates();
+  if (dashboardEmail) dashboardEmail.textContent = user.email || "Admin";
+  if (dashboardRole) dashboardRole.textContent = currentRole.replace(/^./, (char) => char.toUpperCase());
+  setStatus(`${user.email} · Inventario listo`);
+
+  await Promise.all([loadEvents(), loadInventory()]);
 }
 
-async function syncEventToBeoflow(eventId) {
-  if (!supabase || !eventId) return { status: "skipped", reason: "No event id." };
+inventoryForm?.addEventListener("submit", saveInventoryItem);
+refreshInventoryButton?.addEventListener("click", loadInventory);
+resetInventoryButton?.addEventListener("click", resetInventoryForm);
 
-  try {
-    const { data, error } = await supabase.functions.invoke("beoflow", {
-      body: {
-        action: "sync-event",
-        eventId,
-        workspaceId: WORKSPACE_ID,
-      },
-    });
+inventoryList?.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-edit-inventory], [data-delete-inventory]");
+  if (!target) return;
 
-    if (error) {
-      console.error("BEOFlow event sync error:", error);
-      return { status: "failed", reason: error.message };
-    }
-
-    return data?.beoflowSync || { status: "skipped", reason: "No sync response." };
-  } catch (error) {
-    console.error("BEOFlow event sync failed:", error);
-    return { status: "failed", reason: error instanceof Error ? error.message : String(error) };
-  }
-}
-
-async function syncProviderToBeoflow(providerId) {
-  if (!supabase || !providerId) return { status: "skipped", reason: "No provider id." };
-
-  try {
-    const { data, error } = await supabase.functions.invoke("beoflow", {
-      body: {
-        action: "sync-provider",
-        providerId,
-        workspaceId: WORKSPACE_ID,
-      },
-    });
-
-    if (error) {
-      console.error("BEOFlow provider sync error:", error);
-      return { status: "failed", reason: error.message };
-    }
-    return data?.beoflowSync || { status: "skipped", reason: "No sync response." };
-  } catch (error) {
-    console.error("BEOFlow provider sync failed:", error);
-    return { status: "failed", reason: error instanceof Error ? error.message : String(error) };
-  }
-}
-eventForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!supabase) {
-    setEventStatus("Supabase no esta conectado.");
-    return;
-  }
-
-  const session = await readActiveSession(setEventStatus);
-  if (!session) return;
-
-  const ready = await ensureAdminReady(setEventStatus);
-  if (!ready) return;
-
-  if (!canWriteWorkspaceData()) {
-    const detectedRole = currentRole || currentUserRoles()[0] || "sin rol";
-    setEventStatus(`No tienes permisos para administrar eventos. Rol detectado: ${detectedRole}.`);
-    return;
-  }
-
-  const payload = buildEventPayload();
-
-  if (!payload.title) {
-    setEventStatus("Agrega el nombre del evento.");
-    return;
-  }
-
-  setEventStatus("Guardando evento...");
-  const saveResult = await insertEventPayload(payload, session);
-  const { data, error } = saveResult;
-
-  if (error) {
-    setEventStatus(eventSaveErrorMessage(error));
-    return;
-  }
-
-  const syncResult = saveResult.beoflowSync || (await syncEventToBeoflow(data?.id));
-  eventForm.reset();
-  eventBudget.value = "$5K - $10K";
-  setEventStatus(
-    syncResult.status === "synced"
-      ? "Evento guardado y sincronizado."
-      : `Evento guardado. Sync pendiente${syncResult.reason ? `: ${syncResult.reason}` : "."}`
-  );
-  await Promise.all([loadEvents(), loadWorkspace()]);
-  await loadAssignments();
-});
-
-collaboratorForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!supabase) {
-    setCollaboratorStatus("Supabase no esta conectado.");
-    return;
-  }
-
-  const session = await readActiveSession(setCollaboratorStatus);
-  if (!session) return;
-
-  const ready = await ensureAdminReady(setCollaboratorStatus);
-  if (!ready) return;
-
-  if (!canWriteWorkspaceData()) {
-    const detectedRole = currentRole || currentUserRoles()[0] || "sin rol";
-    setCollaboratorStatus(`No tienes permisos para administrar proveedores. Rol detectado: ${detectedRole}.`);
-    console.warn("Provider permission denied", {
-      currentRole,
-      currentProfileRole: currentProfile?.role,
-      currentMembershipRole: currentMembership?.role,
-      currentMembershipStatus: currentMembership?.status,
-    });
-    return;
-  }
-
-  const payload = {
-    workspace_id: WORKSPACE_ID,
-    provider_name: collaboratorName.value.trim(),
-    contact_name: providerContactName?.value.trim() || null,
-    email: collaboratorEmail.value.trim() || null,
-    phone: collaboratorPhone.value.trim() || null,
-    website: providerWebsite?.value.trim() || null,
-    city: providerCity?.value.trim() || null,
-    state: providerState?.value.trim() || null,
-    provider_type: collaboratorRole.value,
-    status: collaboratorStatus.value,
-    notes: buildProviderNotes(),
-  };
-
-  if (!payload.provider_name) {
-    setCollaboratorStatus("Agrega el nombre del proveedor.");
-    return;
-  }
-
-  const isEditing = Boolean(collaboratorId.value);
-  setCollaboratorStatus(isEditing ? "Actualizando proveedor..." : "Creando proveedor...");
-
-  let data = null;
-  let error = null;
-  let beoflowSync = null;
-
-  if (isEditing) {
-    const result = await updateProviderPayload(collaboratorId.value, payload, session);
-    data = result.data;
-    error = result.error;
-    beoflowSync = result.beoflowSync || null;
-  } else {
-    const result = await insertProviderPayload(payload, session);
-    data = result.data;
-    error = result.error;
-    beoflowSync = result.beoflowSync || null;
-  }
-
-  if (error) {
-    setCollaboratorStatus(providerSaveErrorMessage(error));
-    return;
-  }
-
-  const syncResult = beoflowSync || (await syncProviderToBeoflow(data?.id || collaboratorId.value));
-  setCollaboratorStatus(
-    syncResult.status === "synced"
-      ? "Proveedor guardado y sincronizado."
-      : `Proveedor guardado. Sync pendiente${syncResult.reason ? `: ${syncResult.reason}` : "."}`
-  );
-  resetCollaboratorForm();
-  await Promise.all([refreshCollaboratorModule(), loadWorkspace()]);
-});
-
-assignmentForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!supabase) return;
-
-  const ready = await ensureAdminReady(setAssignmentStatus);
-  if (!ready || !canManageEvents()) return;
-
-  const eventId = Number(assignmentEvent.value);
-  const collaboratorIdValue = Number(assignmentCollaborator.value);
-
-  if (!eventId || !collaboratorIdValue) {
-    setAssignmentStatus("Selecciona evento y proveedor.");
-    return;
-  }
-
-  setAssignmentStatus("Guardando asignacion...");
-
-  const { error } = await supabase.from("cater_event_assignments").upsert(
-    {
-      workspace_id: WORKSPACE_ID,
-      event_id: eventId,
-      collaborator_id: collaboratorIdValue,
-      assignment_role: assignmentRole.value,
-      status: assignmentSelectStatus.value,
-      notes: assignmentNotes.value.trim() || null,
-    },
-    { onConflict: "event_id,collaborator_id" }
-  );
-
-  if (error) {
-    setAssignmentStatus(error.message);
-    return;
-  }
-
-  assignmentNotes.value = "";
-  setAssignmentStatus("Asignacion guardada.");
-  await loadAssignments();
-});
-
-adminBeoflowForm.addEventListener("submit", async (event) => {
-  event.preventDefault();
-  if (!supabase) return;
-
-  const ready = await ensureAdminReady((message) => {
-    beoflowResult.textContent = message;
-  });
-  if (!ready) return;
-
-  const prompt = adminBeoflowPrompt.value.trim();
-  if (!prompt) {
-    beoflowResult.textContent = "Escribe una instruccion para BEOFlow.";
-    return;
-  }
-
-  beoflowResult.textContent = "BEOFlow procesando...";
-
-  const { data, error } = await supabase.functions.invoke("beoflow", {
-    body: {
-      message: prompt,
-      eventId: selectedEvent?.id || null,
-      currentPlan: selectedEvent ? eventPlanFromRow(selectedEvent) : {},
-      workspaceId: WORKSPACE_ID,
-    },
-  });
-
-  if (error) {
-    beoflowResult.textContent = error.message;
-    return;
-  }
-
-  beoflowResult.textContent = JSON.stringify(data, null, 2);
-  await Promise.all([loadEvents(), loadCustomers(), refreshCollaboratorModule(), loadWorkspace()]);
-});
-
-async function updateCollaboratorStatus(id, status) {
-  if (!supabase) return;
-
-  const ready = await ensureAdminReady(setCollaboratorStatus);
-  if (!ready || !canManageCollaborators()) {
-    setCollaboratorStatus("No tienes permisos para administrar proveedores.");
-    return;
-  }
-
-  const { error } = await supabase
-    .from("cater_providers")
-    .update({ status })
-    .eq("workspace_id", WORKSPACE_ID)
-    .eq("id", Number(id));
-
-  if (error) {
-    setCollaboratorStatus(error.message);
-    return;
-  }
-
-  const syncResult = await syncProviderToBeoflow(id);
-  setCollaboratorStatus(
-    syncResult.status === "synced"
-      ? (status === "active" ? "Proveedor activado y sincronizado." : "Proveedor desactivado y sincronizado.")
-      : (status === "active" ? "Proveedor activado." : "Proveedor desactivado.")
-  );
-  await refreshCollaboratorModule();
-}
-
-refreshWorkspaceButton.addEventListener("click", async () => {
-  setSessionStatus("Abriendo BEOFlow Command...");
-  const ready = await ensureAdminReady(setSessionStatus);
-  if (!ready) return;
-  await loadAdminData();
-  scrollToAdminTarget("#beoflow-command");
-});
-refreshEventsButton.addEventListener("click", () => {
-  loadEvents().then(loadAssignments);
-});
-
-quoteDraftEventSelect?.addEventListener("change", () => {
-  setQuoteDraftStatus("Evento listo. Genera un borrador cuando quieras.");
-});
-
-quoteDraftUseCurrentButton?.addEventListener("click", () => {
-  if (quoteDraftEventSelect) quoteDraftEventSelect.value = "__current_form";
-  generateQuoteDraft();
-});
-
-quoteDraftGenerateButton?.addEventListener("click", generateQuoteDraft);
-quoteDraftCopyButton?.addEventListener("click", copyQuoteDraftMessage);
-quoteDraftResetButton?.addEventListener("click", resetQuoteDraft);
-
-refreshRequestsButton.addEventListener("click", () => {
-  Promise.all([loadUserRequests(), loadCustomers()]);
-});
-
-refreshCollaboratorsButton.addEventListener("click", refreshCollaboratorModule);
-resetCollaboratorButton.addEventListener("click", resetCollaboratorForm);
-
-document.querySelectorAll("[data-scroll-target]:not(.sidebar-link)").forEach((button) => {
-  button.addEventListener("click", () => {
-    scrollToAdminTarget(button.dataset.scrollTarget, button.dataset.adminView);
-  });
-});
-
-document.addEventListener("click", (event) => {
-  if (!(event.target instanceof Element)) return;
-  const action = event.target.closest("[data-state-scroll]");
-  if (!action) return;
-  scrollToAdminTarget(action.dataset.stateScroll, action.dataset.adminView);
+  if (target.dataset.editInventory) editInventoryItem(target.dataset.editInventory);
+  if (target.dataset.deleteInventory) deleteInventoryItem(target.dataset.deleteInventory);
 });
 
 document.querySelectorAll(".sidebar-link").forEach((link) => {
   link.addEventListener("click", (event) => {
     event.preventDefault();
-    const targetSelector = link.dataset.scrollTarget || "#overview";
-    const requestedView = link.dataset.adminView || "";
-    setActiveSidebarTarget(targetSelector, link, requestedView);
-    scrollToAdminTarget(targetSelector, requestedView);
+    document.querySelectorAll(".sidebar-link").forEach((item) => item.classList.toggle("is-active", item === link));
+    scrollToAdminTarget(link.dataset.scrollTarget || "#calendarPanel", link.dataset.adminView || "");
   });
 });
 
-window.addEventListener("hashchange", clearAdminHash);
-window.addEventListener("resize", syncAdminStickyOffset);
-window.addEventListener("load", syncAdminStickyOffset);
-
-signoutButton.addEventListener("click", async () => {
+signoutButton?.addEventListener("click", async () => {
   if (!supabase) return;
   await supabase.auth.signOut();
   window.location.href = "../login.html";
 });
 
-window.addEventListener("beforeunload", () => {
-  stopAdminLiveUpdates();
-});
-
-syncAdminStickyOffset();
-renderAnalytics();
-adminBootPromise = bootAdmin().catch((error) => {
-  setSessionStatus(error.message);
-  return false;
+bootAdmin().catch((error) => {
+  setStatus(error.message);
 });

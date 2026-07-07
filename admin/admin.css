@@ -5015,3 +5015,140 @@ textarea:focus {
   background: rgba(181, 154, 106, 0.07);
   color: rgba(16, 21, 19, 0.76);
 }
+
+/* Admin reset: calendar + inventory only. */
+.admin-clean-grid {
+  display: grid;
+  gap: clamp(1rem, 1.6vw, 1.4rem);
+}
+
+.admin-layout-simple[data-admin-view="calendar"] #inventoryPanel,
+.admin-layout-simple[data-admin-view="inventory"] #calendarPanel {
+  display: none;
+}
+
+.admin-layout-simple[data-admin-view="calendar"] #calendarPanel,
+.admin-layout-simple[data-admin-view="inventory"] #inventoryPanel {
+  display: grid;
+}
+
+.home-button {
+  display: inline-flex;
+  min-height: 2.75rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--cv-public-line);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.9);
+  color: var(--cv-public-gold-light);
+  font-weight: 850;
+  padding: 0 1rem;
+}
+
+.inventory-panel {
+  display: grid;
+  gap: clamp(1rem, 1.6vw, 1.4rem);
+}
+
+.inventory-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.inventory-form label {
+  display: grid;
+  gap: 0.45rem;
+  color: var(--cv-public-muted);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.inventory-form .full-field {
+  grid-column: 1 / -1;
+}
+
+.inventory-form textarea {
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.inventory-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.inventory-card {
+  overflow: hidden;
+  border: 1px solid var(--cv-public-line);
+  border-radius: 1.1rem;
+  background: rgba(255, 253, 248, 0.92);
+  box-shadow: 0 1rem 2.8rem rgba(27, 42, 34, 0.08);
+}
+
+.inventory-photo {
+  display: grid;
+  min-height: 12rem;
+  place-items: center;
+  background: #f4ecdf;
+  color: var(--cv-public-muted);
+  font-weight: 850;
+}
+
+.inventory-photo img {
+  width: 100%;
+  height: 100%;
+  min-height: 12rem;
+  object-fit: cover;
+}
+
+.inventory-card-body {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+}
+
+.inventory-card h3 {
+  margin: 0;
+  color: var(--cv-public-text);
+  font-family: var(--cv-serif);
+  font-size: 1.75rem;
+  line-height: 0.98;
+}
+
+.inventory-card p {
+  margin: 0;
+  color: var(--cv-public-muted);
+  line-height: 1.45;
+}
+
+.inventory-meta,
+.inventory-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.inventory-meta span {
+  border: 1px solid #d7c8ad;
+  border-radius: 999px;
+  color: var(--cv-public-gold-light);
+  font-size: 0.78rem;
+  font-weight: 850;
+  padding: 0.35rem 0.6rem;
+}
+
+@media (max-width: 760px) {
+  .inventory-form {
+    grid-template-columns: 1fr;
+  }
+}

@@ -3,16 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Portal de cliente de Cater Vegas en BEOFlow." />
-    <title>Cater Vegas | Cliente</title>
-    <link rel="stylesheet" href="client.css?v=admin-route-20260618" />
+    <meta name="description" content="Portal de comprador de Cater Vegas." />
+    <title>Cater Vegas | Comprador</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="client.css?v=inventory-catalog-20260706" />
   </head>
   <body>
     <header class="portal-header">
       <a class="portal-logo" href="../index.html">CATER VEGAS</a>
       <nav>
-        <a class="portal-home" href="../index.html" aria-label="Regresar al inicio"><span>🏠</span> Home</a>
-        <a class="portal-home" href="../admin/" aria-label="Ir al admin"><span>⚙️</span> Admin</a>
+        <a class="portal-home" href="../index.html" aria-label="Regresar al inicio">Home</a>
+        <a class="portal-home" href="../admin/" aria-label="Ir al admin">Admin</a>
         <a href="../login.html">Login</a>
         <button id="signoutButton" type="button">Salir</button>
       </nav>
@@ -20,20 +23,27 @@
 
     <main class="portal-shell">
       <section class="portal-hero">
-        <p class="portal-kicker">Client Workspace</p>
-        <h1>Eventos y planes.</h1>
-        <p id="sessionStatus">Verificando sesión...</p>
+        <p class="portal-kicker">Cater Vegas</p>
+        <h1>Catalogo para tu evento.</h1>
+        <p id="sessionStatus">Verificando sesion...</p>
+      </section>
+
+      <section class="portal-card catalog-card">
+        <p class="portal-kicker">Inventario disponible</p>
+        <h2>Mesas, sillas y equipo</h2>
+        <p>Todo lo que el administrador agregue al inventario aparecera aqui para el comprador.</p>
+        <div class="catalog-grid" id="inventoryCatalog"></div>
       </section>
 
       <section class="portal-card">
-        <p class="portal-kicker">Cater Vegas</p>
-        <h2>Tu acceso de cliente</h2>
-        <p id="clientSummary">Los eventos aprobados para tu cuenta aparecerán aquí.</p>
+        <p class="portal-kicker">Eventos</p>
+        <h2>Planes aprobados</h2>
+        <p id="clientSummary">Los eventos aprobados para tu cuenta apareceran aqui.</p>
         <div class="portal-list" id="eventsList"></div>
       </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="client.js?v=supabase-auth-loader-20260619"></script>
+    <script type="module" src="client.js?v=inventory-catalog-20260706"></script>
   </body>
 </html>

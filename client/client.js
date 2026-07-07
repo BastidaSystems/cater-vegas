@@ -10,6 +10,7 @@ import {
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const eventsList = document.querySelector("#eventsList");
+const inventoryCatalog = document.querySelector("#inventoryCatalog");
 const signoutButton = document.querySelector("#signoutButton");
 
 let supabase = null;
@@ -37,7 +38,7 @@ async function loadClientEvents() {
   }
 
   if (!data?.length) {
-    eventsList.innerHTML = "<p>No hay eventos visibles para tu cuenta todavía.</p>";
+    eventsList.innerHTML = "<p>No hay eventos visibles para tu cuenta todavia.</p>";
     return;
   }
 
@@ -47,6 +48,50 @@ async function loadClientEvents() {
         <article class="portal-row">
           <strong>${escapeHtml(event.title || `Evento #${event.id}`)}</strong>
           <span>#${event.id} · ${escapeHtml(event.event_type || "Sin tipo")} · ${escapeHtml(event.status || "draft")}</span>
+        </article>
+      `
+    )
+    .join("");
+}
+
+async function loadInventoryCatalog() {
+  const { data, error } = await supabase
+    .from("cater_inventory")
+    .select("id,name,category,description,quantity_available,price_label,image_url,updated_at")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    inventoryCatalog.innerHTML = `<p>${escapeHtml(error.message)}. Pide al administrador crear la tabla cater_inventory.</p>`;
+    return;
+  }
+
+  if (!data?.length) {
+    inventoryCatalog.innerHTML = "<p>El inventario disponible aparecera aqui cuando el administrador agregue articulos.</p>";
+    return;
+  }
+
+  inventoryCatalog.innerHTML = data
+    .map(
+      (item) => `
+        <article class="catalog-item">
+          <div class="catalog-photo">
+            ${
+              item.image_url
+                ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">`
+                : "<span>Sin foto</span>"
+            }
+          </div>
+          <div class="catalog-copy">
+            <span>${escapeHtml(item.category || "Inventario")}</span>
+            <h3>${escapeHtml(item.name)}</h3>
+            <p>${escapeHtml(item.description || "Disponible para cotizacion.")}</p>
+            <div class="catalog-meta">
+              <strong>${Number(item.quantity_available ?? 0)} disponibles</strong>
+              ${item.price_label ? `<strong>${escapeHtml(item.price_label)}</strong>` : ""}
+            </div>
+          </div>
         </article>
       `
     )
@@ -73,13 +118,12 @@ async function bootClient() {
   }
 
   const role = getEffectiveWorkspaceRole(profile, membership, user);
-  if (["owner", "admin", "super_admin", "platform_admin", "organizer"].includes(role)) {
-    navigateWithLoopGuard("../admin/", "client-admin-role");
-    return;
-  }
+  const label = ["owner", "admin", "super_admin", "platform_admin", "organizer"].includes(role)
+    ? "Vista de comprador"
+    : "Comprador";
 
-  sessionStatus.textContent = `${user.email} · Cliente`;
-  await loadClientEvents();
+  sessionStatus.textContent = `${user.email} · ${label}`;
+  await Promise.all([loadClientEvents(), loadInventoryCatalog()]);
 }
 
 signoutButton.addEventListener("click", async () => {
