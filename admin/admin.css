@@ -5036,6 +5036,20 @@ textarea:focus {
   align-content: start;
 }
 
+.admin-layout-simple .admin-sidebar {
+  grid-template-rows: auto auto 1fr auto;
+  align-content: start;
+}
+
+.admin-layout-simple .sidebar-nav {
+  align-self: start;
+  margin-top: clamp(1.5rem, 4vh, 2.75rem);
+}
+
+.admin-layout-simple .sidebar-mini {
+  align-self: end;
+}
+
 .admin-layout-simple .admin-header {
   align-items: center;
   background:
