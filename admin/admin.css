@@ -6821,6 +6821,7 @@ body {
 .simple-panel,
 .dashboard-panel,
 .dashboard-overview-grid,
+.dashboard-calendar-shell,
 .dashboard-panel .dashboard-calendar,
 .dashboard-side-panel,
 .side-card,
@@ -7128,9 +7129,24 @@ body {
   border-radius: 24px;
 }
 
+.dashboard-calendar-shell {
+  border: 1px solid var(--cv-public-line);
+  border-radius: 24px;
+  background: rgba(255, 253, 248, 0.86);
+  box-shadow: 0 1rem 2.6rem rgba(27, 42, 34, 0.07);
+  padding: 1rem;
+}
+
 .dashboard-panel .dashboard-calendar {
-  padding: 1.2rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: hidden;
+}
+
+.dashboard-calendar-shell .calendar-month-label {
+  margin-bottom: 0.85rem;
 }
 
 .calendar-grid {
