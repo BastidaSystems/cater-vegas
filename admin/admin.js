@@ -451,6 +451,10 @@ function eventDateValue(event) {
   return Number.isNaN(value.getTime()) ? null : value;
 }
 
+function isDashboardEvent(event) {
+  return String(event?.status || "").trim().toLowerCase() !== "draft";
+}
+
 function renderDashboardStats(monthEvents, upcomingEvents) {
   if (!dashboardMetrics) return;
 
@@ -811,7 +815,7 @@ async function loadEvents() {
     setStatus(`Calendar: ${error.message}`);
     allEvents = [];
   } else {
-    allEvents = data || [];
+    allEvents = (data || []).filter(isDashboardEvent);
   }
 
   renderCalendar();
