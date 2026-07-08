@@ -7702,6 +7702,69 @@ body {
   line-height: 1.45;
 }
 
+.request-management-form {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  border: 1px solid rgba(181, 154, 106, 0.16);
+  border-radius: 18px;
+  background: #ffffff;
+  padding: 0.85rem;
+}
+
+.request-management-form label {
+  display: grid;
+  gap: 0.45rem;
+  min-width: 0;
+}
+
+.request-management-form span {
+  color: var(--cv-admin-muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.request-management-form select,
+.request-management-form textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--cv-admin-line);
+  border-radius: 16px;
+  background: #fbfaf7;
+  color: var(--cv-admin-ink);
+  font: inherit;
+  font-weight: 720;
+  outline: none;
+  padding: 0.78rem 0.9rem;
+}
+
+.request-management-form textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.request-management-form button {
+  width: fit-content;
+}
+
+.request-management-status {
+  min-height: 1.25rem;
+  margin: 0;
+  color: var(--cv-admin-muted);
+  font-size: 0.86rem;
+  font-weight: 760;
+}
+
+.request-management-status.is-error {
+  color: #9d3026;
+}
+
+.request-management-status.is-success {
+  color: #176f3b;
+}
+
 .request-products article {
   display: flex;
   justify-content: space-between;
