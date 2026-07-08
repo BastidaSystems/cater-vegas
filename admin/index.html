@@ -3,35 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Dashboard de eventos e inventario de Cater Vegas." />
+    <meta name="description" content="Dashboard de administración e inventario de Cater Vegas." />
     <title>Cater Vegas | Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin.css?v=sidebar-menu-clean-20260707" />
+    <link rel="stylesheet" href="admin.css?v=premium-admin-dashboard-20260707" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
       <aside class="admin-sidebar" aria-label="Menu de administrador">
         <a class="admin-logo" href="../index.html" aria-label="Cater Vegas home">
           <span>CV</span>
-          <strong>CATER VEGAS</strong>
+          <strong>CATER VEGAS <small>ADMIN</small></strong>
         </a>
 
         <nav class="sidebar-nav">
           <button class="sidebar-link is-active" type="button" data-scroll-target="#calendarPanel" data-admin-view="dashboard">
+            <span class="sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 5.5h16M4 12h16M4 18.5h10" />
+              </svg>
+            </span>
             Dashboard
           </button>
           <button class="sidebar-link" type="button" data-scroll-target="#inventoryPanel" data-admin-view="inventory">
-            Inventario
+            <span class="sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M5 7.5h14v11H5z" />
+                <path d="M8 7.5V5h8v2.5M8 12h8" />
+              </svg>
+            </span>
+            Inventory
           </button>
         </nav>
 
         <div class="sidebar-mini">
-          <span class="status-dot"></span>
+          <span class="avatar">CV</span>
           <div>
-            <strong>David</strong>
-            <small>Administrador</small>
+            <strong id="dashboardEmail">Admin</strong>
+            <small id="dashboardRole">Owner</small>
           </div>
         </div>
       </aside>
@@ -41,19 +52,15 @@
           <div class="header-title">
             <p class="eyebrow">Cater Vegas Admin</p>
             <h1>Dashboard</h1>
-            <p>Vista general de eventos, calendario e inventario publicado para compradores.</p>
+            <p>Event planning, calendar visibility, and buyer-facing inventory in one calm workspace.</p>
             <p id="sessionStatus" class="session-status">Verificando sesion...</p>
           </div>
 
           <div class="header-actions">
-            <a class="home-button" href="../index.html" aria-label="Regresar al inicio">Home</a>
             <a class="home-button" href="../client/" aria-label="Ver pagina del comprador">Ver comprador</a>
             <div class="user-pill" aria-label="Usuario activo">
               <span class="avatar">CV</span>
-              <div>
-                <strong id="dashboardEmail">Admin</strong>
-                <small id="dashboardRole">Owner</small>
-              </div>
+              <strong>Perfil</strong>
             </div>
             <button id="signoutButton" class="logout-button" type="button">Salir</button>
           </div>
@@ -64,7 +71,7 @@
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Operacion general</p>
-                <h2>Dashboard de eventos</h2>
+                <h2>Event Dashboard</h2>
               </div>
               <span class="calendar-month-label" id="calendarMonthLabel">Este mes</span>
             </div>
@@ -72,12 +79,20 @@
             <div class="dashboard-overview-grid">
               <div class="dashboard-calendar" id="dashboardCalendar" aria-live="polite"></div>
               <aside class="dashboard-side-panel">
-                <div>
-                  <p class="eyebrow">Agenda</p>
-                  <h3>Proximos eventos</h3>
-                </div>
-                <div class="dashboard-upcoming-list" id="dashboardUpcomingList" aria-live="polite"></div>
-                <div class="dashboard-inventory-summary" id="dashboardInventorySummary" aria-live="polite"></div>
+                <section class="side-card agenda-card">
+                  <div>
+                    <p class="eyebrow">Agenda</p>
+                    <h3>Próximos eventos</h3>
+                  </div>
+                  <div class="dashboard-upcoming-list" id="dashboardUpcomingList" aria-live="polite"></div>
+                </section>
+                <section class="side-card inventory-summary-card">
+                  <div>
+                    <p class="eyebrow">Inventory</p>
+                    <h3>Inventario</h3>
+                  </div>
+                  <div class="dashboard-inventory-summary" id="dashboardInventorySummary" aria-live="polite"></div>
+                </section>
               </aside>
             </div>
           </section>
@@ -86,7 +101,7 @@
             <div class="panel-heading">
               <div>
                 <p class="eyebrow">Catalogo visible para compradores</p>
-                <h2>Inventario</h2>
+                <h2>Inventory</h2>
               </div>
               <button class="secondary-button" id="refreshInventoryButton" type="button">Actualizar</button>
             </div>
