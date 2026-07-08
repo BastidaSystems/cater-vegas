@@ -6583,7 +6583,7 @@ body::before,
   border-radius: 26px;
   background: #ffffff;
   box-shadow: var(--cv-admin-shadow-soft);
-  padding: 1rem;
+  padding: 1rem 4.5rem 1rem 1rem;
 }
 
 .user-company-avatar {
@@ -7531,7 +7531,11 @@ body {
   min-width: 0;
 }
 
-.event-request-card button {
+.event-request-card {
+  position: relative;
+}
+
+.event-request-card .event-request-select {
   display: grid;
   width: 100%;
   gap: 0.45rem;
@@ -7549,11 +7553,34 @@ body {
     transform 180ms ease;
 }
 
-.event-request-card.is-selected button,
-.event-request-card button:hover {
+.event-request-card.is-selected .event-request-select,
+.event-request-card .event-request-select:hover {
   border-color: rgba(181, 154, 106, 0.34);
   box-shadow: 0 18px 48px rgba(32, 35, 32, 0.07);
   transform: translateY(-1px);
+}
+
+.event-request-delete {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  min-height: 2rem;
+  border: 1px solid rgba(201, 130, 115, 0.28);
+  border-radius: 999px;
+  background: #fffdf8;
+  color: #9b4b3f;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  padding: 0 0.65rem;
+  text-transform: uppercase;
+}
+
+.event-request-delete:hover {
+  border-color: rgba(201, 130, 115, 0.54);
+  background: #fff5f2;
 }
 
 .event-request-card strong,

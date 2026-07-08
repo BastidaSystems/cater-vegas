@@ -815,7 +815,7 @@ function renderEventRequests() {
         : "No timestamp";
       return `
         <article class="event-request-card ${String(request.id) === String(selectedRequestId) ? "is-selected" : ""}">
-          <button type="button" data-select-request="${escapeHtml(request.id)}">
+          <button class="event-request-select" type="button" data-select-request="${escapeHtml(request.id)}">
             <span class="event-request-status">${escapeHtml(request.status || "draft")}</span>
             <strong>${escapeHtml(customer.full_name || request.title || "Public request")}</strong>
             <small>${escapeHtml(customer.email || "No email")} · ${escapeHtml(customer.phone || "No phone")}</small>
@@ -823,6 +823,7 @@ function renderEventRequests() {
             <p>${escapeHtml(requestCartSummary(request))}</p>
             <time>${escapeHtml(createdLabel)}</time>
           </button>
+          <button class="event-request-delete" type="button" data-delete-request="${escapeHtml(request.id)}" aria-label="Delete request ${escapeHtml(request.id)}">Delete</button>
         </article>
       `;
     })
@@ -1163,6 +1164,33 @@ async function notifyConfirmedRequest(id, status) {
 
   if (error) return ` Notification could not be sent: ${error.message}`;
   return notificationSummary(data?.results || []);
+}
+
+async function deleteEventRequest(id) {
+  const request = requestById(id);
+  const customer = request ? requestCustomer(request) : {};
+  const label = customer.full_name || request?.title || `request #${id}`;
+  if (!window.confirm(`Delete ${label}? This cannot be undone.`)) return;
+
+  if (!supabase) {
+    setRequestManagementStatus("Supabase is required to delete requests.", "error");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("cater_events")
+    .delete()
+    .eq("workspace_id", currentWorkspaceId)
+    .eq("id", id);
+
+  if (error) {
+    setRequestManagementStatus(error.message, "error");
+    return;
+  }
+
+  if (String(selectedRequestId) === String(id)) selectedRequestId = "";
+  await loadEvents();
+  setStatus("Request deleted.");
 }
 
 async function updateEventRequestStatus(id, status) {
@@ -1819,6 +1847,12 @@ inventoryDetailPanel?.addEventListener("click", (event) => {
 });
 
 eventRequestsList?.addEventListener("click", (event) => {
+  const deleteTarget = event.target.closest("[data-delete-request]");
+  if (deleteTarget) {
+    deleteEventRequest(deleteTarget.dataset.deleteRequest);
+    return;
+  }
+
   const target = event.target.closest("[data-select-request]");
   if (!target) return;
   selectedRequestId = target.dataset.selectRequest || "";
