@@ -1317,7 +1317,7 @@ async function loadInventory() {
     .filter(Boolean);
   renderInventory();
   renderCalendar();
-  setInventoryStatus("Inventory synced.");
+  setInventoryStatus("");
 }
 
 async function loadUsers() {
