@@ -8055,49 +8055,57 @@ body {
 
 .inventory-panel .inventory-category-chip {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  min-height: 4.15rem;
-  gap: 0.45rem;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon title"
+    "icon count";
+  min-height: 4.4rem;
+  gap: 0.1rem 0.65rem;
   align-items: center;
   border-color: rgba(181, 154, 106, 0.18);
   box-shadow: none;
-  padding: 0.34rem 0.78rem 0.34rem 0.34rem;
-  text-align: left;
+  padding: 0.55rem 0.9rem 0.55rem 0.55rem;
+  text-align: center;
 }
 
 .inventory-panel .inventory-category-chip span {
-  width: 2rem;
-  height: 2rem;
-  font-size: 0.62rem;
-  grid-row: span 2;
+  grid-area: icon;
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0;
+}
+
+.inventory-panel .inventory-category-chip span::before {
+  content: "";
+  display: block;
+  width: 1.05rem;
+  height: 0.66rem;
+  border: 2px solid currentColor;
+  border-radius: 999px;
+  box-shadow:
+    -0.34rem 0.55rem 0 -0.28rem currentColor,
+    0.34rem 0.55rem 0 -0.28rem currentColor;
 }
 
 .inventory-panel .inventory-category-chip strong {
-  font-size: 0.78rem;
-  display: flex;
+  grid-area: title;
+  display: block;
   min-width: 0;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.4rem;
-}
-
-.inventory-panel .inventory-category-chip strong b {
-  display: inline-grid;
-  min-width: 1.55rem;
-  height: 1.55rem;
-  place-items: center;
-  border-radius: 999px;
-  background: #fbfaf7;
-  color: var(--cv-admin-gold);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
+  line-height: 1.1;
 }
 
 .inventory-panel .inventory-category-chip small {
-  overflow: hidden;
+  grid-area: count;
+  display: block;
+  min-width: auto;
+  height: auto;
+  border-radius: 0;
+  background: transparent;
   color: var(--cv-admin-muted);
-  font-size: 0.66rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1.1;
 }
 
 @media (max-width: 980px) {

@@ -456,7 +456,6 @@ function renderInventoryCategories() {
   const filters = INVENTORY_INDUSTRY_FILTERS.map((filter) => ({
     ...filter,
     count: filter.categories.reduce((sum, category) => sum + Number(counts[category] || 0), 0),
-    subcategories: filter.categories.map(inventoryCategoryLabel).join(" / "),
   }));
 
   if (!filters.some((filter) => filter.id === activeInventoryCategory)) {
@@ -467,9 +466,9 @@ function renderInventoryCategories() {
     .map((filter) => {
       return `
         <button class="inventory-category-chip ${activeInventoryCategory === filter.id ? "is-active" : ""}" type="button" data-inventory-category="${escapeHtml(filter.id)}">
-          <span aria-hidden="true">${escapeHtml(filter.icon)}</span>
-          <strong>${escapeHtml(filter.label)} <b>${Number(filter.count || 0)}</b></strong>
-          <small>${escapeHtml(filter.subcategories || "")}</small>
+          <span class="inventory-category-icon" aria-hidden="true"></span>
+          <strong>${escapeHtml(filter.label)}</strong>
+          <small>${Number(filter.count || 0)}</small>
         </button>
       `;
     })
