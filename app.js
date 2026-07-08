@@ -319,15 +319,29 @@ function updateRequestFormState() {
   const estimatedTotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   requestSubmitButton.disabled = isSubmitted || !items.length;
   if (!items.length) {
-    requestSubmitButton.textContent = "Pay now";
+    requestSubmitButton.textContent = "Pay with card";
     publicRequestStatus("Add at least one item before payment.");
   } else {
-    requestSubmitButton.textContent = estimatedTotal ? `Pay ${formatMoney(estimatedTotal)} now` : "Pay now";
+    requestSubmitButton.textContent = estimatedTotal ? `Pay ${formatMoney(estimatedTotal)} with card` : "Pay with card";
   }
 
   if (items.length && requestStatus?.textContent === "Add at least one item before payment.") {
     publicRequestStatus("");
   }
+}
+
+function checkoutErrorMessage(error, data) {
+  const message = String(error?.message || data?.error || "").trim();
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes("failed to send a request") ||
+    normalized.includes("edge function") ||
+    normalized.includes("function not found") ||
+    normalized.includes("not configured")
+  ) {
+    return "Card checkout is not active yet. Stripe must be deployed before payment can open.";
+  }
+  return message || "Could not open card checkout. Please try again.";
 }
 
 async function submitPublicPayment(event) {
@@ -386,7 +400,7 @@ async function submitPublicPayment(event) {
   });
 
   if (error || !data?.checkout_url) {
-    publicRequestStatus(error?.message || data?.error || "Could not open payment. Please try again.", "error");
+    publicRequestStatus(checkoutErrorMessage(error, data), "error");
     updateRequestFormState();
     return;
   }
