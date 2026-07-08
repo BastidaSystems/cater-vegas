@@ -418,10 +418,10 @@ function renderInventoryCategory(category) {
         return `
           <article class="table-choice inventory-choice${selectedClass}" data-inventory-id="${escapeHtml(item.id)}">
             <button class="inventory-select-button" type="button" data-select-inventory="${escapeHtml(item.id)}">
+              <strong>${escapeHtml(title)}</strong>
               <span class="table-choice-image inventory-choice-image" aria-hidden="true">
               ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="">` : ""}
               </span>
-              <strong>${escapeHtml(title)}</strong>
               <small>${escapeHtml(note || copy.label)}</small>
             </button>
             <div class="inventory-quantity-row">
