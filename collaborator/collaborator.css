@@ -27,6 +27,13 @@
   gap: 1.35rem;
 }
 
+.collaborator-shell .panel-heading > div {
+  display: grid;
+  align-items: start;
+  justify-items: start;
+  gap: 0.35rem;
+}
+
 .collaborator-shell .collaborator-metrics {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
