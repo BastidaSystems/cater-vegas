@@ -89,6 +89,13 @@ const dashboardMetrics = document.querySelector("#dashboardMetrics");
 const dashboardCalendar = document.querySelector("#dashboardCalendar");
 const dashboardUpcomingList = document.querySelector("#dashboardUpcomingList");
 const dashboardInventorySummary = document.querySelector("#dashboardInventorySummary");
+const pricingRulesCard = document.querySelector("#pricingRulesCard");
+const pricingRulesForm = document.querySelector("#pricingRulesForm");
+const weekdayMarkupInput = document.querySelector("#weekdayMarkupInput");
+const weekendMarkupInput = document.querySelector("#weekendMarkupInput");
+const holidayMarkupInput = document.querySelector("#holidayMarkupInput");
+const holidayDatesInput = document.querySelector("#holidayDatesInput");
+const pricingRulesStatus = document.querySelector("#pricingRulesStatus");
 const calendarMonthLabel = document.querySelector("#calendarMonthLabel");
 const inventoryForm = document.querySelector("#inventoryForm");
 const inventoryItemId = document.querySelector("#inventoryItemId");
@@ -161,6 +168,12 @@ let workspaceMembers = [];
 let activeInventoryCategory = "industry:setup";
 let selectedInventoryId = "";
 let selectedRequestId = "";
+let pricingRules = {
+  weekday_markup_percent: 0,
+  weekend_markup_percent: 20,
+  holiday_markup_percent: 40,
+  holiday_dates: ["01-01", "05-25", "07-04", "09-07", "11-26", "12-25"],
+};
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -190,6 +203,33 @@ function roleLabel(role) {
 
 function canReviewInventory() {
   return APPROVER_ROLES.has(currentRole);
+}
+
+function canManagePricingRules() {
+  return ADMIN_ROLES.has(currentRole);
+}
+
+function normalizeHolidayDates(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  return String(value || "")
+    .split(/[\s,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function setPricingRulesStatus(message) {
+  if (pricingRulesStatus) pricingRulesStatus.textContent = message;
+}
+
+function renderPricingRulesForm() {
+  if (!pricingRulesCard || !pricingRulesForm) return;
+  pricingRulesCard.hidden = !canManagePricingRules();
+  if (!canManagePricingRules()) return;
+
+  if (weekdayMarkupInput) weekdayMarkupInput.value = String(Number(pricingRules.weekday_markup_percent || 0));
+  if (weekendMarkupInput) weekendMarkupInput.value = String(Number(pricingRules.weekend_markup_percent || 0));
+  if (holidayMarkupInput) holidayMarkupInput.value = String(Number(pricingRules.holiday_markup_percent || 0));
+  if (holidayDatesInput) holidayDatesInput.value = normalizeHolidayDates(pricingRules.holiday_dates).join(", ");
 }
 
 function approvalLabel(status) {
@@ -1319,6 +1359,68 @@ async function loadInventory() {
   setInventoryStatus("");
 }
 
+async function loadPricingRules() {
+  if (!supabase) {
+    renderPricingRulesForm();
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("cater_pricing_rules")
+    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent,holiday_dates")
+    .eq("workspace_id", currentWorkspaceId)
+    .maybeSingle();
+
+  if (!error && data) {
+    pricingRules = {
+      ...pricingRules,
+      ...data,
+      holiday_dates: normalizeHolidayDates(data.holiday_dates),
+    };
+  }
+
+  renderPricingRulesForm();
+}
+
+async function savePricingRules(event) {
+  event.preventDefault();
+  if (!canManagePricingRules()) return;
+  if (!supabase) {
+    setPricingRulesStatus("Supabase is required for pricing rules.");
+    return;
+  }
+
+  const payload = {
+    workspace_id: currentWorkspaceId,
+    weekday_markup_percent: Number(weekdayMarkupInput?.value || 0),
+    weekend_markup_percent: Number(weekendMarkupInput?.value || 0),
+    holiday_markup_percent: Number(holidayMarkupInput?.value || 0),
+    holiday_dates: normalizeHolidayDates(holidayDatesInput?.value || ""),
+    updated_by: currentUser?.id || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  setPricingRulesStatus("Saving pricing...");
+  const { data, error } = await supabase
+    .from("cater_pricing_rules")
+    .upsert(payload, { onConflict: "workspace_id" })
+    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent,holiday_dates")
+    .single();
+
+  if (error) {
+    setPricingRulesStatus(error.message);
+    return;
+  }
+
+  pricingRules = {
+    ...pricingRules,
+    ...data,
+    holiday_dates: normalizeHolidayDates(data.holiday_dates),
+  };
+  renderPricingRulesForm();
+  setPricingRulesStatus("Pricing saved.");
+}
+
 async function loadUsers() {
   if (!usersList) return;
 
@@ -1730,7 +1832,7 @@ async function bootAdmin() {
 
   if (!isSupabaseConfigured) {
     setStatus("Configure Supabase to sync inventory.");
-    await Promise.all([loadInventory(), loadUserData()]);
+    await Promise.all([loadInventory(), loadUserData(), loadPricingRules()]);
     return;
   }
 
@@ -1759,10 +1861,11 @@ async function bootAdmin() {
   if (dashboardRole) dashboardRole.textContent = roleLabel(currentRole);
   setStatus(user.email || "Admin");
 
-  await Promise.all([loadEvents(), loadInventory(), loadUserData()]);
+  await Promise.all([loadEvents(), loadInventory(), loadUserData(), loadPricingRules()]);
 }
 
 inventoryForm?.addEventListener("submit", saveInventoryItem);
+pricingRulesForm?.addEventListener("submit", savePricingRules);
 addInventoryButton?.addEventListener("click", () => {
   if (inventoryForm?.classList.contains("is-open")) {
     resetInventoryForm();

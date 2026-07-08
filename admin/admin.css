@@ -8179,6 +8179,48 @@ body {
   }
 }
 
+.pricing-rules-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.pricing-rules-form label {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.pricing-rules-form label span {
+  color: var(--cv-admin-muted);
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pricing-rules-form input,
+.pricing-rules-form textarea {
+  width: 100%;
+  border: 1px solid var(--cv-admin-border);
+  border-radius: 1rem;
+  background: #fffdf8;
+  color: var(--cv-admin-ink);
+  font: inherit;
+  font-weight: 800;
+  padding: 0.78rem 0.9rem;
+}
+
+.pricing-rules-form textarea {
+  min-height: 4.8rem;
+  resize: vertical;
+}
+
+.pricing-rules-form .full-field,
+.pricing-rules-form button,
+.pricing-rules-form .admin-status {
+  grid-column: 1 / -1;
+}
+
 .inventory-panel .inventory-browser {
   display: block;
 }

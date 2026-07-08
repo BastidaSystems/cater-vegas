@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Cater Vegas administration and inventory dashboard." />
     <title>Cater Vegas | Admin</title>
-    <link rel="stylesheet" href="admin.css?v=industry-icons-20260708" />
+    <link rel="stylesheet" href="admin.css?v=date-pricing-rules-20260708" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
@@ -93,6 +93,32 @@
                     <h3>Inventory</h3>
                   </div>
                   <div class="dashboard-inventory-summary" id="dashboardInventorySummary" aria-live="polite"></div>
+                </section>
+                <section class="side-card pricing-rules-card" id="pricingRulesCard">
+                  <div>
+                    <p class="eyebrow">Pricing</p>
+                    <h3>Date Pricing</h3>
+                  </div>
+                  <form class="pricing-rules-form" id="pricingRulesForm">
+                    <label>
+                      <span>Weekday %</span>
+                      <input id="weekdayMarkupInput" type="number" min="0" step="1" placeholder="0" />
+                    </label>
+                    <label>
+                      <span>Weekend %</span>
+                      <input id="weekendMarkupInput" type="number" min="0" step="1" placeholder="20" />
+                    </label>
+                    <label>
+                      <span>Holiday %</span>
+                      <input id="holidayMarkupInput" type="number" min="0" step="1" placeholder="40" />
+                    </label>
+                    <label class="full-field">
+                      <span>Holiday dates</span>
+                      <textarea id="holidayDatesInput" rows="3" placeholder="01-01, 07-04, 12-25"></textarea>
+                    </label>
+                    <button class="secondary-button" type="submit">Save Pricing</button>
+                    <p class="admin-status" id="pricingRulesStatus" aria-live="polite"></p>
+                  </form>
                 </section>
               </aside>
             </div>
@@ -277,6 +303,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=industry-icons-20260708"></script>
+    <script type="module" src="admin.js?v=date-pricing-rules-20260708"></script>
   </body>
 </html>

@@ -130,6 +130,12 @@ let activeCategory = "";
 let build = loadBuild();
 let supabaseClientPromise = null;
 let inventoryLoadError = "";
+let pricingRules = {
+  weekday_markup_percent: 0,
+  weekend_markup_percent: 20,
+  holiday_markup_percent: 40,
+  holiday_dates: ["01-01", "05-25", "07-04", "09-07", "11-26", "12-25"],
+};
 
 const publicRequestForm = document.getElementById("publicRequestForm");
 const requestFullName = document.getElementById("requestFullName");
@@ -219,8 +225,52 @@ function ensureBuildDefaults() {
   if (changed) saveBuild();
 }
 
+function normalizeHolidayDates(value) {
+  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
+  return String(value || "")
+    .split(/[\s,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function datePricingContext() {
+  const iso = selectedEventDateIso();
+  if (!iso) return { type: "weekday", markupPercent: Number(pricingRules.weekday_markup_percent || 0), iso: "" };
+  const [, month, day] = iso.split("-");
+  const holidayTokens = normalizeHolidayDates(pricingRules.holiday_dates);
+  const isHoliday = holidayTokens.includes(iso) || holidayTokens.includes(`${month}-${day}`);
+  const date = new Date(`${iso}T00:00:00`);
+  const dayOfWeek = date.getDay();
+  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+  const type = isHoliday ? "holiday" : isWeekend ? "weekend" : "weekday";
+  const markupPercent = Number(
+    type === "holiday"
+      ? pricingRules.holiday_markup_percent
+      : type === "weekend"
+        ? pricingRules.weekend_markup_percent
+        : pricingRules.weekday_markup_percent
+  ) || 0;
+  return { type, markupPercent, iso };
+}
+
+function adjustedUnitPrice(basePrice) {
+  const base = Number(basePrice || 0);
+  const { markupPercent } = datePricingContext();
+  return Math.round(base * (1 + markupPercent / 100) * 100) / 100;
+}
+
 function cartItems() {
-  return Object.values(build.cart || {}).filter((item) => Number(item.quantity) > 0);
+  return Object.values(build.cart || {})
+    .filter((item) => Number(item.quantity) > 0)
+    .map((item) => {
+      const baseUnitPrice = Number(item.base_unit_price ?? item.unit_price ?? 0);
+      return {
+        ...item,
+        base_unit_price: baseUnitPrice,
+        unit_price: adjustedUnitPrice(baseUnitPrice),
+        price_adjustment: datePricingContext(),
+      };
+    });
 }
 
 function providerIdValue(id) {
@@ -311,6 +361,7 @@ function requestPlanPayload(formValues = {}) {
     guest_count: Number(formValues.guestCount || 0),
     notes: formValues.notes || "",
     estimated_total: estimatedTotal,
+    pricing: datePricingContext(),
     cart,
     selections,
   };
@@ -500,6 +551,7 @@ function setCartQuantity(item, quantity) {
   if (!nextQuantity) {
     delete build.cart[item.id];
   } else {
+    const baseUnitPrice = itemUnitPrice(item);
     build.cart[item.id] = {
       id: item.id,
       category: item.category,
@@ -508,7 +560,8 @@ function setCartQuantity(item, quantity) {
       image_url: itemImage(item),
       quantity: nextQuantity,
       price_label: itemPriceLabel(item),
-      unit_price: itemUnitPrice(item),
+      base_unit_price: baseUnitPrice,
+      unit_price: adjustedUnitPrice(baseUnitPrice),
     };
   }
 
@@ -710,7 +763,12 @@ function renderInventoryCategory(category) {
         const selectedClass = selected?.id === item.id ? " is-selected" : "";
         const quantity = cartQuantity(item.id);
         const available = itemQuantityAvailable(item);
-        const priceLabel = itemPriceLabel(item);
+        const basePrice = itemUnitPrice(item);
+        const adjustedPrice = adjustedUnitPrice(basePrice);
+        const pricing = datePricingContext();
+        const priceLabel = adjustedPrice
+          ? `${formatMoney(adjustedPrice)}${pricing.markupPercent ? ` (${pricing.markupPercent}% ${pricing.type})` : ""}`
+          : itemPriceLabel(item);
         return `
           <article class="table-choice inventory-choice${selectedClass}" data-inventory-id="${escapeHtml(item.id)}">
             <button class="inventory-select-button" type="button" data-select-inventory="${escapeHtml(item.id)}">
@@ -829,9 +887,9 @@ function updateBuilderPreview() {
 }
 
 function renderCart(cartList, cartCountLabel, cartTotalLabel) {
-  const cartItems = Object.values(build.cart || {}).filter((item) => Number(item.quantity) > 0);
-  const totalQuantity = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
-  const estimatedTotal = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
+  const items = cartItems();
+  const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const estimatedTotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   const checkoutButton = document.getElementById("cart-checkout-button");
 
   if (cartCountLabel) {
@@ -845,18 +903,18 @@ function renderCart(cartList, cartCountLabel, cartTotalLabel) {
   }
 
   if (checkoutButton) {
-    checkoutButton.classList.toggle("is-disabled", !cartItems.length);
-    checkoutButton.setAttribute("aria-disabled", String(!cartItems.length));
+    checkoutButton.classList.toggle("is-disabled", !items.length);
+    checkoutButton.setAttribute("aria-disabled", String(!items.length));
   }
 
   if (!cartList) return;
 
-  if (!cartItems.length) {
+  if (!items.length) {
     cartList.innerHTML = "<p>Your selected products will appear here.</p>";
     return;
   }
 
-  cartList.innerHTML = cartItems
+  cartList.innerHTML = items
     .map(
       (item) => {
         const quantity = Number(item.quantity || 0);
@@ -958,12 +1016,13 @@ function reconcileBuildWithInventory() {
     }
 
     const nextPriceLabel = itemPriceLabel(inventoryItem);
-    const nextUnitPrice = itemUnitPrice(inventoryItem);
-    if (build.cart[id].price_label !== nextPriceLabel || Number(build.cart[id].unit_price || 0) !== nextUnitPrice) {
+    const nextBaseUnitPrice = itemUnitPrice(inventoryItem);
+    if (build.cart[id].price_label !== nextPriceLabel || Number(build.cart[id].base_unit_price ?? build.cart[id].unit_price ?? 0) !== nextBaseUnitPrice) {
       build.cart[id] = {
         ...build.cart[id],
         price_label: nextPriceLabel,
-        unit_price: nextUnitPrice,
+        base_unit_price: nextBaseUnitPrice,
+        unit_price: adjustedUnitPrice(nextBaseUnitPrice),
       };
       changed = true;
     }
@@ -1008,6 +1067,28 @@ async function loadPublicInventory() {
   }
 
   reconcileBuildWithInventory();
+  if (activeCategory) renderInventoryCategory(activeCategory);
+  renderReview();
+}
+
+async function loadPublicPricingRules() {
+  const { workspaceId, isConfigured, client } = await getPublicSupabaseClient();
+  if (!isConfigured || !client) return;
+
+  const { data, error } = await client
+    .from("cater_pricing_rules")
+    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent,holiday_dates")
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (!error && data) {
+    pricingRules = {
+      ...pricingRules,
+      ...data,
+      holiday_dates: normalizeHolidayDates(data.holiday_dates),
+    };
+  }
+
   if (activeCategory) renderInventoryCategory(activeCategory);
   renderReview();
 }
@@ -1121,12 +1202,15 @@ document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) 
     build.eventDate = `June ${button.textContent.trim()}, 2026`;
     updateHeroSelectedDate(button.textContent.trim());
     saveBuild();
+    clearPendingPaymentOrder();
+    renderCart(document.getElementById("inventory-cart-list"), document.getElementById("cart-count-label"), document.getElementById("cart-total-label"));
+    renderReview();
     window.setTimeout(() => showStep("event-type"), 260);
   });
 });
 
 ensureBuildDefaults();
 updateHeroSelectedDate(document.querySelector(".calendar-grid button.is-selected")?.textContent.trim() || "18");
-loadPublicInventory();
+Promise.all([loadPublicInventory(), loadPublicPricingRules()]);
 const initialRoute = parseHashRoute();
 showStep(initialRoute.stepId, initialRoute.category);
