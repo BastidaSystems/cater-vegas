@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin.css?v=admin-account-pill-20260707" />
+    <link rel="stylesheet" href="admin.css?v=users-delete-inventory-20260707" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
@@ -35,6 +35,16 @@
               </svg>
             </span>
             Inventory
+          </button>
+          <button class="sidebar-link" type="button" data-scroll-target="#usersPanel" data-admin-view="users">
+            <span class="sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M16 18.5c0-2-1.8-3.5-4-3.5s-4 1.5-4 3.5" />
+                <circle cx="12" cy="9" r="3" />
+                <path d="M17.5 8.5h3M19 7v3" />
+              </svg>
+            </span>
+            Usuarios
           </button>
         </nav>
 
@@ -161,11 +171,89 @@
               <aside class="inventory-detail-panel" id="inventoryDetailPanel" aria-live="polite"></aside>
             </div>
           </section>
+
+          <section class="panel simple-panel users-panel" id="usersPanel" aria-label="Usuarios y empresas colaboradoras">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Colaboradores legales</p>
+                <h2>Usuarios</h2>
+              </div>
+              <button class="secondary-button" id="refreshUsersButton" type="button">Actualizar</button>
+            </div>
+
+            <form class="users-form" id="userCompanyForm">
+              <input id="userCompanyId" type="hidden" />
+              <label>
+                <span>Nombre del colaborador</span>
+                <input id="userFullName" type="text" placeholder="David Ramirez" required />
+              </label>
+              <label>
+                <span>Empresa</span>
+                <input id="userCompanyName" type="text" placeholder="Vegas Party Rentals LLC" required />
+              </label>
+              <label>
+                <span>Email</span>
+                <input id="userEmail" type="email" placeholder="empresa@email.com" />
+              </label>
+              <label>
+                <span>Telefono</span>
+                <input id="userPhone" type="tel" placeholder="(702) 555-0123" />
+              </label>
+              <label>
+                <span>Tipo de servicio</span>
+                <select id="userServiceType">
+                  <option value="rental">Renta / Inventario</option>
+                  <option value="food">Food / Catering</option>
+                  <option value="beverage">Beverages / Bar</option>
+                  <option value="staffing">Staffing</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="venue">Venue / Hospedaje</option>
+                  <option value="other">Otro</option>
+                </select>
+              </label>
+              <label>
+                <span>Rol</span>
+                <select id="userRole">
+                  <option value="staff">Staff</option>
+                  <option value="organizer">Organizer</option>
+                  <option value="admin">Admin</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </label>
+              <label>
+                <span>Tax ID / Licencia</span>
+                <input id="userTaxId" type="text" placeholder="EIN, licencia o permiso" />
+              </label>
+              <label>
+                <span>Estatus legal</span>
+                <select id="userLegalStatus">
+                  <option value="pending">Pendiente de revisar</option>
+                  <option value="verified">Verificado</option>
+                  <option value="needs_documents">Faltan documentos</option>
+                </select>
+              </label>
+              <label class="full-field">
+                <span>Direccion de empresa</span>
+                <input id="userBusinessAddress" type="text" placeholder="Direccion fiscal o comercial" />
+              </label>
+              <label class="full-field">
+                <span>Notas / condiciones</span>
+                <textarea id="userCompanyNotes" rows="4" placeholder="Contrato, seguro, permisos, condiciones de renta o venta."></textarea>
+              </label>
+              <div class="form-actions full-field">
+                <button class="primary-button" type="submit">Guardar usuario</button>
+                <button class="secondary-button" id="resetUserButton" type="button">Limpiar</button>
+                <p class="admin-status" id="usersStatus" aria-live="polite"></p>
+              </div>
+            </form>
+
+            <div class="users-list" id="usersList" aria-live="polite"></div>
+          </section>
         </section>
       </main>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=admin-english-connection-20260707"></script>
+    <script type="module" src="admin.js?v=users-delete-inventory-20260707"></script>
   </body>
 </html>
