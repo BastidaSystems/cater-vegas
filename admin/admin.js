@@ -21,10 +21,10 @@ const INVENTORY_STATUS_FILTERS = [
   { id: "visibility:private", label: "Private", icon: "Pri" },
 ];
 const INVENTORY_INDUSTRY_FILTERS = [
-  { id: "industry:setup", label: "Set up", icon: "SET", categories: ["tables", "chairs", "linen", "decor", "tents"] },
-  { id: "industry:ab", label: "A&B", icon: "A&B", categories: ["food", "beverages"] },
-  { id: "industry:entertainment", label: "Entertainment", icon: "ENT", categories: ["entertainment"] },
-  { id: "industry:lodging", label: "Lodging", icon: "STAY", categories: ["lodging"] },
+  { id: "industry:setup", label: "Set up", icon: "setup", categories: ["tables", "chairs", "linen", "decor", "tents"] },
+  { id: "industry:ab", label: "A&B", icon: "ab", categories: ["food", "beverages"] },
+  { id: "industry:entertainment", label: "Entertainment", icon: "entertainment", categories: ["entertainment"] },
+  { id: "industry:lodging", label: "Lodging", icon: "lodging", categories: ["lodging"] },
 ];
 const INVENTORY_CATEGORY_LABELS = {
   tables: "Tables",
@@ -466,7 +466,7 @@ function renderInventoryCategories() {
     .map((filter) => {
       return `
         <button class="inventory-category-chip ${activeInventoryCategory === filter.id ? "is-active" : ""}" type="button" data-inventory-category="${escapeHtml(filter.id)}">
-          <span class="inventory-category-icon" aria-hidden="true"></span>
+          <span class="inventory-category-icon" data-icon="${escapeHtml(filter.icon)}" aria-hidden="true"></span>
           <strong>${escapeHtml(filter.label)}</strong>
           <small>${Number(filter.count || 0)}</small>
         </button>
