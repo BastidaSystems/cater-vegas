@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Create a Cater Vegas collaborator account." />
+    <meta name="description" content="Create a Cater Vegas owner account." />
     <title>Cater Vegas | Create Account</title>
     <link rel="stylesheet" href="styles.css?v=20260703-catering-fit-2" />
     <style>
@@ -646,7 +646,7 @@
       const email = document.querySelector("#accountEmail");
       const password = document.querySelector("#accountPassword");
       const status = document.querySelector("#accountStatus");
-      const accountType = "collaborator";
+      const accountType = "owner";
       const authConnectionMessage = "Could not connect to Supabase. Check the project URL or your connection.";
       let supabase = null;
 
@@ -690,13 +690,13 @@
       }
 
       async function createWorkspaceAccess(user) {
-        await upsertProfile(user.id, DEFAULT_WORKSPACE_ID, "collaborator_pending");
+        await upsertProfile(user.id, DEFAULT_WORKSPACE_ID, "owner");
         const { error } = await supabase.from("beoflow_workspace_members").upsert(
           {
             workspace_id: DEFAULT_WORKSPACE_ID,
             user_id: user.id,
-            role: "collaborator",
-            status: "pending",
+            role: "owner",
+            status: "active",
           },
           { onConflict: "workspace_id,user_id" }
         );
@@ -723,7 +723,7 @@
             options: {
               data: {
                 full_name: fullName.value.trim(),
-                cater_role: "collaborator_pending",
+                cater_role: "owner",
                 workspace_id: DEFAULT_WORKSPACE_ID,
                 account_type: accountType,
               },

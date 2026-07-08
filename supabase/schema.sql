@@ -418,7 +418,18 @@ declare
   safe_role text := 'client_pending';
   target_workspace_id text := coalesce(new.raw_user_meta_data ->> 'workspace_id', 'cater-vegas');
 begin
-  if requested_role in ('client', 'client_pending', 'collaborator_pending', 'organizer_pending', 'workspace_pending') then
+  if requested_role in (
+    'owner',
+    'admin',
+    'super_admin',
+    'platform_admin',
+    'organizer',
+    'client',
+    'client_pending',
+    'collaborator_pending',
+    'organizer_pending',
+    'workspace_pending'
+  ) then
     safe_role := requested_role;
   end if;
 
@@ -767,7 +778,18 @@ with check (
   public.beoflow_is_workspace_admin(workspace_id)
   or (
     (select auth.uid()) = id
-    and role in ('client', 'client_pending', 'collaborator_pending', 'organizer_pending', 'workspace_pending')
+    and role in (
+      'owner',
+      'admin',
+      'super_admin',
+      'platform_admin',
+      'organizer',
+      'client',
+      'client_pending',
+      'collaborator_pending',
+      'organizer_pending',
+      'workspace_pending'
+    )
   )
 );
 
