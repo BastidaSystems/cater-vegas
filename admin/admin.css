@@ -7130,3 +7130,8 @@ body {
 .admin-layout-simple .admin-main {
   gap: 1.35rem;
 }
+
+/* Hide the dashboard section title while preserving the calendar controls. */
+.dashboard-panel > .panel-heading h2 {
+  display: none !important;
+}
