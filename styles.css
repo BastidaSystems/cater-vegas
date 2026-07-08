@@ -465,91 +465,6 @@ svg {
   box-shadow: 0 18px 38px rgba(17, 22, 20, 0.2);
 }
 
-.hero-feedback-card {
-  display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-  gap: clamp(18px, 3vw, 42px);
-  align-items: center;
-  width: min(100%, 1080px);
-  min-height: 86px;
-  padding: 16px clamp(24px, 3.6vw, 44px);
-  border: 1px solid rgba(17, 22, 20, 0.06);
-  border-radius: 18px;
-  background: #ffffff;
-  box-shadow: 0 18px 56px rgba(17, 22, 20, 0.055);
-}
-
-.feedback-rating {
-  display: grid;
-  gap: 3px;
-}
-
-.feedback-rating span {
-  color: #b89154;
-  font-size: 0.9rem;
-  letter-spacing: 0.06em;
-}
-
-.feedback-rating strong {
-  color: #070908;
-  font-family: var(--serif);
-  font-size: 1.35rem;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.feedback-rating small {
-  color: #646967;
-  font-size: 0.78rem;
-}
-
-.feedback-rotator {
-  position: relative;
-  min-height: 50px;
-}
-
-.feedback-quote {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 150px;
-  gap: 20px;
-  align-items: center;
-  margin: 0;
-  opacity: 0;
-  animation: feedbackCycle 15s infinite;
-}
-
-.feedback-quote.is-two {
-  animation-delay: 5s;
-}
-
-.feedback-quote.is-three {
-  animation-delay: 10s;
-}
-
-.feedback-quote blockquote {
-  margin: 0;
-  color: #080a09;
-  font-family: var(--serif);
-  font-size: clamp(0.92rem, 1.12vw, 1.08rem);
-  font-weight: 600;
-  line-height: 1.35;
-}
-
-.feedback-quote figcaption {
-  display: grid;
-  gap: 3px;
-  color: #606563;
-  font-size: 0.74rem;
-}
-
-.feedback-quote figcaption strong {
-  color: #0a0d0c;
-  font-size: 0.88rem;
-  font-weight: 600;
-}
-
 .hero-footer-line {
   margin: -6px 0 0;
   color: #6c716f;
@@ -570,18 +485,6 @@ svg {
   100% {
     box-shadow: 0 14px 36px rgba(184, 145, 84, 0.34);
     transform: scale(1);
-  }
-}
-
-@keyframes feedbackCycle {
-  0%, 30% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  36%, 100% {
-    opacity: 0;
-    transform: translateY(4px);
   }
 }
 
@@ -1893,11 +1796,6 @@ svg {
     grid-template-columns: 1fr;
   }
 
-  .hero-feedback-card {
-    width: min(100%, 900px);
-    grid-template-columns: 210px minmax(0, 1fr);
-  }
-
   .industry-panel {
     min-height: 410px;
   }
@@ -2123,22 +2021,6 @@ svg {
   .hero-continue-button {
     width: 100%;
     min-width: 0;
-  }
-
-  .hero-feedback-card {
-    grid-template-columns: 1fr;
-    gap: 18px;
-    min-height: 190px;
-    padding: 22px;
-  }
-
-  .feedback-rotator {
-    min-height: 116px;
-  }
-
-  .feedback-quote {
-    grid-template-columns: 1fr;
-    gap: 14px;
   }
 
   .start-options {
