@@ -7304,11 +7304,6 @@ body {
   gap: 1.35rem;
 }
 
-/* Hide the dashboard section title while preserving the calendar controls. */
-.dashboard-panel > .panel-heading h2 {
-  display: none !important;
-}
-
 /* Unified account/profile UI. Visual-only; keeps existing auth hooks intact. */
 .admin-layout-simple .admin-header {
   display: flex !important;
