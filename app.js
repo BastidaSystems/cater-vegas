@@ -130,6 +130,7 @@ let publicInventory = [];
 let activeCategory = "";
 let build = loadBuild();
 let supabaseClientPromise = null;
+let inventoryLoadError = "";
 
 async function getPublicSupabaseClient() {
   if (!supabaseClientPromise) {
@@ -330,7 +331,29 @@ function updateBreadcrumb(container, category = activeCategory) {
     .join("");
 }
 
-function showStep(stepId) {
+function parseHashRoute(hash = window.location.hash) {
+  const rawHash = String(hash || "").replace(/^#/, "");
+  const [stepPart, queryPart = ""] = rawHash.split("?");
+  const params = new URLSearchParams(queryPart);
+  const category = normalizeInventoryCategory(params.get("category"));
+
+  return {
+    stepId: stepPart || "calendar",
+    category,
+  };
+}
+
+function routeHashForStep(stepId, category = activeCategory) {
+  if (stepId === "inventory" && category) {
+    return `#inventory?category=${encodeURIComponent(category)}`;
+  }
+
+  return `#${stepId}`;
+}
+
+function showStep(stepId, category = "") {
+  const routeCategory = normalizeInventoryCategory(category);
+  if (routeCategory) activeCategory = routeCategory;
   const activeStep = stepIds.includes(stepId) ? stepId : "calendar";
 
   if (activeStep === "inventory" && !activeCategory) {
@@ -353,8 +376,9 @@ function showStep(stepId) {
   if (activeStep === "inventory") renderInventoryCategory(activeCategory);
   if (activeStep === "review") renderReview();
 
-  if (window.location.hash !== `#${activeStep}`) {
-    window.history.replaceState(null, "", `#${activeStep}`);
+  const nextHash = routeHashForStep(activeStep);
+  if (window.location.hash !== nextHash) {
+    window.history.replaceState(null, "", nextHash);
   }
 
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -393,7 +417,7 @@ function renderInventoryCategory(category) {
   if (!inventoryGrid) return;
 
   if (!items.length) {
-    inventoryGrid.innerHTML = `<div class="empty-state inventory-empty">${escapeHtml(copy.empty)}</div>`;
+    inventoryGrid.innerHTML = `<div class="empty-state inventory-empty">${escapeHtml(inventoryLoadError || copy.empty)}</div>`;
   } else {
     inventoryGrid.innerHTML = items
       .map((item) => {
@@ -641,7 +665,9 @@ async function loadPublicInventory() {
   const { workspaceId, isConfigured, client } = await getPublicSupabaseClient();
 
   if (!isConfigured || !client) {
+    inventoryLoadError = "";
     publicInventory = localItems.filter((item) => flowCategoryIds.includes(item.category));
+    reconcileBuildWithInventory();
     if (activeCategory) renderInventoryCategory(activeCategory);
     renderReview();
     return;
@@ -661,8 +687,10 @@ async function loadPublicInventory() {
     if (error) throw error;
 
     const remoteItems = (data || []).map(normalizeProviderRow).filter(Boolean);
+    inventoryLoadError = "";
     publicInventory = remoteItems.filter((item) => flowCategoryIds.includes(item.category));
   } catch {
+    inventoryLoadError = "Inventory could not be loaded from Supabase. Please refresh.";
     publicInventory = [];
   }
 
@@ -717,14 +745,19 @@ document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") setCartPopover(false);
 });
 
+window.addEventListener("hashchange", () => {
+  const route = parseHashRoute();
+  showStep(route.stepId, route.category);
+});
+
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
   link.addEventListener("click", (event) => {
     const href = link.getAttribute("href");
-    const targetId = href.slice(1);
+    const { stepId: targetId, category } = parseHashRoute(href);
 
     if (stepIds.includes(targetId)) {
       event.preventDefault();
-      showStep(targetId);
+      showStep(targetId, category);
       return;
     }
 
@@ -776,4 +809,5 @@ document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) 
 
 updateHeroSelectedDate(document.querySelector(".calendar-grid button.is-selected")?.textContent.trim() || "18");
 loadPublicInventory();
-showStep(window.location.hash.slice(1));
+const initialRoute = parseHashRoute();
+showStep(initialRoute.stepId, initialRoute.category);
