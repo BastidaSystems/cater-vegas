@@ -14,6 +14,12 @@ const APPROVER_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 const USER_NOTE_PREFIX = "CATER_USER_COMPANY_JSON:";
 const INVENTORY_CATEGORY_IDS = ["tables", "chairs", "linen", "decor", "tents", "food", "beverages", "entertainment", "lodging"];
+const INVENTORY_STATUS_FILTERS = [
+  { id: "approval:pending", label: "Pending", icon: "Pen" },
+  { id: "approval:approved", label: "Approved", icon: "Ok" },
+  { id: "visibility:public", label: "Public", icon: "Pub" },
+  { id: "visibility:private", label: "Private", icon: "Pri" },
+];
 const INVENTORY_CATEGORY_LABELS = {
   tables: "Tables",
   chairs: "Chairs",
@@ -87,6 +93,8 @@ const inventoryPrice = document.querySelector("#inventoryPrice");
 const inventoryImageFile = document.querySelector("#inventoryImageFile");
 const inventoryDescription = document.querySelector("#inventoryDescription");
 const inventoryStatus = document.querySelector("#inventoryStatus");
+const addInventoryButton = document.querySelector("#addInventoryButton");
+const inventoryFormTitle = document.querySelector("#inventoryFormTitle");
 const inventoryCategoryBar = document.querySelector("#inventoryCategoryBar");
 const inventoryList = document.querySelector("#inventoryList");
 const inventoryDetailPanel = document.querySelector("#inventoryDetailPanel");
@@ -373,6 +381,44 @@ function normalizeInventoryItem(item) {
   };
 }
 
+function inventoryStatusLabel(status) {
+  return String(status || "active")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function inventoryVisibilityLabel(item) {
+  return item?.public_visible ? "Public" : "Private";
+}
+
+function inventoryVisibilityCopy(item) {
+  return item?.public_visible && String(item?.approval_status || "").toLowerCase() === "approved"
+    ? "Visible on public site"
+    : "Not public yet";
+}
+
+function inventoryFilterLabel(filterId) {
+  const statusFilter = INVENTORY_STATUS_FILTERS.find((filter) => filter.id === filterId);
+  if (statusFilter) return statusFilter.label;
+  return filterId === "all" ? "All" : inventoryCategoryLabel(filterId);
+}
+
+function inventoryItemMatchesFilter(item, filterId) {
+  if (filterId === "all") return true;
+  if (filterId === "approval:pending") return String(item.approval_status || "pending").toLowerCase() === "pending";
+  if (filterId === "approval:approved") return String(item.approval_status || "").toLowerCase() === "approved";
+  if (filterId === "visibility:public") return Boolean(item.public_visible);
+  if (filterId === "visibility:private") return !item.public_visible;
+  return normalizeInventoryCategory(item.category) === filterId;
+}
+
+function inventoryChipClass(value) {
+  const normalized = String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  return normalized ? `is-${normalized}` : "";
+}
+
 function renderInventoryCategories() {
   if (!inventoryCategoryBar) return;
 
@@ -381,21 +427,36 @@ function renderInventoryCategories() {
       const category = normalizeInventoryCategory(item.category) || "tables";
       acc.all += 1;
       acc[category] = (acc[category] || 0) + 1;
+      const approval = String(item.approval_status || "pending").toLowerCase();
+      acc[`approval:${approval}`] = (acc[`approval:${approval}`] || 0) + 1;
+      acc[item.public_visible ? "visibility:public" : "visibility:private"] =
+        (acc[item.public_visible ? "visibility:public" : "visibility:private"] || 0) + 1;
       return acc;
     },
     { all: 0 }
   );
 
-  const categories = ["all", ...INVENTORY_CATEGORY_IDS.filter((category) => counts[category])];
-  inventoryCategoryBar.innerHTML = categories
-    .map((category) => {
-      const label = category === "all" ? "All" : inventoryCategoryLabel(category);
-      const icon = INVENTORY_CATEGORY_ICONS[category] || category.slice(0, 3);
+  const categoryFilters = ["all", ...INVENTORY_CATEGORY_IDS];
+  const filters = [
+    ...categoryFilters.map((id) => ({
+      id,
+      label: inventoryFilterLabel(id),
+      icon: INVENTORY_CATEGORY_ICONS[id] || id.slice(0, 3),
+    })),
+    ...INVENTORY_STATUS_FILTERS,
+  ];
+
+  if (!filters.some((filter) => filter.id === activeInventoryCategory)) {
+    activeInventoryCategory = "all";
+  }
+
+  inventoryCategoryBar.innerHTML = filters
+    .map((filter) => {
       return `
-        <button class="inventory-category-chip ${activeInventoryCategory === category ? "is-active" : ""}" type="button" data-inventory-category="${escapeHtml(category)}">
-          <span aria-hidden="true">${escapeHtml(icon)}</span>
-          <strong>${escapeHtml(label)}</strong>
-          <small>${Number(counts[category] || 0)}</small>
+        <button class="inventory-category-chip ${activeInventoryCategory === filter.id ? "is-active" : ""}" type="button" data-inventory-category="${escapeHtml(filter.id)}">
+          <span aria-hidden="true">${escapeHtml(filter.icon)}</span>
+          <strong>${escapeHtml(filter.label)}</strong>
+          <small>${Number(counts[filter.id] || 0)}</small>
         </button>
       `;
     })
@@ -838,49 +899,69 @@ function renderInventory() {
     return;
   }
 
-  const visibleItems =
-    activeInventoryCategory === "all"
-      ? inventoryItems
-      : inventoryItems.filter((item) => normalizeInventoryCategory(item.category) === activeInventoryCategory);
+  const visibleItems = inventoryItems.filter((item) => inventoryItemMatchesFilter(item, activeInventoryCategory));
 
   if (!visibleItems.length) {
-    inventoryList.innerHTML = `<div class="empty-state">No items in ${escapeHtml(inventoryCategoryLabel(activeInventoryCategory))}.</div>`;
+    inventoryList.innerHTML = `<div class="empty-state">No items match this filter.</div>`;
     renderInventoryDetail(null);
     return;
   }
 
-  if (!visibleItems.some((item) => String(item.id) === String(selectedInventoryId))) {
-    selectedInventoryId = visibleItems[0]?.id || "";
-  }
-
   inventoryList.innerHTML = visibleItems
-    .map(
-      (item) => `
-        <article class="inventory-icon-card ${String(item.id) === String(selectedInventoryId) ? "is-selected" : ""}">
-          <div class="inventory-card-actions">
-            <button type="button" data-edit-inventory="${escapeHtml(item.id)}">Edit</button>
-            <button type="button" data-delete-inventory="${escapeHtml(item.id)}">Delete</button>
+    .map((item) => {
+      const approval = String(item.approval_status || "pending").toLowerCase();
+      const visibility = item.public_visible ? "public" : "private";
+      const status = String(item.status || "active").toLowerCase();
+      const reviewActions = canReviewInventory()
+        ? `
+            ${approval !== "approved" ? `<button class="secondary-button" type="button" data-approve-inventory="${escapeHtml(item.id)}">Approve</button>` : ""}
+            ${approval !== "rejected" ? `<button class="tiny-button" type="button" data-reject-inventory="${escapeHtml(item.id)}">Reject</button>` : ""}
+            ${
+              item.public_visible
+                ? `<button class="secondary-button" type="button" data-unpublish-inventory="${escapeHtml(item.id)}">Unpublish</button>`
+                : `<button class="secondary-button" type="button" data-publish-inventory="${escapeHtml(item.id)}">Publish</button>`
+            }
+          `
+        : "";
+
+      return `
+        <article class="inventory-item-card">
+          <div class="inventory-card-media">
+            ${
+              item.image_url
+                ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">`
+                : `<span>${escapeHtml(inventoryIconForCategory(item.category))}</span>`
+            }
           </div>
-          <button class="inventory-card-select" type="button" data-select-inventory="${escapeHtml(item.id)}">
-            <span class="inventory-icon-photo">
-              ${
-                item.image_url
-                  ? `<img src="${escapeHtml(item.image_url)}" alt="${escapeHtml(item.name)}">`
-                  : `<b>${escapeHtml(inventoryIconForCategory(item.category))}</b>`
-              }
-            </span>
-            <span class="inventory-icon-meta">
-              <small>${escapeHtml(inventoryCategoryLabel(item.category))}</small>
-              <strong>${escapeHtml(item.name)}</strong>
-              <em>${Number(item.quantity_available ?? 0)} available · ${escapeHtml(approvalLabel(item.approval_status))}</em>
-            </span>
-          </button>
+          <div class="inventory-card-main">
+            <div class="inventory-card-topline">
+              <span>${escapeHtml(inventoryCategoryLabel(item.category))}</span>
+              <strong>${Number(item.quantity_available ?? 0)} available</strong>
+            </div>
+            <h3>${escapeHtml(item.name || "Untitled item")}</h3>
+            <p>${escapeHtml(item.description || "No buyer-facing description yet.")}</p>
+            <div class="inventory-card-price">${escapeHtml(item.price_label || "No base price")}</div>
+            <div class="inventory-status-chips" aria-label="Inventory status">
+              <span class="inventory-state-chip ${inventoryChipClass(approval)}">${escapeHtml(approvalLabel(approval))}</span>
+              <span class="inventory-state-chip ${inventoryChipClass(visibility)}">${escapeHtml(inventoryVisibilityLabel(item))}</span>
+              <span class="inventory-state-chip ${inventoryChipClass(status)}">${escapeHtml(inventoryStatusLabel(status))}</span>
+            </div>
+            <div class="inventory-public-note ${item.public_visible && approval === "approved" ? "is-visible" : ""}">
+              ${escapeHtml(inventoryVisibilityCopy(item))}
+            </div>
+            <div class="inventory-card-creator">Created by ${escapeHtml(creatorLabel(item))}</div>
+          </div>
+          <div class="inventory-card-actions">
+            ${reviewActions}
+            <button class="secondary-button" type="button" data-edit-inventory="${escapeHtml(item.id)}">Edit</button>
+            <button class="tiny-button" type="button" data-delete-inventory="${escapeHtml(item.id)}">Delete</button>
+          </div>
         </article>
-      `
-    )
+      `;
+    })
     .join("");
 
-  renderInventoryDetail(visibleItems.find((item) => String(item.id) === String(selectedInventoryId)) || visibleItems[0]);
+  renderInventoryDetail(null);
 }
 
 function renderUsers() {
@@ -1235,7 +1316,27 @@ async function loadUserData() {
 function resetInventoryForm() {
   inventoryForm?.reset();
   if (inventoryItemId) inventoryItemId.value = "";
+  if (inventoryImageFile) inventoryImageFile.value = "";
   setInventoryStatus("");
+  setInventoryFormOpen(false, "new");
+}
+
+function setInventoryFormOpen(isOpen, mode = "new") {
+  inventoryForm?.classList.toggle("is-open", isOpen);
+  inventoryForm?.setAttribute("aria-hidden", String(!isOpen));
+  if (inventoryForm) inventoryForm.dataset.mode = mode;
+  addInventoryButton?.classList.toggle("is-active", isOpen);
+  addInventoryButton?.setAttribute("aria-expanded", String(isOpen));
+  if (addInventoryButton) addInventoryButton.textContent = isOpen ? "Close Form" : "Add Item";
+  if (inventoryFormTitle) inventoryFormTitle.textContent = mode === "edit" ? "Edit Item" : "Add Item";
+}
+
+function openNewInventoryForm() {
+  inventoryForm?.reset();
+  if (inventoryItemId) inventoryItemId.value = "";
+  if (inventoryImageFile) inventoryImageFile.value = "";
+  setInventoryStatus("");
+  setInventoryFormOpen(true, "new");
 }
 
 function resetUserForm() {
@@ -1268,7 +1369,9 @@ function editInventoryItem(id) {
   inventoryCategory.value = normalizeInventoryCategory(item.category) || "tables";
   inventoryQuantity.value = Number(item.quantity_available ?? 0);
   inventoryPrice.value = item.price_label || "";
+  if (inventoryImageFile) inventoryImageFile.value = "";
   inventoryDescription.value = item.description || "";
+  setInventoryFormOpen(true, "edit");
   scrollToAdminTarget("#inventoryPanel", "inventory");
   setInventoryStatus("Editing item. Save to update it.");
 }
@@ -1292,8 +1395,8 @@ async function deleteInventoryItem(id) {
     return;
   }
 
-  setInventoryStatus("Item deleted.");
   await loadInventory();
+  setInventoryStatus("Item deleted.");
 }
 
 function editCompanyUser(id) {
@@ -1524,9 +1627,9 @@ async function saveInventoryItem(event) {
     return;
   }
 
-  resetInventoryForm();
-  setInventoryStatus(id ? "Inventory updated." : "Inventory saved. Publish it when it should appear publicly.");
   await loadInventory();
+  resetInventoryForm();
+  setInventoryStatus(id ? "Inventory updated." : "Inventory saved.");
 }
 
 async function updateInventoryReview(id, patch, successMessage) {
@@ -1551,8 +1654,8 @@ async function updateInventoryReview(id, patch, successMessage) {
     return;
   }
 
-  setInventoryStatus(successMessage);
   await loadInventory();
+  setInventoryStatus(successMessage);
 }
 
 async function bootAdmin() {
@@ -1593,6 +1696,13 @@ async function bootAdmin() {
 }
 
 inventoryForm?.addEventListener("submit", saveInventoryItem);
+addInventoryButton?.addEventListener("click", () => {
+  if (inventoryForm?.classList.contains("is-open")) {
+    resetInventoryForm();
+    return;
+  }
+  openNewInventoryForm();
+});
 refreshInventoryButton?.addEventListener("click", loadInventory);
 resetInventoryButton?.addEventListener("click", resetInventoryForm);
 refreshRequestsButton?.addEventListener("click", loadEvents);
@@ -1608,12 +1718,38 @@ addUserButton?.addEventListener("click", () => {
 resetUserButton?.addEventListener("click", resetUserForm);
 
 inventoryList?.addEventListener("click", (event) => {
-  const actionTarget = event.target.closest("[data-edit-inventory], [data-delete-inventory]");
+  const actionTarget = event.target.closest(
+    "[data-edit-inventory], [data-delete-inventory], [data-approve-inventory], [data-reject-inventory], [data-publish-inventory], [data-unpublish-inventory]"
+  );
   if (actionTarget) {
     event.preventDefault();
     event.stopPropagation();
     if (actionTarget.dataset.editInventory) editInventoryItem(actionTarget.dataset.editInventory);
     if (actionTarget.dataset.deleteInventory) deleteInventoryItem(actionTarget.dataset.deleteInventory);
+    if (actionTarget.dataset.approveInventory) {
+      updateInventoryReview(
+        actionTarget.dataset.approveInventory,
+        { approval_status: "approved", approved_by: currentUser?.id || null, approved_at: new Date().toISOString() },
+        "Item approved."
+      );
+    }
+    if (actionTarget.dataset.rejectInventory) {
+      updateInventoryReview(
+        actionTarget.dataset.rejectInventory,
+        { approval_status: "rejected", public_visible: false, approved_by: null, approved_at: null },
+        "Item rejected and hidden from the public catalog."
+      );
+    }
+    if (actionTarget.dataset.publishInventory) {
+      updateInventoryReview(
+        actionTarget.dataset.publishInventory,
+        { approval_status: "approved", public_visible: true, status: "active", approved_by: currentUser?.id || null, approved_at: new Date().toISOString() },
+        "Item approved and published."
+      );
+    }
+    if (actionTarget.dataset.unpublishInventory) {
+      updateInventoryReview(actionTarget.dataset.unpublishInventory, { public_visible: false }, "Item unpublished.");
+    }
     return;
   }
 
