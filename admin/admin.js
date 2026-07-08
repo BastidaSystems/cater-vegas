@@ -10,6 +10,7 @@ import {
 
 const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
 const LOCAL_USERS_KEY = "caterVegasCompanyUsers";
+const LOCAL_PRICING_RULES_KEY = "caterVegasPricingRules";
 const APPROVER_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 const USER_NOTE_PREFIX = "CATER_USER_COMPANY_JSON:";
@@ -215,6 +216,30 @@ function normalizeHolidayDates(value) {
     .split(/[\s,]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function normalizePricingRules(value = {}) {
+  return {
+    weekday_markup_percent: Number(value.weekday_markup_percent || 0),
+    weekend_markup_percent: Number(value.weekend_markup_percent || 0),
+    holiday_markup_percent: Number(value.holiday_markup_percent || 0),
+    holiday_dates: normalizeHolidayDates(value.holiday_dates || pricingRules.holiday_dates),
+  };
+}
+
+function loadLocalPricingRules() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(LOCAL_PRICING_RULES_KEY) || "{}");
+    if (!Object.keys(saved).length) return null;
+    return normalizePricingRules(saved);
+  } catch {
+    window.localStorage.removeItem(LOCAL_PRICING_RULES_KEY);
+    return null;
+  }
+}
+
+function saveLocalPricingRules(rules) {
+  window.localStorage.setItem(LOCAL_PRICING_RULES_KEY, JSON.stringify(normalizePricingRules(rules)));
 }
 
 function setPricingRulesStatus(message) {
@@ -1360,6 +1385,14 @@ async function loadInventory() {
 }
 
 async function loadPricingRules() {
+  const localRules = loadLocalPricingRules();
+  if (localRules) {
+    pricingRules = {
+      ...pricingRules,
+      ...localRules,
+    };
+  }
+
   if (!supabase) {
     renderPricingRulesForm();
     return;
@@ -1374,9 +1407,11 @@ async function loadPricingRules() {
   if (!error && data) {
     pricingRules = {
       ...pricingRules,
-      ...data,
-      holiday_dates: normalizeHolidayDates(data.holiday_dates),
+      ...normalizePricingRules(data),
     };
+    saveLocalPricingRules(pricingRules);
+  } else if (error) {
+    setPricingRulesStatus(localRules ? "Pricing saved locally. Supabase table still needs to be deployed." : error.message);
   }
 
   renderPricingRulesForm();
@@ -1385,10 +1420,6 @@ async function loadPricingRules() {
 async function savePricingRules(event) {
   event.preventDefault();
   if (!canManagePricingRules()) return;
-  if (!supabase) {
-    setPricingRulesStatus("Supabase is required for pricing rules.");
-    return;
-  }
 
   const payload = {
     workspace_id: currentWorkspaceId,
@@ -1399,6 +1430,18 @@ async function savePricingRules(event) {
     updated_by: currentUser?.id || null,
     updated_at: new Date().toISOString(),
   };
+  const normalizedPayload = normalizePricingRules(payload);
+
+  if (!supabase) {
+    pricingRules = {
+      ...pricingRules,
+      ...normalizedPayload,
+    };
+    saveLocalPricingRules(pricingRules);
+    renderPricingRulesForm();
+    setPricingRulesStatus("Pricing saved in this browser. Connect Supabase to sync it for all buyers.");
+    return;
+  }
 
   setPricingRulesStatus("Saving pricing...");
   const { data, error } = await supabase
@@ -1408,15 +1451,21 @@ async function savePricingRules(event) {
     .single();
 
   if (error) {
-    setPricingRulesStatus(error.message);
+    pricingRules = {
+      ...pricingRules,
+      ...normalizedPayload,
+    };
+    saveLocalPricingRules(pricingRules);
+    renderPricingRulesForm();
+    setPricingRulesStatus("Pricing saved in this browser. Supabase table needs to be deployed for all buyers.");
     return;
   }
 
   pricingRules = {
     ...pricingRules,
-    ...data,
-    holiday_dates: normalizeHolidayDates(data.holiday_dates),
+    ...normalizePricingRules(data),
   };
+  saveLocalPricingRules(pricingRules);
   renderPricingRulesForm();
   setPricingRulesStatus("Pricing saved.");
 }

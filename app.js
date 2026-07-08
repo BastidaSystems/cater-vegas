@@ -2,6 +2,7 @@ const stepIds = ["calendar", "event-type", "setup", "inventory", "fnb", "enterta
 const setupCategoryIds = ["tables", "chairs", "linen", "decor", "tents"];
 const flowCategoryIds = ["tables", "chairs", "linen", "decor", "tents", "food", "beverages", "entertainment", "lodging"];
 const storageKey = "caterVegasBuild";
+const pricingRulesStorageKey = "caterVegasPricingRules";
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 const notesCategoryLabel = "Inventory category";
 
@@ -231,6 +232,39 @@ function normalizeHolidayDates(value) {
     .split(/[\s,]+/)
     .map((item) => item.trim())
     .filter(Boolean);
+}
+
+function normalizePricingRules(value = {}) {
+  return {
+    weekday_markup_percent: Number(value.weekday_markup_percent || 0),
+    weekend_markup_percent: Number(value.weekend_markup_percent || 0),
+    holiday_markup_percent: Number(value.holiday_markup_percent || 0),
+    holiday_dates: normalizeHolidayDates(value.holiday_dates || pricingRules.holiday_dates),
+  };
+}
+
+function loadLocalPricingRules() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(pricingRulesStorageKey) || "{}");
+    if (!Object.keys(saved).length) return null;
+    return normalizePricingRules(saved);
+  } catch {
+    window.localStorage.removeItem(pricingRulesStorageKey);
+    return null;
+  }
+}
+
+function saveLocalPricingRules(rules) {
+  window.localStorage.setItem(pricingRulesStorageKey, JSON.stringify(normalizePricingRules(rules)));
+}
+
+function applyPricingRules(nextRules) {
+  pricingRules = {
+    ...pricingRules,
+    ...normalizePricingRules(nextRules),
+  };
+  if (activeCategory) renderInventoryCategory(activeCategory);
+  renderReview();
 }
 
 function datePricingContext() {
@@ -1076,6 +1110,11 @@ async function loadPublicInventory() {
 }
 
 async function loadPublicPricingRules() {
+  const localRules = loadLocalPricingRules();
+  if (localRules) {
+    applyPricingRules(localRules);
+  }
+
   const { workspaceId, isConfigured, client } = await getPublicSupabaseClient();
   if (!isConfigured || !client) return;
 
@@ -1086,15 +1125,9 @@ async function loadPublicPricingRules() {
     .maybeSingle();
 
   if (!error && data) {
-    pricingRules = {
-      ...pricingRules,
-      ...data,
-      holiday_dates: normalizeHolidayDates(data.holiday_dates),
-    };
+    applyPricingRules(data);
+    saveLocalPricingRules(pricingRules);
   }
-
-  if (activeCategory) renderInventoryCategory(activeCategory);
-  renderReview();
 }
 
 document.querySelectorAll("[data-event-type]").forEach((link) => {
@@ -1154,6 +1187,15 @@ window.addEventListener("hashchange", () => {
 
 window.addEventListener("pageshow", () => {
   normalizePublicPriceLabels();
+});
+
+window.addEventListener("storage", (event) => {
+  if (event.key !== pricingRulesStorageKey || !event.newValue) return;
+  try {
+    applyPricingRules(JSON.parse(event.newValue));
+  } catch {
+    window.localStorage.removeItem(pricingRulesStorageKey);
+  }
 });
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
