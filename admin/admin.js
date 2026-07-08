@@ -107,6 +107,7 @@ const userCompanyNotes = document.querySelector("#userCompanyNotes");
 const usersStatus = document.querySelector("#usersStatus");
 const usersList = document.querySelector("#usersList");
 const workspaceRequestsList = document.querySelector("#workspaceRequestsList");
+const addUserButton = document.querySelector("#addUserButton");
 const refreshUsersButton = document.querySelector("#refreshUsersButton");
 const resetUserButton = document.querySelector("#resetUserButton");
 
@@ -937,6 +938,21 @@ function resetUserForm() {
   userCompanyForm?.reset();
   if (userCompanyId) userCompanyId.value = "";
   setUsersStatus("");
+  setUserFormOpen(false);
+}
+
+function setUserFormOpen(isOpen) {
+  userCompanyForm?.classList.toggle("is-open", isOpen);
+  userCompanyForm?.setAttribute("aria-hidden", String(!isOpen));
+  addUserButton?.classList.toggle("is-active", isOpen);
+  addUserButton?.setAttribute("aria-expanded", String(isOpen));
+}
+
+function openNewUserForm() {
+  userCompanyForm?.reset();
+  if (userCompanyId) userCompanyId.value = "";
+  setUsersStatus("");
+  setUserFormOpen(true);
 }
 
 function editInventoryItem(id) {
@@ -991,6 +1007,7 @@ function editCompanyUser(id) {
   userLegalStatus.value = user.legal_status || "pending";
   userBusinessAddress.value = user.business_address || "";
   userCompanyNotes.value = user.company_notes || "";
+  setUserFormOpen(true);
   scrollToAdminTarget("#usersPanel", "users");
   setUsersStatus("Editing user. Save to update it.");
 }
@@ -1276,6 +1293,13 @@ refreshInventoryButton?.addEventListener("click", loadInventory);
 resetInventoryButton?.addEventListener("click", resetInventoryForm);
 userCompanyForm?.addEventListener("submit", saveCompanyUser);
 refreshUsersButton?.addEventListener("click", loadUserData);
+addUserButton?.addEventListener("click", () => {
+  if (userCompanyForm?.classList.contains("is-open")) {
+    resetUserForm();
+    return;
+  }
+  openNewUserForm();
+});
 resetUserButton?.addEventListener("click", resetUserForm);
 
 inventoryList?.addEventListener("click", (event) => {
