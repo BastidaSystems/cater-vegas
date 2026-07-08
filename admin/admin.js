@@ -92,6 +92,9 @@ const inventoryList = document.querySelector("#inventoryList");
 const inventoryDetailPanel = document.querySelector("#inventoryDetailPanel");
 const refreshInventoryButton = document.querySelector("#refreshInventoryButton");
 const resetInventoryButton = document.querySelector("#resetInventoryButton");
+const eventRequestsList = document.querySelector("#eventRequestsList");
+const eventRequestDetailPanel = document.querySelector("#eventRequestDetailPanel");
+const refreshRequestsButton = document.querySelector("#refreshRequestsButton");
 const userCompanyForm = document.querySelector("#userCompanyForm");
 const userCompanyId = document.querySelector("#userCompanyId");
 const userFullName = document.querySelector("#userFullName");
@@ -139,6 +142,7 @@ let companyUsers = [];
 let workspaceMembers = [];
 let activeInventoryCategory = "all";
 let selectedInventoryId = "";
+let selectedRequestId = "";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -544,6 +548,150 @@ function renderDashboardSide(upcomingEvents) {
   `;
 }
 
+function requestPlan(event) {
+  return event?.plan && typeof event.plan === "object" ? event.plan : {};
+}
+
+function requestCustomer(event) {
+  const relatedCustomer = Array.isArray(event?.customer) ? event.customer[0] : event?.customer;
+  const contact = requestPlan(event).contact || {};
+  return {
+    full_name: relatedCustomer?.full_name || contact.full_name || "",
+    email: relatedCustomer?.email || contact.email || "",
+    phone: relatedCustomer?.phone || contact.phone || "",
+  };
+}
+
+function isPublicRequest(event) {
+  const plan = requestPlan(event);
+  return plan.source === "public_index" || String(event?.title || "").startsWith("Public Request - ");
+}
+
+function publicRequests() {
+  return allEvents
+    .filter(isPublicRequest)
+    .slice()
+    .sort((a, b) => new Date(b.created_at || b.updated_at || 0) - new Date(a.created_at || a.updated_at || 0));
+}
+
+function requestCartItems(event) {
+  const cart = requestPlan(event).cart;
+  return Array.isArray(cart) ? cart : [];
+}
+
+function requestCartSummary(event) {
+  const items = requestCartItems(event);
+  if (!items.length) return "No products listed";
+  return items
+    .map((item) => `${item.provider_name || "Item"} x${Number(item.quantity || 0)}`)
+    .join(", ");
+}
+
+function formatRequestDate(value) {
+  if (!value) return "No date";
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
+
+function renderEventRequestDetail(event) {
+  if (!eventRequestDetailPanel) return;
+
+  if (!event) {
+    eventRequestDetailPanel.innerHTML = `
+      <div class="request-detail-empty">
+        <span aria-hidden="true">RQ</span>
+        <strong>Select a request</strong>
+        <small>Customer details and requested products will appear here.</small>
+      </div>
+    `;
+    return;
+  }
+
+  const customer = requestCustomer(event);
+  const items = requestCartItems(event);
+  const createdLabel = event.created_at
+    ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(event.created_at))
+    : "No timestamp";
+
+  eventRequestDetailPanel.innerHTML = `
+    <div class="request-detail-content">
+      <p class="eyebrow">${escapeHtml(event.status || "draft")}</p>
+      <h3>${escapeHtml(customer.full_name || event.title || "Public request")}</h3>
+      <div class="request-detail-tags">
+        <span>${escapeHtml(formatRequestDate(event.event_date))}</span>
+        <span>${Number(event.guest_count || requestPlan(event).guest_count || 0)} guests</span>
+        <span>${escapeHtml(event.event_type || "Event")}</span>
+        <span>${escapeHtml(createdLabel)}</span>
+      </div>
+      <div class="request-contact-grid">
+        <span><small>Email</small><strong>${escapeHtml(customer.email || "Not provided")}</strong></span>
+        <span><small>Phone</small><strong>${escapeHtml(customer.phone || "Not provided")}</strong></span>
+      </div>
+      <div class="request-notes">
+        <small>Notes</small>
+        <p>${escapeHtml(event.notes || requestPlan(event).notes || "No notes.")}</p>
+      </div>
+      <div class="request-products">
+        <small>Requested products</small>
+        ${
+          items.length
+            ? items
+                .map(
+                  (item) => `
+                    <article>
+                      <strong>${escapeHtml(item.provider_name || "Inventory item")}</strong>
+                      <span>${escapeHtml(item.service_category || "inventory")} · Qty ${Number(item.quantity || 0)}</span>
+                    </article>
+                  `
+                )
+                .join("")
+            : '<p class="empty-state">No requested products were saved in the plan.</p>'
+        }
+      </div>
+    </div>
+  `;
+}
+
+function renderEventRequests() {
+  if (!eventRequestsList) return;
+
+  const requests = publicRequests();
+  if (!requests.length) {
+    selectedRequestId = "";
+    eventRequestsList.innerHTML = '<div class="empty-state">No public quote requests yet.</div>';
+    renderEventRequestDetail(null);
+    return;
+  }
+
+  if (!requests.some((request) => String(request.id) === String(selectedRequestId))) {
+    selectedRequestId = requests[0]?.id || "";
+  }
+
+  eventRequestsList.innerHTML = requests
+    .map((request) => {
+      const customer = requestCustomer(request);
+      const createdLabel = request.created_at
+        ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(request.created_at))
+        : "No timestamp";
+      return `
+        <article class="event-request-card ${String(request.id) === String(selectedRequestId) ? "is-selected" : ""}">
+          <button type="button" data-select-request="${escapeHtml(request.id)}">
+            <span class="event-request-status">${escapeHtml(request.status || "draft")}</span>
+            <strong>${escapeHtml(customer.full_name || request.title || "Public request")}</strong>
+            <small>${escapeHtml(customer.email || "No email")} · ${escapeHtml(customer.phone || "No phone")}</small>
+            <em>${escapeHtml(formatRequestDate(request.event_date))} · ${Number(request.guest_count || requestPlan(request).guest_count || 0)} guests</em>
+            <p>${escapeHtml(requestCartSummary(request))}</p>
+            <time>${escapeHtml(createdLabel)}</time>
+          </button>
+        </article>
+      `;
+    })
+    .join("");
+
+  renderEventRequestDetail(requests.find((request) => String(request.id) === String(selectedRequestId)) || requests[0]);
+}
+
 function renderCalendar() {
   if (!dashboardCalendar) return;
 
@@ -802,14 +950,15 @@ async function loadEvents() {
   if (!supabase) {
     allEvents = [];
     renderCalendar();
+    renderEventRequests();
     return;
   }
 
   const { data, error } = await supabase
     .from("cater_events")
-    .select("id,title,event_type,event_date,status,updated_at")
+    .select("id,title,event_type,event_date,status,guest_count,notes,plan,created_at,updated_at,customer:cater_customers(id,full_name,email,phone)")
     .eq("workspace_id", currentWorkspaceId)
-    .order("event_date", { ascending: true });
+    .order("created_at", { ascending: false });
 
   if (error) {
     setStatus(`Calendar: ${error.message}`);
@@ -819,6 +968,7 @@ async function loadEvents() {
   }
 
   renderCalendar();
+  renderEventRequests();
 }
 
 async function loadCreatorProfiles(userIds) {
@@ -1291,6 +1441,7 @@ async function bootAdmin() {
 inventoryForm?.addEventListener("submit", saveInventoryItem);
 refreshInventoryButton?.addEventListener("click", loadInventory);
 resetInventoryButton?.addEventListener("click", resetInventoryForm);
+refreshRequestsButton?.addEventListener("click", loadEvents);
 userCompanyForm?.addEventListener("submit", saveCompanyUser);
 refreshUsersButton?.addEventListener("click", loadUserData);
 addUserButton?.addEventListener("click", () => {
@@ -1350,6 +1501,13 @@ inventoryDetailPanel?.addEventListener("click", (event) => {
   if (target.dataset.unpublishInventory) {
     updateInventoryReview(target.dataset.unpublishInventory, { public_visible: false }, "Item unpublished.");
   }
+});
+
+eventRequestsList?.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-select-request]");
+  if (!target) return;
+  selectedRequestId = target.dataset.selectRequest || "";
+  renderEventRequests();
 });
 
 usersList?.addEventListener("click", (event) => {

@@ -33,6 +33,15 @@
             </span>
             Inventory
           </button>
+          <button class="sidebar-link" type="button" data-scroll-target="#requestsPanel" data-admin-view="requests">
+            <span class="sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M5 6.5h14v12H5z" />
+                <path d="M8 10h8M8 14h5" />
+              </svg>
+            </span>
+            Requests
+          </button>
           <button class="sidebar-link" type="button" data-scroll-target="#usersPanel" data-admin-view="users">
             <span class="sidebar-icon" aria-hidden="true">
               <svg viewBox="0 0 24 24">
@@ -141,6 +150,20 @@
             <div class="inventory-browser">
               <div class="inventory-list" id="inventoryList" aria-live="polite"></div>
               <aside class="inventory-detail-panel" id="inventoryDetailPanel" aria-live="polite"></aside>
+            </div>
+          </section>
+
+          <section class="panel simple-panel requests-panel" id="requestsPanel" aria-label="Public event requests">
+            <div class="panel-heading">
+              <div>
+                <h2>Requests</h2>
+              </div>
+              <button class="secondary-button" id="refreshRequestsButton" type="button">Refresh</button>
+            </div>
+
+            <div class="requests-browser">
+              <div class="request-list" id="eventRequestsList" aria-live="polite"></div>
+              <aside class="request-detail-panel" id="eventRequestDetailPanel" aria-live="polite"></aside>
             </div>
           </section>
 

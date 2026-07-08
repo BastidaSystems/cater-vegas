@@ -339,9 +339,42 @@
       </div>
 
       <div class="review-summary" id="review-summary" aria-live="polite"></div>
+      <form class="public-request-form" id="publicRequestForm">
+        <div class="request-form-heading">
+          <p class="eyebrow">Request Quote</p>
+          <h3>Send your event request.</h3>
+          <p>Cater Vegas will review availability, pricing, and details before confirming anything.</p>
+        </div>
+        <div class="request-form-grid">
+          <label>
+            <span>Full name</span>
+            <input id="requestFullName" name="full_name" type="text" autocomplete="name" placeholder="QA Guest" required />
+          </label>
+          <label>
+            <span>Email</span>
+            <input id="requestEmail" name="email" type="email" autocomplete="email" placeholder="name@email.com" required />
+          </label>
+          <label>
+            <span>Phone</span>
+            <input id="requestPhone" name="phone" type="tel" autocomplete="tel" placeholder="7025550101" />
+          </label>
+          <label>
+            <span>Guest count</span>
+            <input id="requestGuestCount" name="guest_count" type="number" min="1" inputmode="numeric" placeholder="50" required />
+          </label>
+          <label class="full-field">
+            <span>Notes / special requests</span>
+            <textarea id="requestNotes" name="notes" rows="4" placeholder="Testing Banquet table request"></textarea>
+          </label>
+        </div>
+        <p class="request-status" id="requestStatus" aria-live="polite"></p>
+        <div class="flow-actions request-form-actions">
+          <button class="contact-button request-submit-button" id="requestSubmitButton" type="submit">Request Quote</button>
+          <a class="contact-button secondary-request-link" href="mailto:info@catervegas.com">Email Cater Vegas</a>
+        </div>
+      </form>
       <div class="flow-actions">
         <a class="contact-button" href="#setup">Edit Set up</a>
-        <a class="contact-button" href="#contact">Contact</a>
       </div>
     </section>
 
