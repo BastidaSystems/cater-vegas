@@ -137,7 +137,6 @@ let pricingRules = {
   weekday_markup_percent: 0,
   weekend_markup_percent: 20,
   holiday_markup_percent: 40,
-  holiday_dates: ["01-01", "05-25", "07-04", "09-07", "11-26", "12-25"],
 };
 
 const publicRequestForm = document.getElementById("publicRequestForm");
@@ -260,6 +259,48 @@ function formatEventDate(date) {
   }).format(date);
 }
 
+function nthWeekdayOfMonth(year, monthIndex, weekday, occurrence) {
+  const date = new Date(year, monthIndex, 1);
+  const offset = (weekday - date.getDay() + 7) % 7;
+  return new Date(year, monthIndex, 1 + offset + (occurrence - 1) * 7);
+}
+
+function lastWeekdayOfMonth(year, monthIndex, weekday) {
+  const date = new Date(year, monthIndex + 1, 0);
+  const offset = (date.getDay() - weekday + 7) % 7;
+  return new Date(year, monthIndex, date.getDate() - offset);
+}
+
+function addObservedFixedHoliday(holidays, year, monthIndex, day) {
+  const actual = new Date(year, monthIndex, day);
+  holidays.add(dateIso(actual));
+  if (actual.getDay() === 0) holidays.add(dateIso(new Date(year, monthIndex, day + 1)));
+  if (actual.getDay() === 6) holidays.add(dateIso(new Date(year, monthIndex, day - 1)));
+}
+
+function usFederalHolidaySet(year) {
+  const holidays = new Set();
+
+  addObservedFixedHoliday(holidays, year, 0, 1);
+  holidays.add(dateIso(nthWeekdayOfMonth(year, 0, 1, 3)));
+  holidays.add(dateIso(nthWeekdayOfMonth(year, 1, 1, 3)));
+  holidays.add(dateIso(lastWeekdayOfMonth(year, 4, 1)));
+  addObservedFixedHoliday(holidays, year, 5, 19);
+  addObservedFixedHoliday(holidays, year, 6, 4);
+  holidays.add(dateIso(nthWeekdayOfMonth(year, 8, 1, 1)));
+  holidays.add(dateIso(nthWeekdayOfMonth(year, 9, 1, 2)));
+  addObservedFixedHoliday(holidays, year, 10, 11);
+  holidays.add(dateIso(nthWeekdayOfMonth(year, 10, 4, 4)));
+  addObservedFixedHoliday(holidays, year, 11, 25);
+
+  return holidays;
+}
+
+function isUsFederalHoliday(iso) {
+  const year = Number(iso.slice(0, 4));
+  return Number.isFinite(year) && usFederalHolidaySet(year).has(iso);
+}
+
 function defaultSelectedEventDate() {
   return formatEventDate(todayDate());
 }
@@ -282,20 +323,11 @@ function ensureBuildDefaults() {
   if (changed) saveBuild();
 }
 
-function normalizeHolidayDates(value) {
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
-  return String(value || "")
-    .split(/[\s,]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function normalizePricingRules(value = {}) {
   return {
     weekday_markup_percent: Number(value.weekday_markup_percent || 0),
     weekend_markup_percent: Number(value.weekend_markup_percent || 0),
     holiday_markup_percent: Number(value.holiday_markup_percent || 0),
-    holiday_dates: normalizeHolidayDates(value.holiday_dates || pricingRules.holiday_dates),
   };
 }
 
@@ -326,11 +358,9 @@ function applyPricingRules(nextRules) {
 function datePricingContext() {
   const iso = selectedEventDateIso();
   if (!iso) return { type: "weekday", markupPercent: Number(pricingRules.weekday_markup_percent || 0), iso: "" };
-  const [, month, day] = iso.split("-");
-  const holidayTokens = normalizeHolidayDates(pricingRules.holiday_dates);
-  const isHoliday = holidayTokens.includes(iso) || holidayTokens.includes(`${month}-${day}`);
   const date = new Date(`${iso}T00:00:00`);
   const dayOfWeek = date.getDay();
+  const isHoliday = isUsFederalHoliday(iso);
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
   const type = isHoliday ? "holiday" : isWeekend ? "weekend" : "weekday";
   const markupPercent = Number(
@@ -1151,7 +1181,7 @@ async function loadPublicPricingRules() {
 
   const { data, error } = await client
     .from("cater_pricing_rules")
-    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent,holiday_dates")
+    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent")
     .eq("workspace_id", workspaceId)
     .maybeSingle();
 

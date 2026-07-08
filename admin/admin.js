@@ -95,7 +95,6 @@ const pricingRulesForm = document.querySelector("#pricingRulesForm");
 const weekdayMarkupInput = document.querySelector("#weekdayMarkupInput");
 const weekendMarkupInput = document.querySelector("#weekendMarkupInput");
 const holidayMarkupInput = document.querySelector("#holidayMarkupInput");
-const holidayDatesInput = document.querySelector("#holidayDatesInput");
 const pricingRulesStatus = document.querySelector("#pricingRulesStatus");
 const calendarMonthLabel = document.querySelector("#calendarMonthLabel");
 const inventoryForm = document.querySelector("#inventoryForm");
@@ -173,7 +172,6 @@ let pricingRules = {
   weekday_markup_percent: 0,
   weekend_markup_percent: 20,
   holiday_markup_percent: 40,
-  holiday_dates: ["01-01", "05-25", "07-04", "09-07", "11-26", "12-25"],
 };
 
 function escapeHtml(value) {
@@ -210,20 +208,11 @@ function canManagePricingRules() {
   return ADMIN_ROLES.has(currentRole);
 }
 
-function normalizeHolidayDates(value) {
-  if (Array.isArray(value)) return value.map((item) => String(item).trim()).filter(Boolean);
-  return String(value || "")
-    .split(/[\s,]+/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
 function normalizePricingRules(value = {}) {
   return {
     weekday_markup_percent: Number(value.weekday_markup_percent || 0),
     weekend_markup_percent: Number(value.weekend_markup_percent || 0),
     holiday_markup_percent: Number(value.holiday_markup_percent || 0),
-    holiday_dates: normalizeHolidayDates(value.holiday_dates || pricingRules.holiday_dates),
   };
 }
 
@@ -254,7 +243,6 @@ function renderPricingRulesForm() {
   if (weekdayMarkupInput) weekdayMarkupInput.value = String(Number(pricingRules.weekday_markup_percent || 0));
   if (weekendMarkupInput) weekendMarkupInput.value = String(Number(pricingRules.weekend_markup_percent || 0));
   if (holidayMarkupInput) holidayMarkupInput.value = String(Number(pricingRules.holiday_markup_percent || 0));
-  if (holidayDatesInput) holidayDatesInput.value = normalizeHolidayDates(pricingRules.holiday_dates).join(", ");
 }
 
 function approvalLabel(status) {
@@ -1400,7 +1388,7 @@ async function loadPricingRules() {
 
   const { data, error } = await supabase
     .from("cater_pricing_rules")
-    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent,holiday_dates")
+    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent")
     .eq("workspace_id", currentWorkspaceId)
     .maybeSingle();
 
@@ -1426,7 +1414,6 @@ async function savePricingRules(event) {
     weekday_markup_percent: Number(weekdayMarkupInput?.value || 0),
     weekend_markup_percent: Number(weekendMarkupInput?.value || 0),
     holiday_markup_percent: Number(holidayMarkupInput?.value || 0),
-    holiday_dates: normalizeHolidayDates(holidayDatesInput?.value || ""),
     updated_by: currentUser?.id || null,
     updated_at: new Date().toISOString(),
   };
@@ -1447,7 +1434,7 @@ async function savePricingRules(event) {
   const { data, error } = await supabase
     .from("cater_pricing_rules")
     .upsert(payload, { onConflict: "workspace_id" })
-    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent,holiday_dates")
+    .select("weekday_markup_percent,weekend_markup_percent,holiday_markup_percent")
     .single();
 
   if (error) {
