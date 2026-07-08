@@ -131,6 +131,15 @@ let build = loadBuild();
 let supabaseClientPromise = null;
 let inventoryLoadError = "";
 
+const publicRequestForm = document.getElementById("publicRequestForm");
+const requestFullName = document.getElementById("requestFullName");
+const requestEmail = document.getElementById("requestEmail");
+const requestPhone = document.getElementById("requestPhone");
+const requestGuestCount = document.getElementById("requestGuestCount");
+const requestNotes = document.getElementById("requestNotes");
+const requestStatus = document.getElementById("requestStatus");
+const requestSubmitButton = document.getElementById("requestSubmitButton");
+
 async function getPublicSupabaseClient() {
   if (!supabaseClientPromise) {
     supabaseClientPromise = import("./lib/supabaseClient.js?v=shared-marketplace-workspace-20260707")
@@ -185,6 +194,197 @@ function loadBuild() {
 
 function saveBuild() {
   window.localStorage.setItem(storageKey, JSON.stringify(build));
+}
+
+function defaultSelectedEventDate() {
+  const selectedDay = document.querySelector(".calendar-grid button.is-selected")?.textContent.trim() || "18";
+  const month = document.querySelector(".month-name")?.textContent.trim() || "June";
+  const year = document.querySelector(".month-year")?.textContent.trim() || "2026";
+  return `${month} ${selectedDay}, ${year}`;
+}
+
+function ensureBuildDefaults() {
+  let changed = false;
+
+  if (!build.eventDate) {
+    build.eventDate = defaultSelectedEventDate();
+    changed = true;
+  }
+
+  if (!build.eventType) {
+    build.eventType = "Set up";
+    changed = true;
+  }
+
+  if (changed) saveBuild();
+}
+
+function cartItems() {
+  return Object.values(build.cart || {}).filter((item) => Number(item.quantity) > 0);
+}
+
+function providerIdValue(id) {
+  const numericId = Number(id);
+  return Number.isFinite(numericId) ? numericId : id;
+}
+
+function publicRequestStatus(message, type = "") {
+  if (!requestStatus) return;
+  requestStatus.textContent = message;
+  requestStatus.classList.toggle("is-error", type === "error");
+  requestStatus.classList.toggle("is-success", type === "success");
+}
+
+function selectedEventDateIso() {
+  const raw = String(build.eventDate || "").trim();
+  if (!raw) return "";
+  const match = /^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/.exec(raw);
+  const monthNames = {
+    january: "01",
+    february: "02",
+    march: "03",
+    april: "04",
+    may: "05",
+    june: "06",
+    july: "07",
+    august: "08",
+    september: "09",
+    october: "10",
+    november: "11",
+    december: "12",
+  };
+
+  if (match) {
+    const [, monthName, day, year] = match;
+    const month = monthNames[monthName.toLowerCase()];
+    if (month) return `${year}-${month}-${String(day).padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(`${raw} 00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().slice(0, 10);
+}
+
+function requestPlanPayload(formValues = {}) {
+  const items = cartItems();
+  const cart = items.map((item) => ({
+    provider_id: providerIdValue(item.id),
+    provider_name: item.title,
+    service_category: item.category,
+    quantity: Number(item.quantity || 0),
+    note: item.note || "",
+  }));
+
+  const selections = Object.fromEntries(
+    Object.entries(build.selections || {}).map(([category, selection]) => {
+      const matchingCartItem = items.find((item) => item.category === category && String(item.id) === String(selection?.id));
+      return [
+        category,
+        {
+          provider_id: providerIdValue(selection?.id || matchingCartItem?.id || ""),
+          provider_name: selection?.title || matchingCartItem?.title || "",
+          quantity: Number(matchingCartItem?.quantity || 0),
+          note: selection?.note || matchingCartItem?.note || "",
+        },
+      ];
+    })
+  );
+
+  return {
+    source: "public_index",
+    submitted_at: new Date().toISOString(),
+    selected_date: selectedEventDateIso(),
+    event_type: build.eventType || "Public Request",
+    contact: {
+      full_name: formValues.fullName || "",
+      email: formValues.email || "",
+      phone: formValues.phone || "",
+    },
+    guest_count: Number(formValues.guestCount || 0),
+    notes: formValues.notes || "",
+    cart,
+    selections,
+  };
+}
+
+function updateRequestFormState() {
+  const items = cartItems();
+  if (!requestSubmitButton) return;
+  const isSubmitted = publicRequestForm?.dataset.submitted === "true";
+  requestSubmitButton.disabled = isSubmitted || !items.length;
+  if (!items.length) {
+    publicRequestStatus("Add at least one item before submitting a request.");
+  } else if (requestStatus?.textContent === "Add at least one item before submitting a request.") {
+    publicRequestStatus("");
+  }
+}
+
+async function submitPublicRequest(event) {
+  event.preventDefault();
+
+  if (!publicRequestForm) return;
+
+  if (!cartItems().length) {
+    publicRequestStatus("Add at least one item before submitting a request.", "error");
+    updateRequestFormState();
+    return;
+  }
+
+  if (!publicRequestForm.reportValidity()) return;
+
+  const eventDate = selectedEventDateIso();
+  if (!eventDate) {
+    publicRequestStatus("Choose a valid event date before submitting.", "error");
+    return;
+  }
+
+  const fullName = requestFullName?.value.trim() || "";
+  const email = requestEmail?.value.trim() || "";
+  const phone = requestPhone?.value.trim() || "";
+  const guestCount = Number(requestGuestCount?.value || 0);
+  const notes = requestNotes?.value.trim() || "";
+
+  const formValues = { fullName, email, phone, guestCount, notes };
+  const plan = requestPlanPayload(formValues);
+  const { isConfigured, client } = await getPublicSupabaseClient();
+
+  if (!isConfigured || !client) {
+    publicRequestStatus("Supabase is not configured. Please email Cater Vegas directly.", "error");
+    return;
+  }
+
+  publicRequestForm.dataset.submitted = "false";
+  publicRequestStatus("Submitting request...");
+  requestSubmitButton.disabled = true;
+  requestSubmitButton.textContent = "Submitting...";
+
+  const { data, error } = await client.rpc("cater_submit_public_request", {
+    p_full_name: fullName,
+    p_email: email,
+    p_phone: phone || null,
+    p_guest_count: guestCount,
+    p_notes: notes || null,
+    p_event_date: eventDate,
+    p_event_type: build.eventType || "Public Request",
+    p_plan: plan,
+  });
+
+  if (error) {
+    publicRequestStatus(error.message || "Could not submit request. Please try again.", "error");
+    requestSubmitButton.textContent = "Request Quote";
+    updateRequestFormState();
+    return;
+  }
+
+  publicRequestForm.dataset.submitted = "true";
+  requestSubmitButton.textContent = "Request Sent";
+  publicRequestStatus(
+    data?.request_id
+      ? `Request submitted. Cater Vegas will contact you soon. Request #${data.request_id}.`
+      : "Request submitted. Cater Vegas will contact you soon.",
+    "success"
+  );
+  updateRequestFormState();
 }
 
 function itemQuantityAvailable(item) {
@@ -572,12 +772,12 @@ function renderCart(cartList, cartCountLabel, cartTotalLabel) {
 function renderReview() {
   const reviewSummary = document.getElementById("review-summary");
   if (!reviewSummary) return;
-  const cartItems = Object.values(build.cart || {}).filter((item) => Number(item.quantity) > 0);
+  const items = cartItems();
 
   const rows = flowCategoryIds
     .map((category) => {
       const selection = build.selections[category];
-      const cartForCategory = cartItems
+      const cartForCategory = items
         .filter((item) => item.category === category)
         .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
       return `
@@ -601,10 +801,11 @@ function renderReview() {
     </article>
     <article>
       <small>Product cart</small>
-      <strong>${cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} items saved</strong>
+      <strong>${items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} items saved</strong>
     </article>
     ${rows}
   `;
+  updateRequestFormState();
 }
 
 function normalizeProviderRow(row) {
@@ -696,7 +897,10 @@ document.getElementById("clear-cart-button")?.addEventListener("click", () => {
   saveBuild();
   if (activeCategory) renderInventoryCategory(activeCategory);
   else updateBuilderPreview();
+  updateRequestFormState();
 });
+
+publicRequestForm?.addEventListener("submit", submitPublicRequest);
 
 const navCartButton = document.getElementById("nav-cart-button");
 const navCartPopover = document.getElementById("nav-cart-popover");
@@ -786,6 +990,7 @@ document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) 
   });
 });
 
+ensureBuildDefaults();
 updateHeroSelectedDate(document.querySelector(".calendar-grid button.is-selected")?.textContent.trim() || "18");
 loadPublicInventory();
 const initialRoute = parseHashRoute();
