@@ -11,12 +11,22 @@ import {
 const sessionStatus = document.querySelector("#sessionStatus");
 const assignmentsList = document.querySelector("#assignmentsList");
 const signoutButton = document.querySelector("#signoutButton");
+const collaboratorShell = document.querySelector("[data-collaborator-view]");
+const collaboratorViewButtons = document.querySelectorAll("[data-collaborator-view-button]");
+const collaboratorSummary = document.querySelector("#collaboratorSummary");
+const dashboardEmail = document.querySelector("#dashboardEmail");
+const dashboardRole = document.querySelector("#dashboardRole");
+const submittedInventoryCount = document.querySelector("#submittedInventoryCount");
+const pendingInventoryCount = document.querySelector("#pendingInventoryCount");
+const approvedInventoryCount = document.querySelector("#approvedInventoryCount");
+const publicInventoryCount = document.querySelector("#publicInventoryCount");
 const collaboratorInventoryForm = document.querySelector("#collaboratorInventoryForm");
 const collaboratorInventoryName = document.querySelector("#collaboratorInventoryName");
 const collaboratorInventoryCategory = document.querySelector("#collaboratorInventoryCategory");
 const collaboratorInventoryQuantity = document.querySelector("#collaboratorInventoryQuantity");
 const collaboratorInventoryPrice = document.querySelector("#collaboratorInventoryPrice");
 const collaboratorInventoryImageUrl = document.querySelector("#collaboratorInventoryImageUrl");
+const collaboratorInventoryImageFile = document.querySelector("#collaboratorInventoryImageFile");
 const collaboratorInventoryDescription = document.querySelector("#collaboratorInventoryDescription");
 const collaboratorInventoryStatus = document.querySelector("#collaboratorInventoryStatus");
 const collaboratorInventoryList = document.querySelector("#collaboratorInventoryList");
@@ -71,6 +81,33 @@ const PROVIDER_TYPE_BY_CATEGORY = {
 let supabase = null;
 let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
 let currentUser = null;
+
+function setCollaboratorView(view) {
+  const nextView = view === "inventory" ? "inventory" : "dashboard";
+  if (collaboratorShell) collaboratorShell.dataset.collaboratorView = nextView;
+  collaboratorViewButtons.forEach((button) => {
+    const isActive = button.dataset.collaboratorViewButton === nextView;
+    if (!button.classList.contains("sidebar-link")) return;
+    button.classList.toggle("is-active", isActive);
+    if (isActive) button.setAttribute("aria-current", "page");
+    else button.removeAttribute("aria-current");
+  });
+}
+
+function shortEmail(email) {
+  return String(email || "Collaborator").trim() || "Collaborator";
+}
+
+function setDashboardCounts(items = []) {
+  const pending = items.filter((item) => item.approval_status === "pending").length;
+  const approved = items.filter((item) => item.approval_status === "approved").length;
+  const publicItems = items.filter((item) => item.public_visible && item.approval_status === "approved").length;
+
+  if (submittedInventoryCount) submittedInventoryCount.textContent = String(items.length);
+  if (pendingInventoryCount) pendingInventoryCount.textContent = String(pending);
+  if (approvedInventoryCount) approvedInventoryCount.textContent = String(approved);
+  if (publicInventoryCount) publicInventoryCount.textContent = String(publicItems);
+}
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -127,6 +164,20 @@ function buildInventoryNotes(item) {
   })}`;
 }
 
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    if (!file) {
+      resolve("");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(reader.error || new Error("Could not read the image."));
+    reader.readAsDataURL(file);
+  });
+}
+
 function providerToInventory(row) {
   const meta = parseInventoryNotes(row.notes);
   if (!meta || meta.kind !== "inventory") return null;
@@ -157,8 +208,15 @@ async function loadAssignments(userEmail) {
     .maybeSingle();
 
   if (!collaborator) {
+    if (collaboratorSummary) {
+      collaboratorSummary.textContent = "Your workspace access is active. Submit inventory for admin review from the Inventory module.";
+    }
     assignmentsList.innerHTML = "<p>No collaborator profile is linked to this email yet.</p>";
     return;
+  }
+
+  if (collaboratorSummary) {
+    collaboratorSummary.textContent = `${collaborator.full_name || userEmail} can submit Cater Vegas workspace inventory for admin review.`;
   }
 
   const { data, error } = await supabase
@@ -182,9 +240,13 @@ async function loadAssignments(userEmail) {
   assignmentsList.innerHTML = data
     .map(
       (assignment) => `
-        <article class="portal-row">
-          <strong>Event #${assignment.event_id}</strong>
-          <span>${escapeHtml(assignment.assignment_role)} · ${escapeHtml(assignment.status)} · ${escapeHtml(assignment.notes || "No notes")}</span>
+        <article class="collaborator-row">
+          <span class="collaborator-row-icon">EV</span>
+          <span class="collaborator-row-main">
+            <strong>Event #${assignment.event_id}</strong>
+            <span>${escapeHtml(assignment.assignment_role)} · ${escapeHtml(assignment.status)} · ${escapeHtml(assignment.notes || "No notes")}</span>
+          </span>
+          <small>${escapeHtml(assignment.status || "Assigned")}</small>
         </article>
       `
     )
@@ -203,11 +265,14 @@ async function loadCollaboratorInventory(userId) {
     .limit(100);
 
   if (error) {
+    setDashboardCounts([]);
     collaboratorInventoryList.innerHTML = `<p>${escapeHtml(error.message)}</p>`;
     return;
   }
 
   const items = (data || []).map(providerToInventory).filter(Boolean);
+  setDashboardCounts(items);
+
   if (!items.length) {
     collaboratorInventoryList.innerHTML = "<p>You have not submitted inventory yet.</p>";
     return;
@@ -216,10 +281,13 @@ async function loadCollaboratorInventory(userId) {
   collaboratorInventoryList.innerHTML = items
     .map(
       (item) => `
-        <article class="portal-row">
-          <strong>${escapeHtml(item.name)}</strong>
-          <span>${escapeHtml(inventoryCategoryLabel(item.category))} · ${Number(item.quantity_available || 0)} available · ${item.public_visible ? "Public" : "Not public"}</span>
-          <small>${escapeHtml(approvalLabel(item.approval_status))}</small>
+        <article class="collaborator-row">
+          <span class="collaborator-row-icon">${escapeHtml(inventoryCategoryLabel(item.category).slice(0, 2).toUpperCase())}</span>
+          <span class="collaborator-row-main">
+            <strong>${escapeHtml(item.name)}</strong>
+            <span>${escapeHtml(inventoryCategoryLabel(item.category))} · ${Number(item.quantity_available || 0)} available · ${item.public_visible ? "Public" : "Not public"}</span>
+          </span>
+          <small class="submission-status-badge is-${escapeHtml(item.approval_status)}">${escapeHtml(approvalLabel(item.approval_status))}</small>
         </article>
       `
     )
@@ -236,11 +304,12 @@ async function saveCollaboratorInventory(event) {
 
   const category = normalizeInventoryCategory(collaboratorInventoryCategory.value);
   const name = collaboratorInventoryName.value.trim();
+  const fileImage = await fileToDataUrl(collaboratorInventoryImageFile?.files?.[0]);
   const itemPayload = {
     category,
     quantity_available: Number(collaboratorInventoryQuantity.value || 0),
     price_label: collaboratorInventoryPrice.value.trim() || null,
-    image_url: collaboratorInventoryImageUrl.value.trim() || null,
+    image_url: fileImage || collaboratorInventoryImageUrl.value.trim() || null,
     description: collaboratorInventoryDescription.value.trim() || null,
   };
 
@@ -318,10 +387,16 @@ async function bootCollaborator() {
 
   currentWorkspaceId = DEFAULT_WORKSPACE_ID;
   sessionStatus.textContent = `${user.email} · Collaborator`;
+  if (dashboardEmail) dashboardEmail.textContent = shortEmail(user.email);
+  if (dashboardRole) dashboardRole.textContent = "Collaborator";
   await Promise.all([loadAssignments(user.email), loadCollaboratorInventory(user.id)]);
 }
 
 collaboratorInventoryForm?.addEventListener("submit", saveCollaboratorInventory);
+
+collaboratorViewButtons.forEach((button) => {
+  button.addEventListener("click", () => setCollaboratorView(button.dataset.collaboratorViewButton));
+});
 
 signoutButton.addEventListener("click", async () => {
   if (!supabase) return;
