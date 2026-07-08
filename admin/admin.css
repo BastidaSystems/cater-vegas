@@ -6318,6 +6318,24 @@ body::before,
   gap: clamp(1.4rem, 2vw, 2rem);
 }
 
+.workspace-access-block {
+  display: grid;
+  gap: 1rem;
+}
+
+.compact-heading {
+  margin-bottom: 0;
+}
+
+.compact-heading h3 {
+  margin: 0;
+  color: var(--cv-admin-ink);
+  font-family: var(--cv-admin-serif);
+  font-size: clamp(1.6rem, 2vw, 2.2rem);
+  font-weight: 650;
+  line-height: 1;
+}
+
 .inventory-form,
 .users-form {
   display: grid;

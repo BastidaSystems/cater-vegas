@@ -6,12 +6,11 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=workspace-connection-20260707";
+} from "../lib/supabaseClient.js?v=shared-marketplace-workspace-20260707";
 
-const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
-const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
-const PUBLIC_INVENTORY_KEY = "caterVegasPublicInventory";
+const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
 const LOCAL_USERS_KEY = "caterVegasCompanyUsers";
+const APPROVER_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 const USER_NOTE_PREFIX = "CATER_USER_COMPANY_JSON:";
 const INVENTORY_CATEGORY_IDS = ["tables", "chairs", "linen", "decor", "tents", "food", "beverages", "entertainment", "lodging"];
@@ -108,6 +107,7 @@ const userBusinessAddress = document.querySelector("#userBusinessAddress");
 const userCompanyNotes = document.querySelector("#userCompanyNotes");
 const usersStatus = document.querySelector("#usersStatus");
 const usersList = document.querySelector("#usersList");
+const workspaceRequestsList = document.querySelector("#workspaceRequestsList");
 const refreshUsersButton = document.querySelector("#refreshUsersButton");
 const resetUserButton = document.querySelector("#resetUserButton");
 
@@ -123,6 +123,11 @@ const INVENTORY_CATEGORY_ICONS = {
   entertainment: "Ent",
   lodging: "Stay",
 };
+const APPROVAL_LABELS = {
+  pending: "Pending Review",
+  approved: "Approved",
+  rejected: "Rejected",
+};
 
 let supabase = null;
 let currentUser = null;
@@ -131,6 +136,7 @@ let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
 let allEvents = [];
 let inventoryItems = [];
 let companyUsers = [];
+let workspaceMembers = [];
 let activeInventoryCategory = "all";
 let selectedInventoryId = "";
 
@@ -160,13 +166,46 @@ function roleLabel(role) {
     .join(" ");
 }
 
-function providerTypeForCategory(category) {
-  return PROVIDER_TYPE_BY_CATEGORY[normalizeInventoryCategory(category)] || "vendor";
+function canReviewInventory() {
+  return APPROVER_ROLES.has(currentRole);
 }
 
-function isMissingSchemaColumnError(error) {
-  const message = String(error?.message || "").toLowerCase();
-  return error?.code === "PGRST204" || error?.code === "42703" || message.includes("schema cache") || message.includes("column");
+function approvalLabel(status) {
+  return APPROVAL_LABELS[String(status || "pending").trim().toLowerCase()] || "Pending Review";
+}
+
+function workspaceStatusLabel(status) {
+  return String(status || "pending")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function creatorLabel(item) {
+  return item.created_by_name || item.created_by_email || item.created_by || "Unknown";
+}
+
+function profileRoleForMembership(role, status) {
+  const normalizedRole = String(role || "collaborator").trim().toLowerCase();
+  const normalizedStatus = String(status || "pending").trim().toLowerCase();
+
+  if (normalizedStatus !== "active") {
+    if (normalizedRole === "organizer") return "organizer_pending";
+    if (normalizedRole === "viewer") return "client_pending";
+    return "collaborator_pending";
+  }
+
+  if (normalizedRole === "viewer") return "client";
+  if (["owner", "admin", "super_admin", "platform_admin", "organizer", "collaborator"].includes(normalizedRole)) {
+    return normalizedRole;
+  }
+
+  return "collaborator";
+}
+
+function providerTypeForCategory(category) {
+  return PROVIDER_TYPE_BY_CATEGORY[normalizeInventoryCategory(category)] || "vendor";
 }
 
 function setStatus(message) {
@@ -191,22 +230,6 @@ function scrollToAdminTarget(targetSelector, requestedView = "") {
   const target = document.querySelector(targetSelector);
   if (!target) return;
   target.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function localInventoryRows() {
-  try {
-    return JSON.parse(window.localStorage.getItem(LOCAL_INVENTORY_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalInventory(rows) {
-  window.localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(rows));
-}
-
-function savePublicInventory(rows) {
-  window.localStorage.setItem(PUBLIC_INVENTORY_KEY, JSON.stringify(rows));
 }
 
 function localUserRows() {
@@ -270,18 +293,28 @@ function buildInventoryNotes(item) {
 function providerToInventory(row) {
   const meta = parseInventoryNotes(row.notes);
   if (!meta || meta.kind !== "inventory") return null;
-  const category = normalizeInventoryCategory(meta.category);
+  const category = normalizeInventoryCategory(row.service_category || meta.category);
   if (!category) return null;
+  const creator = row._creator || {};
 
   return {
     id: row.id,
     name: row.provider_name || "",
     category,
-    description: meta.description || "",
+    description: row.public_description || meta.description || "",
     quantity_available: Number(meta.quantity_available || 0),
     price_label: meta.price_label || "",
-    image_url: meta.image_url || "",
+    image_url: row.image_url || meta.image_url || "",
     status: row.status || "active",
+    approval_status: row.approval_status || "pending",
+    public_visible: Boolean(row.public_visible),
+    approved_by: row.approved_by || "",
+    approved_at: row.approved_at || "",
+    provider_type: row.provider_type || providerTypeForCategory(category),
+    created_by: row.created_by || "",
+    created_by_email: creator.email || "",
+    created_by_name: creator.full_name || "",
+    created_at: row.created_at || "",
   };
 }
 
@@ -318,6 +351,9 @@ function normalizeInventoryItem(item) {
     price_label: meta.price_label || item.price_label || "",
     image_url: meta.image_url || item.image_url || "",
     status: item.status || "active",
+    approval_status: item.approval_status || "pending",
+    public_visible: Boolean(item.public_visible),
+    created_by: item.created_by || "",
   };
 }
 
@@ -449,7 +485,7 @@ function renderDashboardSide(upcomingEvents) {
     dashboardInventorySummary.innerHTML = `
       <div class="dashboard-summary-block">
         <p class="eyebrow">Inventory</p>
-        <strong>No published items</strong>
+        <strong>No workspace items</strong>
         <small>Add tables, chairs, or decor from Inventory.</small>
       </div>
     `;
@@ -461,11 +497,14 @@ function renderDashboardSide(upcomingEvents) {
     acc[category] = (acc[category] || 0) + Number(item.quantity_available || 0);
     return acc;
   }, {});
+  const pendingCount = inventoryItems.filter((item) => item.approval_status === "pending").length;
+  const publicCount = inventoryItems.filter((item) => item.public_visible && item.approval_status === "approved").length;
 
   dashboardInventorySummary.innerHTML = `
     <div class="dashboard-summary-block">
-      <p class="eyebrow">Published Inventory</p>
+      <p class="eyebrow">Workspace Inventory</p>
       <strong>${inventoryItems.length} items</strong>
+      <small>${pendingCount} pending review · ${publicCount} public</small>
       <div class="dashboard-inventory-tags">
         ${Object.entries(categoryCounts)
           .slice(0, 5)
@@ -564,8 +603,8 @@ function renderInventory() {
       (item) => `
         <article class="inventory-icon-card ${String(item.id) === String(selectedInventoryId) ? "is-selected" : ""}">
           <div class="inventory-card-actions">
-            <button type="button" data-edit-inventory="${escapeHtml(item.id)}">Editar</button>
-            <button type="button" data-delete-inventory="${escapeHtml(item.id)}">Eliminar</button>
+            <button type="button" data-edit-inventory="${escapeHtml(item.id)}">Edit</button>
+            <button type="button" data-delete-inventory="${escapeHtml(item.id)}">Delete</button>
           </div>
           <button class="inventory-card-select" type="button" data-select-inventory="${escapeHtml(item.id)}">
             <span class="inventory-icon-photo">
@@ -578,7 +617,7 @@ function renderInventory() {
             <span class="inventory-icon-meta">
               <small>${escapeHtml(inventoryCategoryLabel(item.category))}</small>
               <strong>${escapeHtml(item.name)}</strong>
-              <em>${Number(item.quantity_available ?? 0)} disp.</em>
+              <em>${Number(item.quantity_available ?? 0)} available · ${escapeHtml(approvalLabel(item.approval_status))}</em>
             </span>
           </button>
         </article>
@@ -595,7 +634,7 @@ function renderUsers() {
   if (!companyUsers.length) {
     usersList.innerHTML = `
       <div class="empty-state">
-        No hay usuarios colaboradores todavia. Agrega la empresa y datos legales para usarla en procesos de renta o venta.
+        No collaborator users yet. Add company and legal details before using them in rental or sales workflows.
       </div>
     `;
     return;
@@ -608,8 +647,8 @@ function renderUsers() {
           <div class="user-company-avatar">${escapeHtml((user.company_name || user.full_name || "CV").slice(0, 2).toUpperCase())}</div>
           <div class="user-company-main">
             <small>${escapeHtml(user.service_type || "rental")} - ${escapeHtml(user.legal_status || "pending")}</small>
-            <strong>${escapeHtml(user.company_name || "Empresa sin nombre")}</strong>
-            <p>${escapeHtml(user.full_name || "Colaborador")} ${user.role ? `- ${escapeHtml(user.role)}` : ""}</p>
+            <strong>${escapeHtml(user.company_name || "Unnamed company")}</strong>
+            <p>${escapeHtml(user.full_name || "Collaborator")} ${user.role ? `- ${escapeHtml(user.role)}` : ""}</p>
             <div class="user-company-meta">
               ${user.email ? `<span>${escapeHtml(user.email)}</span>` : ""}
               ${user.phone ? `<span>${escapeHtml(user.phone)}</span>` : ""}
@@ -618,12 +657,60 @@ function renderUsers() {
             ${user.business_address ? `<em>${escapeHtml(user.business_address)}</em>` : ""}
           </div>
           <div class="user-company-actions">
-            <button class="secondary-button" type="button" data-edit-user="${escapeHtml(user.id)}">Editar</button>
-            <button class="tiny-button" type="button" data-delete-user="${escapeHtml(user.id)}">Eliminar</button>
+            <button class="secondary-button" type="button" data-edit-user="${escapeHtml(user.id)}">Edit</button>
+            <button class="tiny-button" type="button" data-delete-user="${escapeHtml(user.id)}">Delete</button>
           </div>
         </article>
       `
     )
+    .join("");
+}
+
+function renderWorkspaceMembers() {
+  if (!workspaceRequestsList) return;
+
+  if (!workspaceMembers.length) {
+    workspaceRequestsList.innerHTML = '<div class="empty-state">No workspace access requests yet.</div>';
+    return;
+  }
+
+  workspaceRequestsList.innerHTML = workspaceMembers
+    .map((member) => {
+      const profile = member.profile || {};
+      const displayName = profile.full_name || profile.email || "Workspace user";
+      const displayEmail = profile.email || member.user_id;
+      const initials = (profile.full_name || profile.email || "CV").slice(0, 2).toUpperCase();
+      const role = String(member.role || "collaborator").toLowerCase();
+      const status = String(member.status || "pending").toLowerCase();
+      const canManageMember = member.user_id !== currentUser?.id && !ADMIN_ROLES.has(role);
+
+      return `
+        <article class="user-company-card workspace-member-card">
+          <div class="user-company-avatar">${escapeHtml(initials)}</div>
+          <div class="user-company-main">
+            <small>${escapeHtml(roleLabel(role))} - ${escapeHtml(workspaceStatusLabel(status))}</small>
+            <strong>${escapeHtml(displayName)}</strong>
+            <p>${escapeHtml(displayEmail)}</p>
+            <div class="user-company-meta">
+              <span>Workspace: ${escapeHtml(member.workspace_id || DEFAULT_WORKSPACE_ID)}</span>
+              <span>${status === "active" ? "Accepted" : status === "disabled" ? "Disabled" : "Awaiting admin review"}</span>
+            </div>
+          </div>
+          <div class="user-company-actions">
+            ${
+              canManageMember && status !== "active"
+                ? `<button class="secondary-button" type="button" data-approve-member="${escapeHtml(member.user_id)}">Approve</button>`
+                : ""
+            }
+            ${
+              canManageMember && status !== "disabled"
+                ? `<button class="tiny-button" type="button" data-disable-member="${escapeHtml(member.user_id)}">Disable</button>`
+                : ""
+            }
+          </div>
+        </article>
+      `;
+    })
     .join("");
 }
 
@@ -641,6 +728,18 @@ function renderInventoryDetail(item) {
     return;
   }
 
+  const reviewActions = canReviewInventory()
+    ? `
+        ${item.approval_status !== "approved" ? `<button class="secondary-button" type="button" data-approve-inventory="${escapeHtml(item.id)}">Approve</button>` : ""}
+        ${item.approval_status !== "rejected" ? `<button class="tiny-button" type="button" data-reject-inventory="${escapeHtml(item.id)}">Reject</button>` : ""}
+        ${
+          item.public_visible
+            ? `<button class="secondary-button" type="button" data-unpublish-inventory="${escapeHtml(item.id)}">Unpublish</button>`
+            : `<button class="secondary-button" type="button" data-publish-inventory="${escapeHtml(item.id)}">Publish</button>`
+        }
+      `
+    : "";
+
   inventoryDetailPanel.innerHTML = `
     <div class="inventory-detail-image">
       ${
@@ -655,9 +754,14 @@ function renderInventoryDetail(item) {
       <div class="inventory-detail-tags">
         <span>${Number(item.quantity_available ?? 0)} available</span>
         ${item.price_label ? `<span>${escapeHtml(item.price_label)}</span>` : ""}
+        <span>${escapeHtml(item.status || "active")}</span>
+        <span>${escapeHtml(approvalLabel(item.approval_status))}</span>
+        <span>${item.public_visible ? "Public" : "Not Public"}</span>
       </div>
       <p>${escapeHtml(item.description || "No description.")}</p>
+      <p class="inventory-creator">Created by ${escapeHtml(creatorLabel(item))}</p>
       <div class="inventory-actions">
+        ${reviewActions}
         <button class="secondary-button" type="button" data-edit-inventory="${escapeHtml(item.id)}">Edit</button>
         <button class="tiny-button" type="button" data-delete-inventory="${escapeHtml(item.id)}">Delete</button>
       </div>
@@ -688,31 +792,47 @@ async function loadEvents() {
   renderCalendar();
 }
 
+async function loadCreatorProfiles(userIds) {
+  const ids = [...new Set((userIds || []).filter(Boolean))];
+  if (!ids.length) return new Map();
+
+  const { data, error } = await supabase
+    .from("cater_profiles")
+    .select("id,email,full_name")
+    .in("id", ids);
+
+  if (error) return new Map();
+  return new Map((data || []).map((profile) => [profile.id, profile]));
+}
+
 async function loadInventory() {
   if (!supabase) {
-    inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
+    inventoryItems = [];
     renderInventory();
     renderCalendar();
-    setInventoryStatus("Local mode: connect Supabase so buyers can see it on another device.");
+    setInventoryStatus("Supabase is required for workspace inventory.");
     return;
   }
 
   const { data, error } = await supabase
     .from("cater_providers")
-    .select("id,provider_name,provider_type,status,notes,created_at")
-    .eq("workspace_id", currentWorkspaceId)
+    .select("id,workspace_id,provider_name,provider_type,status,notes,created_at,service_category,public_visible,approval_status,approved_by,approved_at,public_description,image_url,created_by")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
     .order("created_at", { ascending: false });
 
   if (error) {
-    inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
+    inventoryItems = [];
     renderInventory();
     renderCalendar();
     setInventoryStatus(`Could not read inventory: ${error.message}.`);
     return;
   }
 
-  inventoryItems = (data || []).map(providerToInventory).filter(Boolean);
-  savePublicInventory(inventoryItems);
+  const creatorProfiles = await loadCreatorProfiles((data || []).map((item) => item.created_by));
+  inventoryItems = (data || [])
+    .map((row) => ({ ...row, _creator: creatorProfiles.get(row.created_by) || null }))
+    .map(providerToInventory)
+    .filter(Boolean);
   renderInventory();
   renderCalendar();
   setInventoryStatus("Inventory synced.");
@@ -724,7 +844,7 @@ async function loadUsers() {
   if (!supabase) {
     companyUsers = localUserRows().map(rowToCompanyUser);
     renderUsers();
-    setUsersStatus("Modo local: conecta Supabase para sincronizar usuarios.");
+    setUsersStatus("Local mode: connect Supabase to sync users.");
     return;
   }
 
@@ -737,14 +857,46 @@ async function loadUsers() {
   if (error) {
     companyUsers = localUserRows().map(rowToCompanyUser);
     renderUsers();
-    setUsersStatus(`No se pudieron leer usuarios: ${error.message}.`);
+    setUsersStatus(`Could not read users: ${error.message}.`);
     return;
   }
 
   companyUsers = (data || []).map(rowToCompanyUser);
   saveLocalUsers(companyUsers);
   renderUsers();
-  setUsersStatus("Usuarios sincronizados.");
+  setUsersStatus("Users synced.");
+}
+
+async function loadWorkspaceMembers() {
+  if (!workspaceRequestsList || !supabase) {
+    workspaceMembers = [];
+    renderWorkspaceMembers();
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from("beoflow_workspace_members")
+    .select("workspace_id,user_id,role,status,created_at,updated_at")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    workspaceMembers = [];
+    renderWorkspaceMembers();
+    setUsersStatus(`Could not read workspace access: ${error.message}.`);
+    return;
+  }
+
+  const profiles = await loadCreatorProfiles((data || []).map((member) => member.user_id));
+  workspaceMembers = (data || []).map((member) => ({
+    ...member,
+    profile: profiles.get(member.user_id) || null,
+  }));
+  renderWorkspaceMembers();
+}
+
+async function loadUserData() {
+  await Promise.all([loadWorkspaceMembers(), loadUsers()]);
 }
 
 function resetInventoryForm() {
@@ -778,16 +930,14 @@ async function deleteInventoryItem(id) {
   if (!window.confirm("Delete this item from inventory?")) return;
 
   if (!supabase) {
-    const nextRows = localInventoryRows().filter((item) => String(item.id) !== String(id));
-    saveLocalInventory(nextRows);
-    await loadInventory();
+    setInventoryStatus("Supabase is required for workspace inventory.");
     return;
   }
 
   const { error } = await supabase
     .from("cater_providers")
     .delete()
-    .eq("workspace_id", currentWorkspaceId)
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
     .eq("id", id);
 
   if (error) {
@@ -815,11 +965,11 @@ function editCompanyUser(id) {
   userBusinessAddress.value = user.business_address || "";
   userCompanyNotes.value = user.company_notes || "";
   scrollToAdminTarget("#usersPanel", "users");
-  setUsersStatus("Editando usuario. Guarda para actualizarlo.");
+  setUsersStatus("Editing user. Save to update it.");
 }
 
 async function deleteCompanyUser(id) {
-  if (!window.confirm("Eliminar este usuario colaborador?")) return;
+  if (!window.confirm("Delete this collaborator user?")) return;
 
   if (!supabase) {
     const nextRows = localUserRows().filter((user) => String(user.id) !== String(id));
@@ -839,7 +989,7 @@ async function deleteCompanyUser(id) {
     return;
   }
 
-  setUsersStatus("Usuario eliminado.");
+  setUsersStatus("User deleted.");
   await loadUsers();
 }
 
@@ -860,7 +1010,7 @@ async function saveCompanyUser(event) {
   };
 
   if (!userPayload.full_name || !userPayload.company_name) {
-    setUsersStatus("Agrega el nombre del colaborador y la empresa.");
+    setUsersStatus("Add the collaborator name and company.");
     return;
   }
 
@@ -874,7 +1024,7 @@ async function saveCompanyUser(event) {
     notes: buildUserNotes(userPayload),
   };
 
-  setUsersStatus("Guardando usuario...");
+  setUsersStatus("Saving user...");
 
   if (!supabase) {
     const rows = localUserRows();
@@ -904,8 +1054,43 @@ async function saveCompanyUser(event) {
   }
 
   resetUserForm();
-  setUsersStatus("Usuario guardado.");
+  setUsersStatus("User saved.");
   await loadUsers();
+}
+
+async function updateWorkspaceMember(userId, status) {
+  const member = workspaceMembers.find((item) => item.user_id === userId);
+  const role = String(member?.role || "collaborator").trim().toLowerCase() || "collaborator";
+  const profileRole = profileRoleForMembership(role, status);
+
+  setUsersStatus("Updating workspace access...");
+
+  const { error: memberError } = await supabase
+    .from("beoflow_workspace_members")
+    .update({ role, status })
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("user_id", userId);
+
+  if (memberError) {
+    setUsersStatus(memberError.message);
+    return;
+  }
+
+  const { error: profileError } = await supabase
+    .from("cater_profiles")
+    .update({
+      workspace_id: DEFAULT_WORKSPACE_ID,
+      role: profileRole,
+    })
+    .eq("id", userId);
+
+  if (profileError) {
+    setUsersStatus(profileError.message);
+    return;
+  }
+
+  setUsersStatus(status === "active" ? "Workspace access approved." : "Workspace access disabled.");
+  await loadWorkspaceMembers();
 }
 
 async function saveInventoryItem(event) {
@@ -921,7 +1106,7 @@ async function saveInventoryItem(event) {
     description: inventoryDescription.value.trim() || null,
   };
   const basePayload = {
-    workspace_id: currentWorkspaceId,
+    workspace_id: DEFAULT_WORKSPACE_ID,
     provider_name: inventoryName.value.trim(),
     provider_type: providerTypeForCategory(selectedCategory),
     status: "active",
@@ -930,7 +1115,6 @@ async function saveInventoryItem(event) {
   const payload = {
     ...basePayload,
     service_category: selectedCategory,
-    public_visible: true,
     public_description: itemPayload.description,
     image_url: itemPayload.image_url,
   };
@@ -948,38 +1132,36 @@ async function saveInventoryItem(event) {
   setInventoryStatus("Saving inventory...");
 
   if (!supabase) {
-    const rows = localInventoryRows();
-    const id = inventoryItemId.value || `local-${Date.now()}`;
-    const nextRows = [
-      { ...payload, id, created_at: new Date().toISOString() },
-      ...rows.filter((item) => String(item.id) !== String(id)),
-    ];
-    saveLocalInventory(nextRows);
-    resetInventoryForm();
-    await loadInventory();
+    setInventoryStatus("Supabase is required for workspace inventory.");
     return;
   }
 
   const id = inventoryItemId.value;
+  const isReviewer = canReviewInventory();
+  const insertPayload = {
+    ...payload,
+    approval_status: isReviewer ? "approved" : "pending",
+    public_visible: false,
+    approved_by: isReviewer ? currentUser?.id || null : null,
+    approved_at: isReviewer ? new Date().toISOString() : null,
+    created_by: currentUser?.id || null,
+  };
   const savePayload = (nextPayload) =>
     id
       ? supabase
           .from("cater_providers")
           .update(nextPayload)
-          .eq("workspace_id", currentWorkspaceId)
+          .eq("workspace_id", DEFAULT_WORKSPACE_ID)
           .eq("id", id)
           .select()
           .single()
       : supabase
           .from("cater_providers")
-          .insert({ ...nextPayload, created_by: currentUser?.id || null })
+          .insert(nextPayload)
           .select()
           .single();
 
-  let { error } = await savePayload(payload);
-  if (isMissingSchemaColumnError(error)) {
-    ({ error } = await savePayload(basePayload));
-  }
+  const { error } = await savePayload(id ? payload : insertPayload);
 
   if (error) {
     setInventoryStatus(error.message);
@@ -987,7 +1169,33 @@ async function saveInventoryItem(event) {
   }
 
   resetInventoryForm();
-  setInventoryStatus("Inventory saved. Buyers can now see it.");
+  setInventoryStatus(id ? "Inventory updated." : "Inventory saved. Publish it when it should appear publicly.");
+  await loadInventory();
+}
+
+async function updateInventoryReview(id, patch, successMessage) {
+  if (!canReviewInventory()) {
+    setInventoryStatus("Only admins can review or publish inventory.");
+    return;
+  }
+
+  if (!supabase) {
+    setInventoryStatus("Supabase is required for workspace inventory.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("cater_providers")
+    .update(patch)
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", id);
+
+  if (error) {
+    setInventoryStatus(error.message);
+    return;
+  }
+
+  setInventoryStatus(successMessage);
   await loadInventory();
 }
 
@@ -996,7 +1204,7 @@ async function bootAdmin() {
 
   if (!isSupabaseConfigured) {
     setStatus("Configure Supabase to sync inventory.");
-    await Promise.all([loadInventory(), loadUsers()]);
+    await Promise.all([loadInventory(), loadUserData()]);
     return;
   }
 
@@ -1020,19 +1228,19 @@ async function bootAdmin() {
     return;
   }
 
-  currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
+  currentWorkspaceId = DEFAULT_WORKSPACE_ID;
   if (dashboardEmail) dashboardEmail.textContent = user.email || "Admin";
   if (dashboardRole) dashboardRole.textContent = roleLabel(currentRole);
   setStatus(user.email || "Admin");
 
-  await Promise.all([loadEvents(), loadInventory(), loadUsers()]);
+  await Promise.all([loadEvents(), loadInventory(), loadUserData()]);
 }
 
 inventoryForm?.addEventListener("submit", saveInventoryItem);
 refreshInventoryButton?.addEventListener("click", loadInventory);
 resetInventoryButton?.addEventListener("click", resetInventoryForm);
 userCompanyForm?.addEventListener("submit", saveCompanyUser);
-refreshUsersButton?.addEventListener("click", loadUsers);
+refreshUsersButton?.addEventListener("click", loadUserData);
 resetUserButton?.addEventListener("click", resetUserForm);
 
 inventoryList?.addEventListener("click", (event) => {
@@ -1053,10 +1261,36 @@ inventoryList?.addEventListener("click", (event) => {
 });
 
 inventoryDetailPanel?.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-edit-inventory], [data-delete-inventory]");
+  const target = event.target.closest(
+    "[data-edit-inventory], [data-delete-inventory], [data-approve-inventory], [data-reject-inventory], [data-publish-inventory], [data-unpublish-inventory]"
+  );
   if (!target) return;
   if (target.dataset.editInventory) editInventoryItem(target.dataset.editInventory);
   if (target.dataset.deleteInventory) deleteInventoryItem(target.dataset.deleteInventory);
+  if (target.dataset.approveInventory) {
+    updateInventoryReview(
+      target.dataset.approveInventory,
+      { approval_status: "approved", approved_by: currentUser?.id || null, approved_at: new Date().toISOString() },
+      "Item approved."
+    );
+  }
+  if (target.dataset.rejectInventory) {
+    updateInventoryReview(
+      target.dataset.rejectInventory,
+      { approval_status: "rejected", public_visible: false, approved_by: null, approved_at: null },
+      "Item rejected and hidden from the public catalog."
+    );
+  }
+  if (target.dataset.publishInventory) {
+    updateInventoryReview(
+      target.dataset.publishInventory,
+      { approval_status: "approved", public_visible: true, status: "active", approved_by: currentUser?.id || null, approved_at: new Date().toISOString() },
+      "Item approved and published."
+    );
+  }
+  if (target.dataset.unpublishInventory) {
+    updateInventoryReview(target.dataset.unpublishInventory, { public_visible: false }, "Item unpublished.");
+  }
 });
 
 usersList?.addEventListener("click", (event) => {
@@ -1064,6 +1298,13 @@ usersList?.addEventListener("click", (event) => {
   if (!target) return;
   if (target.dataset.editUser) editCompanyUser(target.dataset.editUser);
   if (target.dataset.deleteUser) deleteCompanyUser(target.dataset.deleteUser);
+});
+
+workspaceRequestsList?.addEventListener("click", (event) => {
+  const target = event.target.closest("[data-approve-member], [data-disable-member]");
+  if (!target) return;
+  if (target.dataset.approveMember) updateWorkspaceMember(target.dataset.approveMember, "active");
+  if (target.dataset.disableMember) updateWorkspaceMember(target.dataset.disableMember, "disabled");
 });
 
 inventoryCategoryBar?.addEventListener("click", (event) => {

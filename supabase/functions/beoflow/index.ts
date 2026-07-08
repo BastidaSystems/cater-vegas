@@ -148,7 +148,6 @@ const corsHeaders = {
 };
 
 const SYNC_MANAGER_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
-const CATER_OWNER_EMAILS = new Set(["exmarquesado@gmail.com"]);
 
 const EVENT_SAVE_COLUMNS = new Set([
   "workspace_id",
@@ -1270,8 +1269,7 @@ async function userCanSyncWorkspace(
     return true;
   }
 
-  const email = String(user.email || profile?.email || "").trim().toLowerCase();
-  return CATER_OWNER_EMAILS.has(email);
+  return false;
 }
 
 async function validateAuthenticatedWorkspaceRequest(request: Request, workspaceId: string) {

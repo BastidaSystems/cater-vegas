@@ -55,6 +55,7 @@ create table if not exists public.cater_profiles (
       'staff',
       'organizer',
       'client',
+      'viewer',
       'collaborator',
       'workspace_pending',
       'collaborator_pending',
@@ -117,6 +118,9 @@ create table if not exists public.cater_providers (
   notes text,
   service_category text,
   public_visible boolean not null default false,
+  approval_status text not null default 'pending' check (approval_status in ('pending', 'approved', 'rejected')),
+  approved_by uuid references public.cater_profiles(id) on delete set null,
+  approved_at timestamptz,
   public_description text,
   image_url text,
   created_by uuid references public.cater_profiles(id) on delete set null default auth.uid(),
@@ -192,6 +196,7 @@ alter table public.cater_profiles add constraint cater_profiles_role_check
       'staff',
       'organizer',
       'client',
+      'viewer',
       'collaborator',
       'workspace_pending',
       'collaborator_pending',
@@ -223,6 +228,10 @@ alter table public.cater_providers alter column status set default 'active';
 alter table public.cater_providers add column if not exists notes text;
 alter table public.cater_providers add column if not exists service_category text;
 alter table public.cater_providers add column if not exists public_visible boolean not null default false;
+alter table public.cater_providers add column if not exists approval_status text not null default 'pending';
+alter table public.cater_providers alter column approval_status set default 'pending';
+alter table public.cater_providers add column if not exists approved_by uuid references public.cater_profiles(id) on delete set null;
+alter table public.cater_providers add column if not exists approved_at timestamptz;
 alter table public.cater_providers add column if not exists public_description text;
 alter table public.cater_providers add column if not exists image_url text;
 alter table public.cater_providers add column if not exists created_by uuid;
@@ -233,6 +242,9 @@ alter table public.cater_providers add constraint cater_providers_provider_type_
 alter table public.cater_providers drop constraint if exists cater_providers_status_check;
 alter table public.cater_providers add constraint cater_providers_status_check
   check (status in ('active', 'preferred', 'inactive', 'archived'));
+alter table public.cater_providers drop constraint if exists cater_providers_approval_status_check;
+alter table public.cater_providers add constraint cater_providers_approval_status_check
+  check (approval_status in ('pending', 'approved', 'rejected'));
 
 alter table public.cater_beoflow_messages add column if not exists workspace_id text not null default 'cater-vegas';
 alter table public.cater_beoflow_messages alter column workspace_id set default 'cater-vegas';
@@ -284,6 +296,12 @@ begin
     alter table public.cater_providers
       add constraint cater_providers_created_by_fkey
       foreign key (created_by) references public.cater_profiles(id) on delete set null;
+  end if;
+
+  if not exists (select 1 from pg_constraint where conname = 'cater_providers_approved_by_fkey') then
+    alter table public.cater_providers
+      add constraint cater_providers_approved_by_fkey
+      foreign key (approved_by) references public.cater_profiles(id) on delete set null;
   end if;
 
   if not exists (select 1 from pg_constraint where conname = 'cater_beoflow_messages_workspace_id_fkey') then
@@ -343,6 +361,15 @@ create index if not exists cater_providers_created_by_idx on public.cater_provid
 create index if not exists cater_providers_email_idx on public.cater_providers (email);
 create index if not exists cater_providers_workspace_status_type_idx
   on public.cater_providers (workspace_id, status, provider_type);
+create index if not exists cater_providers_public_filter_idx
+  on public.cater_providers (workspace_id, service_category, approval_status, public_visible, status);
+create index if not exists cater_providers_workspace_approval_idx
+  on public.cater_providers (workspace_id, approval_status, created_at desc);
+create index if not exists cater_providers_workspace_created_by_idx
+  on public.cater_providers (workspace_id, created_by, created_at desc);
+create index if not exists cater_providers_public_inventory_idx
+  on public.cater_providers (workspace_id, service_category, status, created_at desc)
+  where public_visible = true and approval_status = 'approved';
 
 create index if not exists cater_beoflow_messages_workspace_id_idx on public.cater_beoflow_messages (workspace_id);
 create index if not exists cater_beoflow_messages_event_id_idx on public.cater_beoflow_messages (event_id);
@@ -415,51 +442,41 @@ set search_path = public
 as $$
 declare
   requested_role text := coalesce(new.raw_user_meta_data ->> 'cater_role', '');
-  safe_role text := 'client_pending';
+  safe_role text := 'collaborator_pending';
   target_workspace_id text;
   workspace_name text;
   workspace_slug text;
 begin
   if requested_role in (
-    'owner',
-    'admin',
-    'super_admin',
-    'platform_admin',
-    'organizer',
-    'client',
     'client_pending',
     'collaborator_pending',
     'organizer_pending',
     'workspace_pending'
   ) then
     safe_role := requested_role;
+  elsif requested_role = 'client' then
+    safe_role := 'client_pending';
   end if;
 
-  target_workspace_id := coalesce(
-    nullif(new.raw_user_meta_data ->> 'workspace_id', ''),
-    case
-      when safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer')
-        then 'cater-vegas-' || replace(new.id::text, '-', '')
-      else 'cater-vegas'
-    end
-  );
-  workspace_name := coalesce(
-    nullif(new.raw_user_meta_data ->> 'workspace_name', ''),
-    nullif(new.raw_user_meta_data ->> 'full_name', '') || ' Workspace',
-    split_part(new.email, '@', 1) || ' Workspace'
-  );
+  target_workspace_id := 'cater-vegas';
+  workspace_name := 'Cater Vegas';
   workspace_slug := lower(regexp_replace(target_workspace_id, '[^a-z0-9]+', '-', 'g'));
 
-  if safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer') then
-    insert into public.beoflow_workspaces (id, name, slug, industry, status, owner_id)
-    values (target_workspace_id, workspace_name, workspace_slug, 'catering_events', 'active', new.id)
-    on conflict (id) do update
-      set name = coalesce(nullif(public.beoflow_workspaces.name, ''), excluded.name),
-          industry = coalesce(public.beoflow_workspaces.industry, excluded.industry),
-          status = 'active',
-          owner_id = coalesce(public.beoflow_workspaces.owner_id, excluded.owner_id),
-          updated_at = now();
-  end if;
+  insert into public.beoflow_workspaces (id, name, slug, industry, status, owner_id)
+  values (
+    target_workspace_id,
+    workspace_name,
+    workspace_slug,
+    'catering_events',
+    'active',
+    null
+  )
+  on conflict (id) do update
+    set name = coalesce(nullif(public.beoflow_workspaces.name, ''), excluded.name),
+        industry = coalesce(public.beoflow_workspaces.industry, excluded.industry),
+        status = 'active',
+        owner_id = public.beoflow_workspaces.owner_id,
+        updated_at = now();
 
   insert into public.cater_profiles (id, workspace_id, email, full_name, phone, company, role)
   values (
@@ -472,20 +489,29 @@ begin
     safe_role
   )
   on conflict (id) do update
-    set email = excluded.email,
+    set workspace_id = excluded.workspace_id,
+        email = excluded.email,
         full_name = coalesce(nullif(excluded.full_name, ''), public.cater_profiles.full_name),
         phone = coalesce(excluded.phone, public.cater_profiles.phone),
         company = coalesce(excluded.company, public.cater_profiles.company),
+        role = excluded.role,
         updated_at = now();
 
-  if safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer') then
-    insert into public.beoflow_workspace_members (workspace_id, user_id, role, status)
-    values (target_workspace_id, new.id, safe_role, 'active')
-    on conflict (workspace_id, user_id) do update
-      set role = excluded.role,
-          status = 'active',
-          updated_at = now();
-  end if;
+  insert into public.beoflow_workspace_members (workspace_id, user_id, role, status)
+  values (
+    target_workspace_id,
+    new.id,
+    case
+      when safe_role = 'organizer_pending' then 'organizer'
+      when safe_role = 'collaborator_pending' then 'collaborator'
+      else 'viewer'
+    end,
+    'pending'
+  )
+  on conflict (workspace_id, user_id) do update
+    set role = excluded.role,
+        status = excluded.status,
+        updated_at = now();
 
   return new;
 end;
@@ -705,9 +731,12 @@ drop policy if exists "cater_events_insert_by_role" on public.cater_events;
 drop policy if exists "cater_events_update_by_role" on public.cater_events;
 drop policy if exists "cater_events_delete_admin" on public.cater_events;
 drop policy if exists "cater_providers_select_workspace_staff" on public.cater_providers;
+drop policy if exists "cater_providers_select_public_approved" on public.cater_providers;
+drop policy if exists "cater_providers_select_own_submissions" on public.cater_providers;
 drop policy if exists "cater_providers_insert_workspace_staff" on public.cater_providers;
 drop policy if exists "cater_providers_update_workspace_staff" on public.cater_providers;
 drop policy if exists "cater_providers_delete_workspace_admin" on public.cater_providers;
+drop policy if exists cater_providers_select_public_active on public.cater_providers;
 drop policy if exists "cater_beoflow_messages_delete_admin" on public.cater_beoflow_messages;
 drop policy if exists "cater_plan_versions_update_admin" on public.cater_plan_versions;
 drop policy if exists "cater_plan_versions_delete_admin" on public.cater_plan_versions;
@@ -741,7 +770,7 @@ create policy "beoflow_workspaces_insert_pending_owner"
 on public.beoflow_workspaces
 for insert
 to authenticated
-with check (owner_id = (select auth.uid()) and status = 'pending');
+with check (false);
 
 drop policy if exists "beoflow_workspaces_update_admin" on public.beoflow_workspaces;
 create policy "beoflow_workspaces_update_admin"
@@ -766,21 +795,10 @@ to authenticated
 with check (
   public.beoflow_is_workspace_admin(workspace_id)
   or (
+    workspace_id = 'cater-vegas'
     user_id = (select auth.uid())
     and status = 'pending'
-    and (
-      role in ('collaborator', 'viewer')
-      or (
-        role = 'owner'
-        and exists (
-          select 1
-          from public.beoflow_workspaces w
-          where w.id = workspace_id
-            and w.owner_id = (select auth.uid())
-            and w.status = 'pending'
-        )
-      )
-    )
+    and role in ('collaborator', 'viewer')
   )
 );
 
@@ -816,12 +834,6 @@ with check (
   or (
     (select auth.uid()) = id
     and role in (
-      'owner',
-      'admin',
-      'super_admin',
-      'platform_admin',
-      'organizer',
-      'client',
       'client_pending',
       'collaborator_pending',
       'organizer_pending',
@@ -949,26 +961,77 @@ to authenticated
 using (public.beoflow_is_workspace_admin(workspace_id));
 
 drop policy if exists "cater_providers_select_workspace_staff" on public.cater_providers;
+create policy "cater_providers_select_public_approved"
+on public.cater_providers
+for select
+to anon, authenticated
+using (
+  workspace_id = 'cater-vegas'
+  and public_visible = true
+  and approval_status = 'approved'
+  and status in ('active', 'preferred')
+);
+
 create policy "cater_providers_select_workspace_staff"
 on public.cater_providers
 for select
 to authenticated
 using (public.beoflow_is_workspace_staff(workspace_id));
 
+create policy "cater_providers_select_own_submissions"
+on public.cater_providers
+for select
+to authenticated
+using (
+  workspace_id = 'cater-vegas'
+  and created_by = (select auth.uid())
+);
+
 drop policy if exists "cater_providers_insert_workspace_staff" on public.cater_providers;
 create policy "cater_providers_insert_workspace_staff"
 on public.cater_providers
 for insert
 to authenticated
-with check (public.beoflow_is_workspace_staff(workspace_id));
+with check (
+  workspace_id = 'cater-vegas'
+  and created_by = (select auth.uid())
+  and (
+    public.beoflow_is_workspace_admin(workspace_id)
+    or (
+      public.beoflow_current_workspace_role(workspace_id) = 'collaborator'
+      and approval_status = 'pending'
+      and public_visible = false
+      and approved_by is null
+      and approved_at is null
+    )
+  )
+);
 
 drop policy if exists "cater_providers_update_workspace_staff" on public.cater_providers;
 create policy "cater_providers_update_workspace_staff"
 on public.cater_providers
 for update
 to authenticated
-using (public.beoflow_is_workspace_staff(workspace_id))
-with check (public.beoflow_is_workspace_staff(workspace_id));
+using (
+  public.beoflow_is_workspace_admin(workspace_id)
+  or (
+    public.beoflow_current_workspace_role(workspace_id) = 'collaborator'
+    and created_by = (select auth.uid())
+    and approval_status = 'pending'
+  )
+)
+with check (
+  public.beoflow_is_workspace_admin(workspace_id)
+  or (
+    workspace_id = 'cater-vegas'
+    and public.beoflow_current_workspace_role(workspace_id) = 'collaborator'
+    and created_by = (select auth.uid())
+    and approval_status = 'pending'
+    and public_visible = false
+    and approved_by is null
+    and approved_at is null
+  )
+);
 
 drop policy if exists "cater_providers_delete_workspace_admin" on public.cater_providers;
 create policy "cater_providers_delete_workspace_admin"
@@ -1105,6 +1168,7 @@ grant select, insert, update, delete on public.beoflow_workspace_members to auth
 grant select, insert, update on public.cater_profiles to authenticated;
 grant select, insert, update, delete on public.cater_customers to authenticated;
 grant select, insert, update, delete on public.cater_events to authenticated;
+grant select on public.cater_providers to anon;
 grant select, insert, update, delete on public.cater_providers to authenticated;
 grant select, insert, delete on public.cater_beoflow_messages to authenticated;
 grant select, insert, update, delete on public.cater_plan_versions to authenticated;

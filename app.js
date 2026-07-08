@@ -2,7 +2,6 @@ const stepIds = ["calendar", "event-type", "setup", "inventory", "fnb", "enterta
 const setupCategoryIds = ["tables", "chairs", "linen", "decor", "tents"];
 const flowCategoryIds = ["tables", "chairs", "linen", "decor", "tents", "food", "beverages", "entertainment", "lodging"];
 const storageKey = "caterVegasBuild";
-const LOCAL_INVENTORY_KEY = "caterVegasPublicInventory";
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 const notesCategoryLabel = "Inventory category";
 
@@ -134,21 +133,10 @@ let inventoryLoadError = "";
 
 async function getPublicSupabaseClient() {
   if (!supabaseClientPromise) {
-    supabaseClientPromise = import("./lib/supabaseClient.js?v=workspace-connection-20260707")
-      .then(async (module) => {
-        let workspaceId = module.DEFAULT_WORKSPACE_ID;
-
-        if (module.isSupabaseConfigured && module.supabase) {
-          try {
-            const { workspace, membership, profile } = await module.getWorkspaceContext();
-            workspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || workspaceId;
-          } catch {
-            workspaceId = module.DEFAULT_WORKSPACE_ID;
-          }
-        }
-
+    supabaseClientPromise = import("./lib/supabaseClient.js?v=shared-marketplace-workspace-20260707")
+      .then((module) => {
         return {
-          workspaceId,
+          workspaceId: module.DEFAULT_WORKSPACE_ID,
           isConfigured: module.isSupabaseConfigured,
           client: module.supabase,
         };
@@ -621,14 +609,6 @@ function renderReview() {
   `;
 }
 
-function localInventoryRows() {
-  try {
-    return JSON.parse(window.localStorage.getItem(LOCAL_INVENTORY_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
 function normalizeProviderRow(row) {
   const category = providerCategory(row);
   if (!category) return null;
@@ -661,12 +641,11 @@ function reconcileBuildWithInventory() {
 }
 
 async function loadPublicInventory() {
-  const localItems = localInventoryRows().map(normalizeProviderRow).filter(Boolean);
   const { workspaceId, isConfigured, client } = await getPublicSupabaseClient();
 
   if (!isConfigured || !client) {
-    inventoryLoadError = "";
-    publicInventory = localItems.filter((item) => flowCategoryIds.includes(item.category));
+    inventoryLoadError = "Inventory is not configured yet.";
+    publicInventory = [];
     reconcileBuildWithInventory();
     if (activeCategory) renderInventoryCategory(activeCategory);
     renderReview();
@@ -676,9 +655,11 @@ async function loadPublicInventory() {
   try {
     const result = await client
       .from("cater_providers")
-      .select("id,provider_name,provider_type,notes,status,created_at")
+      .select("id,provider_name,provider_type,notes,status,created_at,service_category,public_visible,approval_status,public_description,image_url")
       .eq("workspace_id", workspaceId)
-      .eq("status", "active")
+      .eq("public_visible", true)
+      .eq("approval_status", "approved")
+      .in("status", ["active", "preferred"])
       .ilike("notes", `${INVENTORY_NOTE_PREFIX}%`)
       .order("created_at", { ascending: false })
       .limit(200);
