@@ -7439,6 +7439,14 @@ body {
   display: none !important;
 }
 
+.inventory-panel > .panel-heading div {
+  display: block;
+}
+
+.inventory-panel > .panel-heading h2 {
+  margin-left: 0;
+}
+
 @media (max-width: 820px) {
   .admin-layout-simple .sidebar-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
