@@ -1314,8 +1314,11 @@ svg {
   display: grid;
   grid-template-rows: auto auto auto;
   gap: 10px;
+  width: 100%;
+  max-width: 260px;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
   padding: 14px;
   border: 1px solid rgba(17, 22, 20, 0.12);
   border-radius: 16px;
@@ -1332,6 +1335,8 @@ svg {
   display: grid;
   gap: 10px;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
   border: 0;
   background: transparent;
   color: inherit;
@@ -1357,9 +1362,12 @@ svg {
 .table-choice-image {
   display: grid;
   place-items: center;
+  position: relative;
+  contain: paint;
   overflow: hidden;
   width: 100%;
   min-width: 0;
+  max-width: 100%;
   height: 160px;
   border: 1px solid rgba(134, 120, 90, 0.16);
   border-radius: 12px;
@@ -1373,11 +1381,20 @@ svg {
 
 .table-choice-image img {
   display: block;
-  width: 100%;
-  max-width: 100%;
-  height: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  max-height: 100% !important;
   border-radius: inherit;
   object-fit: contain;
+  object-position: center;
+}
+
+.inventory-choice-image img {
+  position: absolute;
+  inset: 0;
+  min-width: 0;
+  min-height: 0;
 }
 
 .table-choice strong {
@@ -1389,11 +1406,18 @@ svg {
 }
 
 .table-choice small {
+  display: -webkit-box;
+  overflow: hidden;
   color: #4e5851;
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.08em;
+  line-height: 1.25;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .table-choice-description {

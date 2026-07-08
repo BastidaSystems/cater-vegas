@@ -402,18 +402,47 @@ function inventoryIconForCategory(category) {
   return icons[normalized] || "I";
 }
 
-function fileToDataUrl(file) {
+function loadImageFromDataUrl(dataUrl) {
   return new Promise((resolve, reject) => {
-    if (!file) {
-      resolve("");
-      return;
-    }
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Could not load the image."));
+    image.src = dataUrl;
+  });
+}
 
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
     reader.onerror = () => reject(reader.error || new Error("Could not read the image."));
     reader.readAsDataURL(file);
   });
+}
+
+async function fileToDataUrl(file) {
+  if (!file) return "";
+  if (!String(file.type || "").startsWith("image/")) {
+    throw new Error("Choose an image file.");
+  }
+
+  const source = await readFileAsDataUrl(file);
+  const image = await loadImageFromDataUrl(source);
+  const maxWidth = 900;
+  const maxHeight = 675;
+  const scale = Math.min(1, maxWidth / image.naturalWidth, maxHeight / image.naturalHeight);
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) return source;
+  context.fillStyle = "#fffdf8";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(image, 0, 0, width, height);
+  return canvas.toDataURL("image/webp", 0.82);
 }
 
 function eventDateValue(event) {
@@ -1096,7 +1125,14 @@ async function updateWorkspaceMember(userId, status) {
 async function saveInventoryItem(event) {
   event.preventDefault();
 
-  const fileImage = await fileToDataUrl(inventoryImageFile?.files?.[0]);
+  let fileImage = "";
+  try {
+    fileImage = await fileToDataUrl(inventoryImageFile?.files?.[0]);
+  } catch (error) {
+    setInventoryStatus(error.message || "Could not prepare the image.");
+    return;
+  }
+
   const selectedCategory = normalizeInventoryCategory(inventoryCategory.value);
   const itemPayload = {
     category: selectedCategory,
