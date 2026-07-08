@@ -1,5 +1,5 @@
--- Public Cater Vegas request flow.
--- Lets anonymous visitors submit quote requests without granting direct table access.
+-- Public Cater Vegas order flow.
+-- Lets anonymous visitors create checkout orders without granting direct table access.
 
 begin;
 
@@ -54,7 +54,7 @@ begin
   end if;
 
   if v_cart_count <= 0 then
-    raise exception 'Add at least one item before submitting a request.' using errcode = '22023';
+    raise exception 'Add at least one item before checkout.' using errcode = '22023';
   end if;
 
   insert into public.cater_customers (
@@ -94,8 +94,8 @@ begin
   values (
     v_workspace_id,
     v_customer_id,
-    'Public Request - ' || v_full_name,
-    coalesce(v_event_type, 'Public Request'),
+    'Public Order - ' || v_full_name,
+    coalesce(v_event_type, 'Event Order'),
     'draft',
     p_event_date,
     p_guest_count,
@@ -117,6 +117,7 @@ begin
 
   return jsonb_build_object(
     'request_id', v_event_id,
+    'order_id', v_event_id,
     'event_id', v_event_id,
     'customer_id', v_customer_id,
     'status', 'draft'

@@ -298,7 +298,7 @@ function requestPlanPayload(formValues = {}) {
     source: "public_index",
     submitted_at: new Date().toISOString(),
     selected_date: selectedEventDateIso(),
-    event_type: build.eventType || "Public Request",
+    event_type: build.eventType || "Event Order",
     contact: {
       full_name: formValues.fullName || "",
       email: formValues.email || "",
@@ -316,21 +316,27 @@ function updateRequestFormState() {
   const items = cartItems();
   if (!requestSubmitButton) return;
   const isSubmitted = publicRequestForm?.dataset.submitted === "true";
+  const estimatedTotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   requestSubmitButton.disabled = isSubmitted || !items.length;
   if (!items.length) {
-    publicRequestStatus("Add at least one item before submitting a request.");
-  } else if (requestStatus?.textContent === "Add at least one item before submitting a request.") {
+    requestSubmitButton.textContent = "Pay now";
+    publicRequestStatus("Add at least one item before payment.");
+  } else {
+    requestSubmitButton.textContent = estimatedTotal ? `Pay ${formatMoney(estimatedTotal)} now` : "Pay now";
+  }
+
+  if (items.length && requestStatus?.textContent === "Add at least one item before payment.") {
     publicRequestStatus("");
   }
 }
 
-async function submitPublicRequest(event) {
+async function submitPublicPayment(event) {
   event.preventDefault();
 
   if (!publicRequestForm) return;
 
   if (!cartItems().length) {
-    publicRequestStatus("Add at least one item before submitting a request.", "error");
+    publicRequestStatus("Add at least one item before payment.", "error");
     updateRequestFormState();
     return;
   }
@@ -339,7 +345,7 @@ async function submitPublicRequest(event) {
 
   const eventDate = selectedEventDateIso();
   if (!eventDate) {
-    publicRequestStatus("Choose a valid event date before submitting.", "error");
+    publicRequestStatus("Choose a valid event date before payment.", "error");
     return;
   }
 
@@ -354,42 +360,55 @@ async function submitPublicRequest(event) {
   const { isConfigured, client } = await getPublicSupabaseClient();
 
   if (!isConfigured || !client) {
-    publicRequestStatus("Supabase is not configured. Please email Cater Vegas directly.", "error");
+    publicRequestStatus("Payment is not configured yet. Please email Cater Vegas directly.", "error");
     return;
   }
 
+  const baseUrl = `${window.location.origin}${window.location.pathname}`;
   publicRequestForm.dataset.submitted = "false";
-  publicRequestStatus("Submitting request...");
+  publicRequestStatus("Opening secure payment...");
   requestSubmitButton.disabled = true;
-  requestSubmitButton.textContent = "Submitting...";
+  requestSubmitButton.textContent = "Opening checkout...";
 
-  const { data, error } = await client.rpc("cater_submit_public_request", {
-    p_full_name: fullName,
-    p_email: email,
-    p_phone: phone || null,
-    p_guest_count: guestCount,
-    p_notes: notes || null,
-    p_event_date: eventDate,
-    p_event_type: build.eventType || "Public Request",
-    p_plan: plan,
+  const { data, error } = await client.functions.invoke("create-checkout-session", {
+    body: {
+      full_name: fullName,
+      email,
+      phone: phone || null,
+      guest_count: guestCount,
+      notes: notes || null,
+      event_date: eventDate,
+      event_type: build.eventType || "Event Order",
+      plan,
+      success_url: `${baseUrl}?payment=success&session_id={CHECKOUT_SESSION_ID}#review`,
+      cancel_url: `${baseUrl}?payment=cancelled#review`,
+    },
   });
 
-  if (error) {
-    publicRequestStatus(error.message || "Could not submit request. Please try again.", "error");
-    requestSubmitButton.textContent = "Request Quote";
+  if (error || !data?.checkout_url) {
+    publicRequestStatus(error?.message || data?.error || "Could not open payment. Please try again.", "error");
     updateRequestFormState();
     return;
   }
 
   publicRequestForm.dataset.submitted = "true";
-  requestSubmitButton.textContent = "Request Sent";
-  publicRequestStatus(
-    data?.request_id
-      ? `Request submitted. Cater Vegas will contact you soon. Request #${data.request_id}.`
-      : "Request submitted. Cater Vegas will contact you soon.",
-    "success"
-  );
-  updateRequestFormState();
+  requestSubmitButton.textContent = "Redirecting...";
+  publicRequestStatus("Redirecting to secure payment...", "success");
+  window.location.href = data.checkout_url;
+}
+
+function syncPaymentReturnState() {
+  if (!requestStatus) return;
+  const searchParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(String(window.location.hash || "").split("?")[1] || "");
+  const paymentState = searchParams.get("payment") || hashParams.get("payment");
+  if (paymentState === "success") {
+    publicRequestStatus("Payment received. Your order is being confirmed.", "success");
+  } else if (paymentState === "cancelled") {
+    publicRequestStatus("Payment was cancelled. You can review and pay when ready.", "error");
+    publicRequestForm?.removeAttribute("data-submitted");
+    updateRequestFormState();
+  }
 }
 
 function itemQuantityAvailable(item) {
@@ -855,6 +874,7 @@ function renderReview() {
     ${rows}
   `;
   updateRequestFormState();
+  syncPaymentReturnState();
 }
 
 function normalizeProviderRow(row) {
@@ -962,7 +982,7 @@ document.getElementById("clear-cart-button")?.addEventListener("click", () => {
   updateRequestFormState();
 });
 
-publicRequestForm?.addEventListener("submit", submitPublicRequest);
+publicRequestForm?.addEventListener("submit", submitPublicPayment);
 
 const navCartButton = document.getElementById("nav-cart-button");
 const navCartPopover = document.getElementById("nav-cart-popover");
