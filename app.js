@@ -537,6 +537,12 @@ function formatMoney(value) {
   }).format(Number(value || 0));
 }
 
+function normalizePublicPriceLabels() {
+  document.querySelectorAll(".inventory-price").forEach((label) => {
+    label.textContent = label.textContent.replace(/\s*\([^)]*\)\s*$/g, "");
+  });
+}
+
 function cartQuantity(itemId) {
   return Number(build.cart?.[itemId]?.quantity || 0);
 }
@@ -831,6 +837,7 @@ function renderInventoryCategory(category) {
     });
   });
 
+  normalizePublicPriceLabels();
   updateBuilderPreview();
 }
 
@@ -1143,6 +1150,10 @@ document.addEventListener("keydown", (event) => {
 window.addEventListener("hashchange", () => {
   const route = parseHashRoute();
   showStep(route.stepId, route.category);
+});
+
+window.addEventListener("pageshow", () => {
+  normalizePublicPriceLabels();
 });
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {
