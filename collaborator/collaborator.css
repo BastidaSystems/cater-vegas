@@ -2,6 +2,15 @@
 
 .collaborator-shell {
   --collab-content-max: 1280px;
+  align-items: start;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+.collaborator-shell .admin-sidebar {
+  align-self: start;
 }
 
 .collaborator-shell .admin-logo strong small {
@@ -19,12 +28,25 @@
 
 .collaborator-shell .admin-main {
   max-width: var(--collab-content-max);
+  min-height: calc(100vh - clamp(2rem, 3.2vw, 3rem));
+  scrollbar-gutter: stable;
+}
+
+.collaborator-shell .admin-clean-grid {
+  min-height: 100%;
 }
 
 .collaborator-shell .collaborator-dashboard-panel,
 .collaborator-shell .collaborator-inventory-panel {
   display: grid;
+  min-height: 100%;
+  align-content: start;
   gap: 1.35rem;
+}
+
+.collaborator-shell .sidebar-link:hover,
+.collaborator-shell .sidebar-link.is-active {
+  transform: none;
 }
 
 .collaborator-shell .panel-heading > div {
@@ -32,6 +54,29 @@
   align-items: start;
   justify-items: start;
   gap: 0.35rem;
+}
+
+@media (min-width: 1081px) {
+  body {
+    overflow: hidden;
+  }
+
+  .collaborator-shell {
+    height: 100vh;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  .collaborator-shell .admin-sidebar,
+  .collaborator-shell .admin-main {
+    height: calc(100vh - clamp(2rem, 3.2vw, 3rem));
+  }
+
+  .collaborator-shell .admin-main {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 .collaborator-shell .collaborator-metrics {
