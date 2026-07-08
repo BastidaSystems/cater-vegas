@@ -661,11 +661,7 @@ function renderUsers() {
   if (!usersList) return;
 
   if (!companyUsers.length) {
-    usersList.innerHTML = `
-      <div class="empty-state">
-        No collaborator users yet. Add company and legal details before using them in rental or sales workflows.
-      </div>
-    `;
+    usersList.innerHTML = "";
     return;
   }
 
