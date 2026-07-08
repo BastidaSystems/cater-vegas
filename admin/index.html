@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Cater Vegas administration and inventory dashboard." />
     <title>Cater Vegas | Admin</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="admin.css?v=shared-marketplace-workspace-20260707" />
   </head>
   <body>
@@ -48,36 +45,18 @@
           </button>
         </nav>
 
-        <div class="sidebar-mini">
+        <div class="sidebar-mini sidebar-account">
           <span class="avatar">CV</span>
           <div>
             <strong id="dashboardEmail">Admin</strong>
-            <small>Admin account</small>
+            <small id="dashboardRole">Admin account</small>
+            <span id="sessionStatus" class="session-status sidebar-session-status">Checking session...</span>
           </div>
+          <button id="signoutButton" class="logout-button" type="button">Sign Out</button>
         </div>
       </aside>
 
       <main class="admin-main simple-main">
-        <header class="admin-header">
-          <div class="header-title">
-            <p class="eyebrow">Cater Vegas Admin</p>
-            <h1>Dashboard</h1>
-            <p>Event planning, calendar visibility, and buyer-facing inventory in one calm workspace.</p>
-          </div>
-
-          <div class="header-actions">
-            <a class="home-button" href="../client/" aria-label="View buyer page">View Buyer</a>
-            <div class="user-pill account-pill" aria-label="Active user">
-              <span class="avatar">CV</span>
-              <span class="account-copy">
-                <strong id="sessionStatus" class="session-status">Checking session...</strong>
-                <small id="dashboardRole">Owner</small>
-              </span>
-              <button id="signoutButton" class="logout-button" type="button">Sign Out</button>
-            </div>
-          </div>
-        </header>
-
         <section class="admin-clean-grid">
           <section class="panel simple-panel dashboard-panel calendar-panel" id="calendarPanel" aria-label="Event dashboard">
             <div class="panel-heading">

@@ -3,83 +3,175 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Cater Vegas collaborator portal in BEOFlow." />
+    <meta name="description" content="Cater Vegas collaborator inventory workspace." />
     <title>Cater Vegas | Collaborator</title>
+    <link rel="stylesheet" href="../admin/admin.css?v=shared-marketplace-workspace-20260707" />
     <link rel="stylesheet" href="collaborator.css?v=shared-marketplace-workspace-20260707" />
   </head>
   <body>
-    <header class="portal-header">
-      <a class="portal-logo" href="../index.html">CATER VEGAS</a>
-      <nav>
-        <a class="portal-home" href="../index.html" aria-label="Return home"><span>🏠</span> Home</a>
-        <a href="../login.html">Login</a>
-        <button id="signoutButton" type="button">Sign Out</button>
-      </nav>
-    </header>
+    <div class="admin-layout admin-layout-simple collaborator-shell" data-collaborator-view="dashboard">
+      <aside class="admin-sidebar" aria-label="Collaborator menu">
+        <a class="admin-logo" href="../index.html" aria-label="Cater Vegas home">
+          <span>CV</span>
+          <strong>CATER VEGAS <small>COLLABORATOR</small></strong>
+        </a>
 
-    <main class="portal-shell">
-      <section class="portal-hero">
-        <p class="portal-kicker">Collaborator Workspace</p>
-        <h1>Assignments.</h1>
-        <p id="sessionStatus">Checking session...</p>
-      </section>
+        <nav class="sidebar-nav">
+          <button class="sidebar-link is-active" type="button" data-collaborator-view-button="dashboard">
+            <span class="sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M4 5.5h16M4 12h16M4 18.5h10" />
+              </svg>
+            </span>
+            Dashboard
+          </button>
+          <button class="sidebar-link" type="button" data-collaborator-view-button="inventory">
+            <span class="sidebar-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24">
+                <path d="M5 7.5h14v11H5z" />
+                <path d="M8 7.5V5h8v2.5M8 12h8" />
+              </svg>
+            </span>
+            Inventory
+          </button>
+        </nav>
 
-      <section class="portal-card">
-        <p class="portal-kicker">Cater Vegas</p>
-        <h2>Your collaborator access</h2>
-        <p id="collaboratorSummary">Approved assignments for your account will appear here.</p>
-        <div class="portal-list" id="assignmentsList"></div>
-      </section>
-
-      <section class="portal-card">
-        <p class="portal-kicker">Workspace Inventory</p>
-        <h2>Submit Inventory</h2>
-        <p>Items you submit are saved to the Cater Vegas workspace and remain pending until an admin approves and publishes them.</p>
-
-        <form class="portal-form" id="collaboratorInventoryForm">
-          <label>
-            <span>Item name</span>
-            <input id="collaboratorInventoryName" type="text" placeholder="White folding chair" required />
-          </label>
-          <label>
-            <span>Category</span>
-            <select id="collaboratorInventoryCategory" required>
-              <option value="tables">Tables</option>
-              <option value="chairs">Chairs</option>
-              <option value="linen">Linen</option>
-              <option value="decor">Decor</option>
-              <option value="tents">Tents</option>
-              <option value="food">Food</option>
-              <option value="beverages">Beverages</option>
-              <option value="entertainment">Entertainment</option>
-              <option value="lodging">Lodging</option>
-            </select>
-          </label>
-          <label>
-            <span>Available quantity</span>
-            <input id="collaboratorInventoryQuantity" type="number" min="0" placeholder="24" required />
-          </label>
-          <label>
-            <span>Base price</span>
-            <input id="collaboratorInventoryPrice" type="text" placeholder="$12 rental per piece" />
-          </label>
-          <label class="full-field">
-            <span>Image URL</span>
-            <input id="collaboratorInventoryImageUrl" type="url" placeholder="https://..." />
-          </label>
-          <label class="full-field">
-            <span>Description</span>
-            <textarea id="collaboratorInventoryDescription" rows="4" placeholder="Describe the item for admin review."></textarea>
-          </label>
-          <div class="portal-form-actions full-field">
-            <button type="submit">Submit for Review</button>
-            <p id="collaboratorInventoryStatus" aria-live="polite"></p>
+        <div class="sidebar-mini sidebar-account">
+          <span class="avatar">CV</span>
+          <div>
+            <strong id="dashboardEmail">Collaborator</strong>
+            <small id="dashboardRole">Collaborator account</small>
+            <span id="sessionStatus" class="session-status sidebar-session-status">Checking session...</span>
           </div>
-        </form>
+          <button id="signoutButton" class="logout-button" type="button">Sign Out</button>
+        </div>
+      </aside>
 
-        <div class="portal-list inventory-submission-list" id="collaboratorInventoryList" aria-live="polite"></div>
-      </section>
-    </main>
+      <main class="admin-main simple-main">
+        <section class="admin-clean-grid">
+          <section class="panel simple-panel collaborator-dashboard-panel" id="collaboratorDashboardPanel" aria-label="Collaborator dashboard">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Cater Vegas Workspace</p>
+                <h2>Dashboard</h2>
+              </div>
+              <span class="calendar-month-label">Shared Workspace</span>
+            </div>
+
+            <div class="dashboard-metrics collaborator-metrics" aria-live="polite">
+              <article class="dashboard-metric-card">
+                <span>Submitted</span>
+                <strong id="submittedInventoryCount">0</strong>
+                <small>Your inventory items</small>
+              </article>
+              <article class="dashboard-metric-card">
+                <span>Pending</span>
+                <strong id="pendingInventoryCount">0</strong>
+                <small>Waiting for admin review</small>
+              </article>
+              <article class="dashboard-metric-card">
+                <span>Approved</span>
+                <strong id="approvedInventoryCount">0</strong>
+                <small>Accepted by admin</small>
+              </article>
+              <article class="dashboard-metric-card">
+                <span>Public</span>
+                <strong id="publicInventoryCount">0</strong>
+                <small>Published to buyers</small>
+              </article>
+            </div>
+
+            <div class="dashboard-overview-grid collaborator-overview-grid">
+              <section class="side-card collaborator-focus-card">
+                <div>
+                  <p class="eyebrow">Inventory Desk</p>
+                  <h3>Submit Products</h3>
+                </div>
+                <p id="collaboratorSummary">
+                  Add tables, chairs, linen, decor, tents, and service items for admin review before they appear publicly.
+                </p>
+                <button class="primary-button" type="button" data-collaborator-view-button="inventory">Add Inventory</button>
+              </section>
+
+              <aside class="dashboard-side-panel">
+                <section class="side-card">
+                  <div>
+                    <p class="eyebrow">Assignments</p>
+                    <h3>Workspace Access</h3>
+                  </div>
+                  <div class="portal-list" id="assignmentsList" aria-live="polite"></div>
+                </section>
+              </aside>
+            </div>
+          </section>
+
+          <section class="panel simple-panel inventory-panel collaborator-inventory-panel" id="inventoryPanel" aria-label="Submit Cater Vegas inventory">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Workspace Inventory</p>
+                <h2>Inventory</h2>
+              </div>
+              <span class="calendar-month-label">Pending Review</span>
+            </div>
+
+            <form class="inventory-form" id="collaboratorInventoryForm">
+              <label>
+                <span>Item name</span>
+                <input id="collaboratorInventoryName" type="text" placeholder="White folding chair" required />
+              </label>
+              <label>
+                <span>Category</span>
+                <select id="collaboratorInventoryCategory" required>
+                  <option value="tables">Tables</option>
+                  <option value="chairs">Chairs</option>
+                  <option value="linen">Linen</option>
+                  <option value="decor">Decor</option>
+                  <option value="tents">Tents</option>
+                  <option value="food">Food</option>
+                  <option value="beverages">Beverages</option>
+                  <option value="entertainment">Entertainment</option>
+                  <option value="lodging">Lodging</option>
+                </select>
+              </label>
+              <label>
+                <span>Available quantity</span>
+                <input id="collaboratorInventoryQuantity" type="number" min="0" placeholder="24" required />
+              </label>
+              <label>
+                <span>Base price</span>
+                <input id="collaboratorInventoryPrice" type="text" placeholder="$12 rental per piece" />
+              </label>
+              <label class="full-field">
+                <span>Image URL</span>
+                <input id="collaboratorInventoryImageUrl" type="url" placeholder="https://..." />
+              </label>
+              <label class="full-field">
+                <span>Or upload an image from your computer</span>
+                <input id="collaboratorInventoryImageFile" type="file" accept="image/*" />
+              </label>
+              <label class="full-field">
+                <span>Description</span>
+                <textarea id="collaboratorInventoryDescription" rows="4" placeholder="Describe the item for admin review."></textarea>
+              </label>
+              <div class="form-actions full-field">
+                <button class="primary-button" type="submit">Submit for Review</button>
+                <p class="admin-status" id="collaboratorInventoryStatus" aria-live="polite"></p>
+              </div>
+            </form>
+
+            <div class="collaborator-submission-panel">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <p class="eyebrow">Your Submissions</p>
+                  <h3>Submitted Inventory</h3>
+                </div>
+              </div>
+              <div class="portal-list inventory-submission-list" id="collaboratorInventoryList" aria-live="polite"></div>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module" src="collaborator.js?v=shared-marketplace-workspace-20260707"></script>
