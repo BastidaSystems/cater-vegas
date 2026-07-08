@@ -102,12 +102,27 @@
             <div class="panel-heading">
               <div>
                 <h2>Inventory</h2>
+                <p>Manage products published to the Cater Vegas public catalog.</p>
+                <small>Only Approved + Public items appear on the public catalog.</small>
               </div>
-              <button class="secondary-button" id="refreshInventoryButton" type="button">Refresh</button>
+              <div class="heading-actions inventory-heading-actions">
+                <button class="primary-button" id="addInventoryButton" type="button" aria-expanded="false">Add Item</button>
+                <button class="secondary-button" id="refreshInventoryButton" type="button">Refresh</button>
+                <a class="secondary-button" href="../index.html#inventory">View Public Catalog</a>
+              </div>
             </div>
 
-            <form class="inventory-form" id="inventoryForm">
+            <p class="admin-status inventory-panel-status" id="inventoryStatus" aria-live="polite"></p>
+
+            <form class="inventory-form" id="inventoryForm" aria-hidden="true">
               <input id="inventoryItemId" type="hidden" />
+              <div class="inventory-form-heading full-field">
+                <div>
+                  <small>Inventory Desk</small>
+                  <h3 id="inventoryFormTitle">Add Item</h3>
+                </div>
+                <p>New items stay private until they are approved and published.</p>
+              </div>
               <label>
                 <span>Item name</span>
                 <input id="inventoryName" type="text" placeholder="60-inch round table" required />
@@ -142,10 +157,14 @@
                 <span>Buyer-facing description</span>
                 <textarea id="inventoryDescription" rows="4" placeholder="Ideal for dinners, weddings, and VIP events."></textarea>
               </label>
+              <div class="inventory-form-info full-field" aria-label="Inventory publishing rules">
+                <span>Approval status is managed from the item card.</span>
+                <span>Public visibility is controlled with Publish / Unpublish.</span>
+                <span>Saved items use the existing workspace marketplace rules.</span>
+              </div>
               <div class="form-actions full-field">
                 <button class="primary-button" type="submit">Save Inventory</button>
                 <button class="secondary-button" id="resetInventoryButton" type="button">Clear</button>
-                <p class="admin-status" id="inventoryStatus" aria-live="polite"></p>
               </div>
             </form>
 
