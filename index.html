@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=public-cart-20260707">
+  <link rel="stylesheet" href="styles.css?v=navbar-cart-20260707">
 </head>
 <body>
   <header class="site-header" id="top">
@@ -24,9 +24,27 @@
     </a>
 
     <nav class="site-nav" aria-label="Principal">
+      <button class="nav-cart-button" id="nav-cart-button" type="button" aria-label="Open product cart" aria-expanded="false" aria-controls="nav-cart-popover">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M6.2 6.4h14l-1.4 7.1a2 2 0 0 1-2 1.6H8.5a2 2 0 0 1-2-1.7L5.4 3.8H2.8"></path>
+          <circle cx="9.5" cy="19.2" r="1.4"></circle>
+          <circle cx="17.2" cy="19.2" r="1.4"></circle>
+        </svg>
+        <span id="cart-count-label">0</span>
+      </button>
       <a href="login.html">Login</a>
       <a href="#contact">Contact</a>
     </nav>
+    <aside class="nav-cart-popover" id="nav-cart-popover" aria-live="polite" hidden>
+      <div class="inventory-cart-heading">
+        <small>Product cart</small>
+        <strong id="cart-total-label">0 items</strong>
+      </div>
+      <div class="inventory-cart-list" id="inventory-cart-list">
+        <p>Your selected products will appear here.</p>
+      </div>
+      <button class="secondary-flow-button" id="clear-cart-button" type="button">Clear cart</button>
+    </aside>
   </header>
 
   <main>
@@ -291,16 +309,6 @@
           <p id="inventory-preview-note">Choose an item to save this category.</p>
         </div>
       </aside>
-      <aside class="inventory-cart" aria-live="polite">
-        <div class="inventory-cart-heading">
-          <small>Product cart</small>
-          <strong id="cart-count-label">0 items</strong>
-        </div>
-        <div class="inventory-cart-list" id="inventory-cart-list">
-          <p>Your selected products will appear here.</p>
-        </div>
-        <button class="secondary-flow-button" id="clear-cart-button" type="button">Clear cart</button>
-      </aside>
       <div class="selected-summary" id="selected-summary" aria-live="polite"></div>
       <div class="flow-actions">
         <a class="contact-button" id="inventory-next-link" href="#fnb">Continue</a>
@@ -381,6 +389,6 @@
     <p>Events, F&amp;B, Entertainment &amp; Hospitality.</p>
   </footer>
 
-  <script type="module" src="app.js?v=public-cart-20260707"></script>
+  <script type="module" src="app.js?v=navbar-cart-20260707"></script>
 </body>
 </html>

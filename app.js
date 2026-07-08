@@ -476,6 +476,7 @@ function updateBuilderPreview() {
   const summary = document.getElementById("selected-summary");
   const cartList = document.getElementById("inventory-cart-list");
   const cartCountLabel = document.getElementById("cart-count-label");
+  const cartTotalLabel = document.getElementById("cart-total-label");
   const copy = categoryCopy[activeCategory];
 
   if (preview) preview.textContent = selected?.title || `No ${copy?.label.toLowerCase() || "selection"} selected yet`;
@@ -502,15 +503,19 @@ function updateBuilderPreview() {
       .join("");
   }
 
-  renderCart(cartList, cartCountLabel);
+  renderCart(cartList, cartCountLabel, cartTotalLabel);
 }
 
-function renderCart(cartList, cartCountLabel) {
+function renderCart(cartList, cartCountLabel, cartTotalLabel) {
   const cartItems = Object.values(build.cart || {}).filter((item) => Number(item.quantity) > 0);
   const totalQuantity = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
   if (cartCountLabel) {
-    cartCountLabel.textContent = `${totalQuantity} item${totalQuantity === 1 ? "" : "s"}`;
+    cartCountLabel.textContent = String(totalQuantity);
+  }
+
+  if (cartTotalLabel) {
+    cartTotalLabel.textContent = `${totalQuantity} item${totalQuantity === 1 ? "" : "s"}`;
   }
 
   if (!cartList) return;
@@ -649,6 +654,32 @@ document.getElementById("clear-cart-button")?.addEventListener("click", () => {
   saveBuild();
   if (activeCategory) renderInventoryCategory(activeCategory);
   else updateBuilderPreview();
+});
+
+const navCartButton = document.getElementById("nav-cart-button");
+const navCartPopover = document.getElementById("nav-cart-popover");
+
+function setCartPopover(open) {
+  if (!navCartButton || !navCartPopover) return;
+  navCartPopover.hidden = !open;
+  navCartButton.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+navCartButton?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  setCartPopover(Boolean(navCartPopover?.hidden));
+});
+
+navCartPopover?.addEventListener("click", (event) => {
+  event.stopPropagation();
+});
+
+document.addEventListener("click", () => {
+  setCartPopover(false);
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") setCartPopover(false);
 });
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {

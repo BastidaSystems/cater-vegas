@@ -105,7 +105,7 @@ svg {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 0;
+  gap: 10px;
   color: #080a09;
   font-size: clamp(0.82rem, 0.92vw, 0.94rem);
   font-weight: 500;
@@ -121,6 +121,73 @@ svg {
 
 .site-nav a[aria-current="page"] {
   color: #050807;
+}
+
+.nav-cart-button {
+  position: relative;
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid rgba(17, 22, 20, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.94);
+  color: #101513;
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.nav-cart-button:hover,
+.nav-cart-button[aria-expanded="true"] {
+  border-color: rgba(31, 36, 33, 0.34);
+  background: #fffdf8;
+  transform: translateY(-1px);
+}
+
+.nav-cart-button svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.9;
+}
+
+.nav-cart-button span {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  min-width: 21px;
+  height: 21px;
+  place-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 999px;
+  background: #101513;
+  color: #ffffff;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.nav-cart-popover {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: clamp(18px, 3vw, 40px);
+  z-index: 20;
+  display: grid;
+  gap: 12px;
+  width: min(92vw, 390px);
+  border: 1px solid rgba(17, 22, 20, 0.13);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.98);
+  box-shadow: 0 22px 64px rgba(26, 37, 31, 0.16);
+  padding: 16px;
+}
+
+.nav-cart-popover[hidden] {
+  display: none;
 }
 
 .language-pill {
