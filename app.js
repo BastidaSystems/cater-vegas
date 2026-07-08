@@ -765,10 +765,7 @@ function renderInventoryCategory(category) {
         const available = itemQuantityAvailable(item);
         const basePrice = itemUnitPrice(item);
         const adjustedPrice = adjustedUnitPrice(basePrice);
-        const pricing = datePricingContext();
-        const priceLabel = adjustedPrice
-          ? `${formatMoney(adjustedPrice)}${pricing.markupPercent ? ` (${pricing.markupPercent}% ${pricing.type})` : ""}`
-          : itemPriceLabel(item);
+        const priceLabel = adjustedPrice ? formatMoney(adjustedPrice) : itemPriceLabel(item);
         return `
           <article class="table-choice inventory-choice${selectedClass}" data-inventory-id="${escapeHtml(item.id)}">
             <button class="inventory-select-button" type="button" data-select-inventory="${escapeHtml(item.id)}">
