@@ -224,12 +224,12 @@ svg {
 .calendar-hero {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: clamp(10px, 1.25vw, 16px);
+  gap: clamp(14px, 1.7vw, 24px);
   justify-items: center;
   align-items: center;
-  align-content: end;
+  align-content: center;
   min-height: calc(100svh - 68px);
-  padding: clamp(10px, 1.35vw, 18px) clamp(20px, 5vw, 80px) clamp(6px, 0.9vw, 10px);
+  padding: clamp(26px, 4vh, 44px) clamp(20px, 5vw, 80px);
   background: #ffffff;
   scroll-margin-top: 76px;
 }
@@ -237,7 +237,7 @@ svg {
 .landing-hero-copy {
   display: grid;
   justify-items: center;
-  gap: 4px;
+  gap: 6px;
   text-align: center;
 }
 
@@ -254,7 +254,7 @@ svg {
   margin: 0;
   color: #060807;
   font-family: var(--serif);
-  font-size: clamp(2.45rem, 3.8vw, 4.25rem);
+  font-size: clamp(2.7rem, 4.15vw, 4.7rem);
   font-weight: 600;
   letter-spacing: 0;
   line-height: 0.9;
@@ -270,12 +270,12 @@ svg {
 
 .booking-shell {
   display: grid;
-  width: min(100%, 760px);
+  width: min(100%, 860px);
   overflow: hidden;
   border: 1px solid rgba(17, 22, 20, 0.08);
-  border-radius: 16px;
+  border-radius: 20px;
   background: #ffffff;
-  box-shadow: 0 18px 54px rgba(17, 22, 20, 0.065);
+  box-shadow: 0 24px 68px rgba(17, 22, 20, 0.075);
 }
 
 .booking-heading {
@@ -293,7 +293,7 @@ svg {
 }
 
 .calendar-card {
-  padding: clamp(14px, 1.8vw, 22px) clamp(34px, 3.6vw, 48px) clamp(8px, 1vw, 12px);
+  padding: clamp(18px, 2.1vw, 28px) clamp(42px, 4.4vw, 64px) clamp(12px, 1.35vw, 18px);
   border: 0;
   border-radius: 0;
   background: #ffffff;
@@ -303,7 +303,7 @@ svg {
   display: grid;
   grid-template-columns: 42px 1fr 42px;
   align-items: center;
-  margin-bottom: clamp(9px, 1.15vw, 14px);
+  margin-bottom: clamp(12px, 1.35vw, 18px);
 }
 
 .calendar-card-header strong {
@@ -316,7 +316,7 @@ svg {
 }
 
 .month-name {
-  font-size: clamp(2.25rem, 3.05vw, 3.15rem);
+  font-size: clamp(2.45rem, 3.35vw, 3.45rem);
 }
 
 .month-year {
@@ -362,7 +362,7 @@ svg {
 .calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: clamp(3px, 0.45vw, 7px) clamp(10px, 1.55vw, 22px);
+  gap: clamp(5px, 0.6vw, 9px) clamp(14px, 1.85vw, 28px);
 }
 
 .calendar-grid span {
@@ -378,8 +378,8 @@ svg {
 .calendar-grid button {
   display: grid;
   justify-self: center;
-  width: clamp(31px, 2.25vw, 37px);
-  height: clamp(31px, 2.25vw, 37px);
+  width: clamp(35px, 2.5vw, 43px);
+  height: clamp(35px, 2.5vw, 43px);
   min-height: 0;
   place-items: center;
   border: 1px solid transparent;
@@ -388,7 +388,7 @@ svg {
   color: #060807;
   font-family: var(--serif);
   font-weight: 600;
-  font-size: clamp(0.88rem, 1.14vw, 1.06rem);
+  font-size: clamp(0.95rem, 1.22vw, 1.14rem);
   transition: background 180ms ease, color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
@@ -414,8 +414,8 @@ svg {
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 18px;
   align-items: center;
-  min-height: 66px;
-  padding: 9px clamp(24px, 3.4vw, 42px);
+  min-height: 76px;
+  padding: 12px clamp(30px, 4vw, 52px);
   border-top: 1px solid rgba(17, 22, 20, 0.06);
   background: #ffffff;
 }
@@ -444,7 +444,7 @@ svg {
 .hero-continue-button {
   display: inline-flex;
   min-width: 180px;
-  min-height: 46px;
+  min-height: 50px;
   align-items: center;
   justify-content: center;
   gap: 26px;
@@ -466,7 +466,7 @@ svg {
 }
 
 .hero-footer-line {
-  margin: -6px 0 0;
+  margin: 0;
   color: #6c716f;
   font-size: clamp(0.7rem, 0.84vw, 0.82rem);
 }
@@ -1965,13 +1965,13 @@ svg {
   }
 
   .calendar-hero {
-    gap: 18px;
-    padding: 28px 16px 34px;
+    gap: 14px;
+    padding: 22px 16px 26px;
     scroll-margin-top: 140px;
   }
 
   .landing-hero-copy h1 {
-    font-size: clamp(2.8rem, 15vw, 4.15rem);
+    font-size: clamp(2.45rem, 13vw, 3.55rem);
   }
 
   .hero-kicker {
@@ -1984,7 +1984,7 @@ svg {
   }
 
   .calendar-card {
-    padding: 24px 16px 16px;
+    padding: 20px 16px 14px;
   }
 
   .calendar-card-header {
@@ -1998,24 +1998,24 @@ svg {
   }
 
   .month-name {
-    font-size: clamp(2.45rem, 12vw, 3.15rem);
+    font-size: clamp(2.3rem, 11vw, 3rem);
   }
 
   .calendar-grid {
-    gap: 7px 4px;
+    gap: 6px 4px;
   }
 
   .calendar-grid button {
-    width: 38px;
-    height: 38px;
+    width: 36px;
+    height: 36px;
     min-height: 0;
-    font-size: 1rem;
+    font-size: 0.96rem;
   }
 
   .calendar-selection-bar {
     grid-template-columns: 1fr;
-    gap: 16px;
-    padding: 18px;
+    gap: 14px;
+    padding: 16px 18px 18px;
   }
 
   .hero-continue-button {
