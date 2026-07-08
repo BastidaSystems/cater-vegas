@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin.css?v=users-delete-inventory-20260707" />
+    <link rel="stylesheet" href="admin.css?v=shared-marketplace-workspace-20260707" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
@@ -44,7 +44,7 @@
                 <path d="M17.5 8.5h3M19 7v3" />
               </svg>
             </span>
-            Usuarios
+            Users
           </button>
         </nav>
 
@@ -172,47 +172,57 @@
             </div>
           </section>
 
-          <section class="panel simple-panel users-panel" id="usersPanel" aria-label="Usuarios y empresas colaboradoras">
+          <section class="panel simple-panel users-panel" id="usersPanel" aria-label="Users and collaborator companies">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Colaboradores legales</p>
-                <h2>Usuarios</h2>
+                <p class="eyebrow">Legal Collaborators</p>
+                <h2>Users</h2>
               </div>
-              <button class="secondary-button" id="refreshUsersButton" type="button">Actualizar</button>
+              <button class="secondary-button" id="refreshUsersButton" type="button">Refresh</button>
+            </div>
+
+            <div class="workspace-access-block">
+              <div class="panel-heading compact-heading">
+                <div>
+                  <p class="eyebrow">Workspace Access</p>
+                  <h3>Access Requests</h3>
+                </div>
+              </div>
+              <div class="users-list" id="workspaceRequestsList" aria-live="polite"></div>
             </div>
 
             <form class="users-form" id="userCompanyForm">
               <input id="userCompanyId" type="hidden" />
               <label>
-                <span>Nombre del colaborador</span>
+                <span>Collaborator name</span>
                 <input id="userFullName" type="text" placeholder="David Ramirez" required />
               </label>
               <label>
-                <span>Empresa</span>
+                <span>Company</span>
                 <input id="userCompanyName" type="text" placeholder="Vegas Party Rentals LLC" required />
               </label>
               <label>
                 <span>Email</span>
-                <input id="userEmail" type="email" placeholder="empresa@email.com" />
+                <input id="userEmail" type="email" placeholder="company@email.com" />
               </label>
               <label>
-                <span>Telefono</span>
+                <span>Phone</span>
                 <input id="userPhone" type="tel" placeholder="(702) 555-0123" />
               </label>
               <label>
-                <span>Tipo de servicio</span>
+                <span>Service type</span>
                 <select id="userServiceType">
-                  <option value="rental">Renta / Inventario</option>
+                  <option value="rental">Rental / Inventory</option>
                   <option value="food">Food / Catering</option>
                   <option value="beverage">Beverages / Bar</option>
                   <option value="staffing">Staffing</option>
                   <option value="entertainment">Entertainment</option>
-                  <option value="venue">Venue / Hospedaje</option>
-                  <option value="other">Otro</option>
+                  <option value="venue">Venue / Lodging</option>
+                  <option value="other">Other</option>
                 </select>
               </label>
               <label>
-                <span>Rol</span>
+                <span>Role</span>
                 <select id="userRole">
                   <option value="staff">Staff</option>
                   <option value="organizer">Organizer</option>
@@ -221,28 +231,28 @@
                 </select>
               </label>
               <label>
-                <span>Tax ID / Licencia</span>
-                <input id="userTaxId" type="text" placeholder="EIN, licencia o permiso" />
+                <span>Tax ID / License</span>
+                <input id="userTaxId" type="text" placeholder="EIN, license, or permit" />
               </label>
               <label>
-                <span>Estatus legal</span>
+                <span>Legal status</span>
                 <select id="userLegalStatus">
-                  <option value="pending">Pendiente de revisar</option>
-                  <option value="verified">Verificado</option>
-                  <option value="needs_documents">Faltan documentos</option>
+                  <option value="pending">Pending review</option>
+                  <option value="verified">Verified</option>
+                  <option value="needs_documents">Documents needed</option>
                 </select>
               </label>
               <label class="full-field">
-                <span>Direccion de empresa</span>
-                <input id="userBusinessAddress" type="text" placeholder="Direccion fiscal o comercial" />
+                <span>Business address</span>
+                <input id="userBusinessAddress" type="text" placeholder="Legal or commercial address" />
               </label>
               <label class="full-field">
-                <span>Notas / condiciones</span>
-                <textarea id="userCompanyNotes" rows="4" placeholder="Contrato, seguro, permisos, condiciones de renta o venta."></textarea>
+                <span>Notes / terms</span>
+                <textarea id="userCompanyNotes" rows="4" placeholder="Contract, insurance, permits, rental or sale terms."></textarea>
               </label>
               <div class="form-actions full-field">
-                <button class="primary-button" type="submit">Guardar usuario</button>
-                <button class="secondary-button" id="resetUserButton" type="button">Limpiar</button>
+                <button class="primary-button" type="submit">Save User</button>
+                <button class="secondary-button" id="resetUserButton" type="button">Clear</button>
                 <p class="admin-status" id="usersStatus" aria-live="polite"></p>
               </div>
             </form>
@@ -254,6 +264,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=users-delete-inventory-20260707"></script>
+    <script type="module" src="admin.js?v=shared-marketplace-workspace-20260707"></script>
   </body>
 </html>
