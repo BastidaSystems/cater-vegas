@@ -267,11 +267,15 @@ function selectedEventDateIso() {
 
 function requestPlanPayload(formValues = {}) {
   const items = cartItems();
+  const estimatedTotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
   const cart = items.map((item) => ({
     provider_id: providerIdValue(item.id),
     provider_name: item.title,
     service_category: item.category,
     quantity: Number(item.quantity || 0),
+    unit_price: Number(item.unit_price || 0),
+    price_label: item.price_label || "",
+    subtotal: Number(item.quantity || 0) * Number(item.unit_price || 0),
     note: item.note || "",
   }));
 
@@ -302,6 +306,7 @@ function requestPlanPayload(formValues = {}) {
     },
     guest_count: Number(formValues.guestCount || 0),
     notes: formValues.notes || "",
+    estimated_total: estimatedTotal,
     cart,
     selections,
   };
@@ -392,6 +397,27 @@ function itemQuantityAvailable(item) {
   return Number(item.quantity_available ?? meta.quantity_available ?? item.available_quantity ?? 0);
 }
 
+function itemPriceLabel(item) {
+  const meta = providerMeta(item);
+  const label = String(item.price_label || meta.price_label || "").trim();
+  if (/^\d+(?:\.\d+)?$/.test(label)) return formatMoney(Number(label));
+  return label;
+}
+
+function itemUnitPrice(item) {
+  const rawPrice = item.unit_price ?? item.base_price ?? item.price ?? itemPriceLabel(item);
+  const normalized = String(rawPrice || "").replace(/,/g, "").match(/\d+(?:\.\d+)?/);
+  return normalized ? Number(normalized[0]) : 0;
+}
+
+function formatMoney(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: Number.isInteger(Number(value)) ? 0 : 2,
+  }).format(Number(value || 0));
+}
+
 function cartQuantity(itemId) {
   return Number(build.cart?.[itemId]?.quantity || 0);
 }
@@ -413,6 +439,8 @@ function setCartQuantity(item, quantity) {
       note: itemNote(item),
       image_url: itemImage(item),
       quantity: nextQuantity,
+      price_label: itemPriceLabel(item),
+      unit_price: itemUnitPrice(item),
     };
   }
 
@@ -613,6 +641,7 @@ function renderInventoryCategory(category) {
         const selectedClass = selected?.id === item.id ? " is-selected" : "";
         const quantity = cartQuantity(item.id);
         const available = itemQuantityAvailable(item);
+        const priceLabel = itemPriceLabel(item);
         return `
           <article class="table-choice inventory-choice${selectedClass}" data-inventory-id="${escapeHtml(item.id)}">
             <button class="inventory-select-button" type="button" data-select-inventory="${escapeHtml(item.id)}">
@@ -620,6 +649,7 @@ function renderInventoryCategory(category) {
               <span class="table-choice-image inventory-choice-image" aria-hidden="true">
               ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="">` : ""}
               </span>
+              ${priceLabel ? `<em class="inventory-price">${escapeHtml(priceLabel)}</em>` : ""}
               <small>${escapeHtml(note || copy.label)}</small>
             </button>
             <div class="inventory-quantity-row">
@@ -732,13 +762,22 @@ function updateBuilderPreview() {
 function renderCart(cartList, cartCountLabel, cartTotalLabel) {
   const cartItems = Object.values(build.cart || {}).filter((item) => Number(item.quantity) > 0);
   const totalQuantity = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const estimatedTotal = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
+  const checkoutButton = document.getElementById("cart-checkout-button");
 
   if (cartCountLabel) {
     cartCountLabel.textContent = String(totalQuantity);
   }
 
   if (cartTotalLabel) {
-    cartTotalLabel.textContent = `${totalQuantity} item${totalQuantity === 1 ? "" : "s"}`;
+    cartTotalLabel.textContent = estimatedTotal
+      ? `${formatMoney(estimatedTotal)} total`
+      : `${totalQuantity} item${totalQuantity === 1 ? "" : "s"}`;
+  }
+
+  if (checkoutButton) {
+    checkoutButton.classList.toggle("is-disabled", !cartItems.length);
+    checkoutButton.setAttribute("aria-disabled", String(!cartItems.length));
   }
 
   if (!cartList) return;
@@ -750,13 +789,20 @@ function renderCart(cartList, cartCountLabel, cartTotalLabel) {
 
   cartList.innerHTML = cartItems
     .map(
-      (item) => `
+      (item) => {
+        const quantity = Number(item.quantity || 0);
+        const unitPrice = Number(item.unit_price || 0);
+        const lineTotal = quantity * unitPrice;
+        const priceCopy = unitPrice ? `${formatMoney(unitPrice)} each` : item.price_label || "";
+        return `
         <article class="cart-line">
           <strong>${escapeHtml(item.title)}</strong>
-          <span>${Number(item.quantity)} x ${escapeHtml(categoryCopy[item.category]?.label || "Item")}</span>
+          <span class="cart-line-meta">${quantity} x ${escapeHtml(categoryCopy[item.category]?.label || "Item")}${priceCopy ? ` &middot; ${escapeHtml(priceCopy)}` : ""}</span>
+          ${lineTotal ? `<b>${escapeHtml(formatMoney(lineTotal))}</b>` : ""}
           <button type="button" data-remove-cart="${escapeHtml(item.id)}">Remove</button>
         </article>
-      `
+      `;
+      }
     )
     .join("");
 
@@ -773,6 +819,8 @@ function renderReview() {
   const reviewSummary = document.getElementById("review-summary");
   if (!reviewSummary) return;
   const items = cartItems();
+  const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+  const estimatedTotal = items.reduce((sum, item) => sum + Number(item.quantity || 0) * Number(item.unit_price || 0), 0);
 
   const rows = flowCategoryIds
     .map((category) => {
@@ -801,7 +849,8 @@ function renderReview() {
     </article>
     <article>
       <small>Product cart</small>
-      <strong>${items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} items saved</strong>
+      <strong>${estimatedTotal ? escapeHtml(formatMoney(estimatedTotal)) : `${totalQuantity} items saved`}</strong>
+      ${estimatedTotal ? `<span>${totalQuantity} item${totalQuantity === 1 ? "" : "s"} saved</span>` : ""}
     </article>
     ${rows}
   `;
@@ -830,8 +879,21 @@ function reconcileBuildWithInventory() {
   });
 
   Object.keys(build.cart || {}).forEach((id) => {
-    if (!currentIds.has(String(id))) {
+    const inventoryItem = publicInventory.find((item) => String(item.id) === String(id));
+    if (!inventoryItem) {
       delete build.cart[id];
+      changed = true;
+      return;
+    }
+
+    const nextPriceLabel = itemPriceLabel(inventoryItem);
+    const nextUnitPrice = itemUnitPrice(inventoryItem);
+    if (build.cart[id].price_label !== nextPriceLabel || Number(build.cart[id].unit_price || 0) !== nextUnitPrice) {
+      build.cart[id] = {
+        ...build.cart[id],
+        price_label: nextPriceLabel,
+        unit_price: nextUnitPrice,
+      };
       changed = true;
     }
   });
@@ -940,6 +1002,7 @@ document.querySelectorAll('a[href^="#"]').forEach((link) => {
 
     if (stepIds.includes(targetId)) {
       event.preventDefault();
+      setCartPopover(false);
       showStep(targetId, category);
       return;
     }

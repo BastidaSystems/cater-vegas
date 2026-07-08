@@ -1477,7 +1477,7 @@ svg {
 
 .cart-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
   gap: 12px;
   align-items: center;
   border: 1px solid rgba(17, 22, 20, 0.1);
@@ -1493,10 +1493,30 @@ svg {
   white-space: nowrap;
 }
 
+.cart-line b {
+  color: #111614;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+
+.inventory-price {
+  display: inline-flex;
+  justify-self: center;
+  margin-top: 10px;
+  color: #b58f4f;
+  font-style: normal;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
 .cart-line button,
+.cart-checkout-button,
 .secondary-flow-button,
 .inventory-add-button,
 .inventory-quantity-row button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 38px;
   border: 1px solid rgba(17, 22, 20, 0.13);
   border-radius: 999px;
@@ -1504,6 +1524,18 @@ svg {
   color: #111614;
   font-weight: 900;
   padding: 0 14px;
+  text-decoration: none;
+}
+
+.cart-checkout-button {
+  border-color: #111614;
+  background: #111614;
+  color: #fffdf8;
+}
+
+.cart-checkout-button.is-disabled {
+  pointer-events: none;
+  opacity: 0.42;
 }
 
 .inventory-quantity-row {
