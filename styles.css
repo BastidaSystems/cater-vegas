@@ -115,8 +115,17 @@ svg {
   padding: 5px 16px;
 }
 
+.site-nav a.nav-cart-button {
+  flex: 0 0 auto;
+  padding: 0;
+}
+
 .site-nav a + a {
   border-left: 1px solid rgba(17, 22, 20, 0.11);
+}
+
+.site-nav .nav-cart-button + a {
+  border-left: 0;
 }
 
 .site-nav a[aria-current="page"] {
