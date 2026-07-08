@@ -1141,6 +1141,30 @@ function requestById(id) {
   return requestEvents.find((event) => String(event.id) === String(id)) || null;
 }
 
+function notificationSummary(results = []) {
+  const sent = results.filter((result) => result.status === "sent").map((result) => result.channel.toUpperCase());
+  const skipped = results.filter((result) => result.status === "skipped").map((result) => result.channel.toUpperCase());
+  const failed = results.filter((result) => result.status === "failed").map((result) => result.channel.toUpperCase());
+  if (sent.length) return ` Notification sent by ${sent.join(" and ")}.`;
+  if (failed.length) return ` Notification failed for ${failed.join(" and ")}.`;
+  if (skipped.length) return " Notification not sent because email/SMS service keys are not configured.";
+  return "";
+}
+
+async function notifyConfirmedRequest(id, status) {
+  if (!supabase || status !== "confirmed") return "";
+  const { data, error } = await supabase.functions.invoke("notify-request-status", {
+    body: {
+      request_id: id,
+      workspace_id: currentWorkspaceId,
+      status,
+    },
+  });
+
+  if (error) return ` Notification could not be sent: ${error.message}`;
+  return notificationSummary(data?.results || []);
+}
+
 async function updateEventRequestStatus(id, status) {
   const normalizedStatus = String(status || "").trim().toLowerCase();
   if (!REQUEST_STATUS_OPTIONS.includes(normalizedStatus)) {
@@ -1166,8 +1190,9 @@ async function updateEventRequestStatus(id, status) {
   }
 
   selectedRequestId = id;
+  const notificationMessage = await notifyConfirmedRequest(id, normalizedStatus);
   await loadEvents();
-  setRequestManagementStatus(`Request status updated to ${requestStatusLabel(normalizedStatus)}.`, "success");
+  setRequestManagementStatus(`Request status updated to ${requestStatusLabel(normalizedStatus)}.${notificationMessage}`, "success");
 }
 
 async function updateEventRequestAdminNotes(id, adminNotes) {
