@@ -400,8 +400,6 @@ function renderInventoryCategory(category) {
     inventoryNextLink.textContent = nextStep === "review" ? "Review" : `Continue to ${nextStep === "fnb" ? "F&B" : categoryCopy[nextStep]?.label || "next step"}`;
   }
 
-  updateBreadcrumb(document.getElementById("inventory-breadcrumb"), activeCategory);
-
   if (!inventoryGrid) return;
 
   if (!items.length) {

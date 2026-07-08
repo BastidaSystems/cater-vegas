@@ -1280,6 +1280,11 @@ svg {
   overflow-x: clip;
 }
 
+#inventory {
+  align-items: start;
+  padding-top: clamp(34px, 4vw, 58px);
+}
+
 .table-builder-layout {
   display: contents;
 }
