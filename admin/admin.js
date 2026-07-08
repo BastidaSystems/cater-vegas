@@ -20,6 +20,12 @@ const INVENTORY_STATUS_FILTERS = [
   { id: "visibility:public", label: "Public", icon: "Pub" },
   { id: "visibility:private", label: "Private", icon: "Pri" },
 ];
+const INVENTORY_INDUSTRY_FILTERS = [
+  { id: "industry:setup", label: "Set up", icon: "SET", categories: ["tables", "chairs", "linen", "decor", "tents"] },
+  { id: "industry:ab", label: "A&B", icon: "A&B", categories: ["food", "beverages"] },
+  { id: "industry:entertainment", label: "Entertainment", icon: "ENT", categories: ["entertainment"] },
+  { id: "industry:lodging", label: "Lodging", icon: "STAY", categories: ["lodging"] },
+];
 const INVENTORY_CATEGORY_LABELS = {
   tables: "Tables",
   chairs: "Chairs",
@@ -152,7 +158,7 @@ let requestEvents = [];
 let inventoryItems = [];
 let companyUsers = [];
 let workspaceMembers = [];
-let activeInventoryCategory = "all";
+let activeInventoryCategory = "industry:setup";
 let selectedInventoryId = "";
 let selectedRequestId = "";
 
@@ -400,13 +406,16 @@ function inventoryVisibilityCopy(item) {
 }
 
 function inventoryFilterLabel(filterId) {
+  const industryFilter = INVENTORY_INDUSTRY_FILTERS.find((filter) => filter.id === filterId);
+  if (industryFilter) return industryFilter.label;
   const statusFilter = INVENTORY_STATUS_FILTERS.find((filter) => filter.id === filterId);
   if (statusFilter) return statusFilter.label;
   return filterId === "all" ? "All" : inventoryCategoryLabel(filterId);
 }
 
 function inventoryItemMatchesFilter(item, filterId) {
-  if (filterId === "all") return true;
+  const industryFilter = INVENTORY_INDUSTRY_FILTERS.find((filter) => filter.id === filterId);
+  if (industryFilter) return industryFilter.categories.includes(normalizeInventoryCategory(item.category));
   if (filterId === "approval:pending") return String(item.approval_status || "pending").toLowerCase() === "pending";
   if (filterId === "approval:approved") return String(item.approval_status || "").toLowerCase() === "approved";
   if (filterId === "visibility:public") return Boolean(item.public_visible);
@@ -436,18 +445,14 @@ function renderInventoryCategories() {
     { all: 0 }
   );
 
-  const categoryFilters = ["all", ...INVENTORY_CATEGORY_IDS];
-  const filters = [
-    ...categoryFilters.map((id) => ({
-      id,
-      label: inventoryFilterLabel(id),
-      icon: INVENTORY_CATEGORY_ICONS[id] || id.slice(0, 3),
-    })),
-    ...INVENTORY_STATUS_FILTERS,
-  ];
+  const filters = INVENTORY_INDUSTRY_FILTERS.map((filter) => ({
+    ...filter,
+    count: filter.categories.reduce((sum, category) => sum + Number(counts[category] || 0), 0),
+    subcategories: filter.categories.map(inventoryCategoryLabel).join(" / "),
+  }));
 
   if (!filters.some((filter) => filter.id === activeInventoryCategory)) {
-    activeInventoryCategory = "all";
+    activeInventoryCategory = filters[0]?.id || "industry:setup";
   }
 
   inventoryCategoryBar.innerHTML = filters
@@ -455,8 +460,8 @@ function renderInventoryCategories() {
       return `
         <button class="inventory-category-chip ${activeInventoryCategory === filter.id ? "is-active" : ""}" type="button" data-inventory-category="${escapeHtml(filter.id)}">
           <span aria-hidden="true">${escapeHtml(filter.icon)}</span>
-          <strong>${escapeHtml(filter.label)}</strong>
-          <small>${Number(counts[filter.id] || 0)}</small>
+          <strong>${escapeHtml(filter.label)} <b>${Number(filter.count || 0)}</b></strong>
+          <small>${escapeHtml(filter.subcategories || "")}</small>
         </button>
       `;
     })
