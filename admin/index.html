@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Cater Vegas administration and inventory dashboard." />
     <title>Cater Vegas | Admin</title>
-    <link rel="stylesheet" href="admin.css?v=fixed-us-holidays-20260708" />
+    <link rel="stylesheet" href="admin.css?v=pricing-card-grid-20260708" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
@@ -73,7 +73,31 @@
                 <h2>Dashboard</h2>
               </div>
             </div>
-            <div class="dashboard-metrics" id="dashboardMetrics" aria-live="polite"></div>
+            <div class="dashboard-metrics" aria-live="polite">
+              <div id="dashboardMetrics" class="dashboard-metrics-list"></div>
+              <section class="dashboard-pricing-card pricing-rules-card" id="pricingRulesCard">
+                <div>
+                  <p class="eyebrow">Pricing</p>
+                  <h3>Date Pricing</h3>
+                </div>
+                <form class="pricing-rules-form" id="pricingRulesForm">
+                  <label>
+                    <span>Weekday %</span>
+                    <input id="weekdayMarkupInput" type="number" min="0" step="1" placeholder="0" />
+                  </label>
+                  <label>
+                    <span>Weekend %</span>
+                    <input id="weekendMarkupInput" type="number" min="0" step="1" placeholder="20" />
+                  </label>
+                  <label>
+                    <span>Holiday %</span>
+                    <input id="holidayMarkupInput" type="number" min="0" step="1" placeholder="40" />
+                  </label>
+                  <button class="secondary-button" type="submit">Save Pricing</button>
+                  <p class="admin-status" id="pricingRulesStatus" aria-live="polite"></p>
+                </form>
+              </section>
+            </div>
             <div class="dashboard-overview-grid">
               <div class="dashboard-calendar-shell">
                 <div class="calendar-month-label" id="calendarMonthLabel" aria-live="polite"></div>
@@ -93,28 +117,6 @@
                     <h3>Inventory</h3>
                   </div>
                   <div class="dashboard-inventory-summary" id="dashboardInventorySummary" aria-live="polite"></div>
-                </section>
-                <section class="side-card pricing-rules-card" id="pricingRulesCard">
-                  <div>
-                    <p class="eyebrow">Pricing</p>
-                    <h3>Date Pricing</h3>
-                  </div>
-                  <form class="pricing-rules-form" id="pricingRulesForm">
-                    <label>
-                      <span>Weekday %</span>
-                      <input id="weekdayMarkupInput" type="number" min="0" step="1" placeholder="0" />
-                    </label>
-                    <label>
-                      <span>Weekend %</span>
-                      <input id="weekendMarkupInput" type="number" min="0" step="1" placeholder="20" />
-                    </label>
-                    <label>
-                      <span>Holiday %</span>
-                      <input id="holidayMarkupInput" type="number" min="0" step="1" placeholder="40" />
-                    </label>
-                    <button class="secondary-button" type="submit">Save Pricing</button>
-                    <p class="admin-status" id="pricingRulesStatus" aria-live="polite"></p>
-                  </form>
                 </section>
               </aside>
             </div>
@@ -299,6 +301,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=fixed-us-holidays-20260708"></script>
+    <script type="module" src="admin.js?v=pricing-card-grid-20260708"></script>
   </body>
 </html>
