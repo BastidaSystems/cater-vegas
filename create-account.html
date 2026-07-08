@@ -634,12 +634,11 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
       import {
-        DEFAULT_WORKSPACE_ID,
         isSupabaseConfigured,
         navigateWithLoopGuard,
         requireSupabase,
         resolvePostLoginPath,
-      } from "./lib/supabaseClient.js?v=supabase-auth-loader-20260619";
+      } from "./lib/supabaseClient.js?v=workspace-isolation-20260707";
 
       const form = document.querySelector("#accountForm");
       const fullName = document.querySelector("#fullName");
@@ -647,8 +646,17 @@
       const password = document.querySelector("#accountPassword");
       const status = document.querySelector("#accountStatus");
       const accountType = "owner";
+      const ownerWorkspaceId = createOwnerWorkspaceId();
       const authConnectionMessage = "Could not connect to Supabase. Check the project URL or your connection.";
       let supabase = null;
+
+      function createOwnerWorkspaceId() {
+        const id =
+          globalThis.crypto && typeof globalThis.crypto.randomUUID === "function"
+            ? globalThis.crypto.randomUUID()
+            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        return `cater-vegas-${id}`.toLowerCase();
+      }
 
       function setStatus(message) {
         status.textContent = message;
@@ -690,10 +698,10 @@
       }
 
       async function createWorkspaceAccess(user) {
-        await upsertProfile(user.id, DEFAULT_WORKSPACE_ID, "owner");
+        await upsertProfile(user.id, ownerWorkspaceId, "owner");
         const { error } = await supabase.from("beoflow_workspace_members").upsert(
           {
-            workspace_id: DEFAULT_WORKSPACE_ID,
+            workspace_id: ownerWorkspaceId,
             user_id: user.id,
             role: "owner",
             status: "active",
@@ -724,7 +732,8 @@
               data: {
                 full_name: fullName.value.trim(),
                 cater_role: "owner",
-                workspace_id: DEFAULT_WORKSPACE_ID,
+                workspace_id: ownerWorkspaceId,
+                workspace_name: `${fullName.value.trim() || "Cater Vegas"} Workspace`,
                 account_type: accountType,
               },
               emailRedirectTo: new URL("login.html", window.location.href).href,

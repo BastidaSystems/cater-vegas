@@ -6,7 +6,7 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=supabase-auth-loader-20260619";
+} from "../lib/supabaseClient.js?v=workspace-isolation-20260707";
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const eventsList = document.querySelector("#eventsList");
@@ -15,6 +15,7 @@ const signoutButton = document.querySelector("#signoutButton");
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 
 let supabase = null;
+let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -40,7 +41,7 @@ async function loadClientEvents() {
   const { data, error } = await supabase
     .from("cater_events")
     .select("id,title,event_type,status,event_date,budget_label,updated_at")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .order("updated_at", { ascending: false })
     .limit(50);
 
@@ -70,7 +71,7 @@ async function loadInventoryCatalog() {
   const { data, error } = await supabase
     .from("cater_providers")
     .select("id,provider_name,provider_type,status,notes,updated_at,created_at")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .eq("provider_type", "rental")
     .eq("status", "active")
     .order("created_at", { ascending: false });
@@ -125,7 +126,7 @@ async function bootClient() {
   }
 
   supabase = requireSupabase();
-  const { user, profile, membership } = await getWorkspaceContext();
+  const { user, profile, membership, workspace } = await getWorkspaceContext();
 
   if (!user) {
     navigateWithLoopGuard("../login.html", "client-missing-user");
@@ -142,6 +143,7 @@ async function bootClient() {
     ? "Vista de comprador"
     : "Comprador";
 
+  currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
   sessionStatus.textContent = `${user.email} · ${label}`;
   await Promise.all([loadClientEvents(), loadInventoryCatalog()]);
 }

@@ -6,13 +6,14 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=supabase-auth-loader-20260619";
+} from "../lib/supabaseClient.js?v=workspace-isolation-20260707";
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const assignmentsList = document.querySelector("#assignmentsList");
 const signoutButton = document.querySelector("#signoutButton");
 
 let supabase = null;
+let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -27,7 +28,7 @@ async function loadAssignments(userEmail) {
   const { data: collaborator } = await supabase
     .from("cater_collaborators")
     .select("id,full_name,role,status")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .ilike("email", userEmail)
     .maybeSingle();
 
@@ -39,7 +40,7 @@ async function loadAssignments(userEmail) {
   const { data, error } = await supabase
     .from("cater_event_assignments")
     .select("id,event_id,assignment_role,status,notes,created_at")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .eq("collaborator_id", collaborator.id)
     .order("created_at", { ascending: false })
     .limit(50);
@@ -73,7 +74,7 @@ async function bootCollaborator() {
   }
 
   supabase = requireSupabase();
-  const { user, profile, membership } = await getWorkspaceContext();
+  const { user, profile, membership, workspace } = await getWorkspaceContext();
 
   if (!user) {
     navigateWithLoopGuard("../login.html", "collaborator-missing-user");
@@ -91,6 +92,7 @@ async function bootCollaborator() {
     return;
   }
 
+  currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
   sessionStatus.textContent = `${user.email} · Colaborador`;
   await loadAssignments(user.email);
 }

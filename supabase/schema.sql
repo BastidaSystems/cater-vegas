@@ -416,7 +416,9 @@ as $$
 declare
   requested_role text := coalesce(new.raw_user_meta_data ->> 'cater_role', '');
   safe_role text := 'client_pending';
-  target_workspace_id text := coalesce(new.raw_user_meta_data ->> 'workspace_id', 'cater-vegas');
+  target_workspace_id text;
+  workspace_name text;
+  workspace_slug text;
 begin
   if requested_role in (
     'owner',
@@ -431,6 +433,32 @@ begin
     'workspace_pending'
   ) then
     safe_role := requested_role;
+  end if;
+
+  target_workspace_id := coalesce(
+    nullif(new.raw_user_meta_data ->> 'workspace_id', ''),
+    case
+      when safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer')
+        then 'cater-vegas-' || replace(new.id::text, '-', '')
+      else 'cater-vegas'
+    end
+  );
+  workspace_name := coalesce(
+    nullif(new.raw_user_meta_data ->> 'workspace_name', ''),
+    nullif(new.raw_user_meta_data ->> 'full_name', '') || ' Workspace',
+    split_part(new.email, '@', 1) || ' Workspace'
+  );
+  workspace_slug := lower(regexp_replace(target_workspace_id, '[^a-z0-9]+', '-', 'g'));
+
+  if safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer') then
+    insert into public.beoflow_workspaces (id, name, slug, industry, status, owner_id)
+    values (target_workspace_id, workspace_name, workspace_slug, 'catering_events', 'active', new.id)
+    on conflict (id) do update
+      set name = coalesce(nullif(public.beoflow_workspaces.name, ''), excluded.name),
+          industry = coalesce(public.beoflow_workspaces.industry, excluded.industry),
+          status = 'active',
+          owner_id = coalesce(public.beoflow_workspaces.owner_id, excluded.owner_id),
+          updated_at = now();
   end if;
 
   insert into public.cater_profiles (id, workspace_id, email, full_name, phone, company, role)
@@ -449,6 +477,15 @@ begin
         phone = coalesce(excluded.phone, public.cater_profiles.phone),
         company = coalesce(excluded.company, public.cater_profiles.company),
         updated_at = now();
+
+  if safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer') then
+    insert into public.beoflow_workspace_members (workspace_id, user_id, role, status)
+    values (target_workspace_id, new.id, safe_role, 'active')
+    on conflict (workspace_id, user_id) do update
+      set role = excluded.role,
+          status = 'active',
+          updated_at = now();
+  end if;
 
   return new;
 end;
@@ -548,10 +585,10 @@ as $$
   )
   or exists (
     select 1
-    from public.cater_profiles p
-    where p.id = (select auth.uid())
-      and p.workspace_id = target_workspace_id
-      and p.role in ('admin', 'staff', 'organizer', 'collaborator', 'client')
+      from public.cater_profiles p
+      where p.id = (select auth.uid())
+        and p.workspace_id = target_workspace_id
+        and p.role in ('owner', 'admin', 'super_admin', 'platform_admin', 'staff', 'organizer', 'collaborator', 'client')
   );
 $$;
 

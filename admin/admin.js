@@ -6,7 +6,7 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=supabase-auth-loader-20260619";
+} from "../lib/supabaseClient.js?v=workspace-isolation-20260707";
 
 const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
 const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
@@ -109,6 +109,7 @@ const INVENTORY_CATEGORY_ICONS = {
 let supabase = null;
 let currentUser = null;
 let currentRole = "";
+let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
 let allEvents = [];
 let inventoryItems = [];
 let activeInventoryCategory = "all";
@@ -545,7 +546,7 @@ async function loadEvents() {
   const { data, error } = await supabase
     .from("cater_events")
     .select("id,title,event_type,event_date,status,updated_at")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .order("event_date", { ascending: true });
 
   if (error) {
@@ -570,7 +571,7 @@ async function loadInventory() {
   const { data, error } = await supabase
     .from("cater_providers")
     .select("id,provider_name,provider_type,status,notes,created_at")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -622,7 +623,7 @@ async function deleteInventoryItem(id) {
   const { error } = await supabase
     .from("cater_providers")
     .delete()
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .eq("id", id);
 
   if (error) {
@@ -647,7 +648,7 @@ async function saveInventoryItem(event) {
     description: inventoryDescription.value.trim() || null,
   };
   const basePayload = {
-    workspace_id: DEFAULT_WORKSPACE_ID,
+    workspace_id: currentWorkspaceId,
     provider_name: inventoryName.value.trim(),
     provider_type: providerTypeForCategory(selectedCategory),
     status: "active",
@@ -692,7 +693,7 @@ async function saveInventoryItem(event) {
       ? supabase
           .from("cater_providers")
           .update(nextPayload)
-          .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+          .eq("workspace_id", currentWorkspaceId)
           .eq("id", id)
           .select()
           .single()
@@ -727,7 +728,7 @@ async function bootAdmin() {
   }
 
   supabase = requireSupabase();
-  const { user, profile, membership } = await getWorkspaceContext();
+  const { user, profile, membership, workspace } = await getWorkspaceContext();
   currentUser = user;
 
   if (!user) {
@@ -746,6 +747,7 @@ async function bootAdmin() {
     return;
   }
 
+  currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
   if (dashboardEmail) dashboardEmail.textContent = user.email || "Admin";
   if (dashboardRole) dashboardRole.textContent = currentRole.replace(/^./, (char) => char.toUpperCase());
   setStatus(`${user.email} · Inventario listo`);

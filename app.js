@@ -133,7 +133,7 @@ let supabaseClientPromise = null;
 
 async function getPublicSupabaseClient() {
   if (!supabaseClientPromise) {
-    supabaseClientPromise = import("./lib/supabaseClient.js?v=supabase-auth-loader-20260619")
+    supabaseClientPromise = import("./lib/supabaseClient.js?v=workspace-isolation-20260707")
       .then((module) => ({
         workspaceId: module.DEFAULT_WORKSPACE_ID,
         isConfigured: module.isSupabaseConfigured,
