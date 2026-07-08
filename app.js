@@ -154,6 +154,7 @@ function loadBuild() {
     eventDate: "",
     eventType: "",
     selections: {},
+    cart: {},
   };
 
   try {
@@ -172,6 +173,7 @@ function loadBuild() {
       ...fallback,
       ...saved,
       selections: saved.selections || fallback.selections,
+      cart: saved.cart || fallback.cart,
     };
   } catch {
     window.localStorage.removeItem(storageKey);
@@ -181,6 +183,38 @@ function loadBuild() {
 
 function saveBuild() {
   window.localStorage.setItem(storageKey, JSON.stringify(build));
+}
+
+function itemQuantityAvailable(item) {
+  const meta = providerMeta(item);
+  return Number(item.quantity_available ?? meta.quantity_available ?? item.available_quantity ?? 0);
+}
+
+function cartQuantity(itemId) {
+  return Number(build.cart?.[itemId]?.quantity || 0);
+}
+
+function setCartQuantity(item, quantity) {
+  if (!item) return;
+  const available = itemQuantityAvailable(item);
+  const requestedQuantity = Math.max(0, Number(quantity || 0));
+  const nextQuantity = available ? Math.min(requestedQuantity, available) : requestedQuantity;
+  build.cart = build.cart || {};
+
+  if (!nextQuantity) {
+    delete build.cart[item.id];
+  } else {
+    build.cart[item.id] = {
+      id: item.id,
+      category: item.category,
+      title: itemTitle(item),
+      note: itemNote(item),
+      image_url: itemImage(item),
+      quantity: nextQuantity,
+    };
+  }
+
+  saveBuild();
 }
 
 function normalizeInventoryCategory(value) {
@@ -354,29 +388,68 @@ function renderInventoryCategory(category) {
         const note = itemNote(item);
         const imageUrl = itemImage(item);
         const selectedClass = selected?.id === item.id ? " is-selected" : "";
+        const quantity = cartQuantity(item.id);
+        const available = itemQuantityAvailable(item);
         return `
-          <button class="table-choice inventory-choice${selectedClass}" type="button" data-inventory-id="${escapeHtml(item.id)}">
-            <span class="table-choice-image inventory-choice-image" aria-hidden="true">
+          <article class="table-choice inventory-choice${selectedClass}" data-inventory-id="${escapeHtml(item.id)}">
+            <button class="inventory-select-button" type="button" data-select-inventory="${escapeHtml(item.id)}">
+              <span class="table-choice-image inventory-choice-image" aria-hidden="true">
               ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="">` : ""}
-            </span>
-            <strong>${escapeHtml(title)}</strong>
-            <small>${escapeHtml(note || copy.label)}</small>
-          </button>
+              </span>
+              <strong>${escapeHtml(title)}</strong>
+              <small>${escapeHtml(note || copy.label)}</small>
+            </button>
+            <div class="inventory-quantity-row">
+              <button type="button" data-cart-decrease="${escapeHtml(item.id)}" aria-label="Decrease ${escapeHtml(title)}">-</button>
+              <label>
+                <span>Qty</span>
+                <input type="number" min="0" ${available ? `max="${available}"` : ""} value="${quantity}" data-cart-quantity="${escapeHtml(item.id)}" />
+              </label>
+              <button type="button" data-cart-increase="${escapeHtml(item.id)}" aria-label="Increase ${escapeHtml(title)}">+</button>
+            </div>
+            <button class="inventory-add-button" type="button" data-add-to-cart="${escapeHtml(item.id)}">
+              ${quantity ? "Update cart" : "Add to cart"}
+            </button>
+          </article>
         `;
       })
       .join("");
   }
 
-  inventoryGrid.querySelectorAll("[data-inventory-id]").forEach((button) => {
+  inventoryGrid.querySelectorAll("[data-select-inventory]").forEach((button) => {
+    button.addEventListener("click", () => selectInventoryItem(button.dataset.selectInventory));
+  });
+
+  inventoryGrid.querySelectorAll("[data-add-to-cart]").forEach((button) => {
     button.addEventListener("click", () => {
-      const item = publicInventory.find((entry) => String(entry.id) === button.dataset.inventoryId);
-      if (!item) return;
-      build.selections[activeCategory] = {
-        id: item.id,
-        title: itemTitle(item),
-        note: itemNote(item),
-      };
-      saveBuild();
+      const item = publicInventory.find((entry) => String(entry.id) === button.dataset.addToCart);
+      const inputElement = Array.from(inventoryGrid.querySelectorAll("[data-cart-quantity]")).find(
+        (field) => String(field.dataset.cartQuantity) === String(button.dataset.addToCart)
+      );
+      const nextQuantity = Number(inputElement?.value || 1) || 1;
+      selectInventoryItem(button.dataset.addToCart, false);
+      setCartQuantity(item, nextQuantity);
+      renderInventoryCategory(activeCategory);
+    });
+  });
+
+  inventoryGrid.querySelectorAll("[data-cart-increase], [data-cart-decrease]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.cartIncrease || button.dataset.cartDecrease;
+      const item = publicInventory.find((entry) => String(entry.id) === id);
+      const current = cartQuantity(id);
+      const next = button.dataset.cartIncrease ? current + 1 : Math.max(0, current - 1);
+      setCartQuantity(item, next);
+      selectInventoryItem(id, false);
+      renderInventoryCategory(activeCategory);
+    });
+  });
+
+  inventoryGrid.querySelectorAll("[data-cart-quantity]").forEach((input) => {
+    input.addEventListener("change", () => {
+      const item = publicInventory.find((entry) => String(entry.id) === input.dataset.cartQuantity);
+      setCartQuantity(item, input.value);
+      selectInventoryItem(input.dataset.cartQuantity, false);
       renderInventoryCategory(activeCategory);
     });
   });
@@ -384,11 +457,25 @@ function renderInventoryCategory(category) {
   updateBuilderPreview();
 }
 
+function selectInventoryItem(itemId, rerender = true) {
+  const item = publicInventory.find((entry) => String(entry.id) === String(itemId));
+  if (!item) return;
+  build.selections[activeCategory] = {
+    id: item.id,
+    title: itemTitle(item),
+    note: itemNote(item),
+  };
+  saveBuild();
+  if (rerender) renderInventoryCategory(activeCategory);
+}
+
 function updateBuilderPreview() {
   const selected = build.selections[activeCategory];
   const preview = document.getElementById("inventory-preview");
   const previewNote = document.getElementById("inventory-preview-note");
   const summary = document.getElementById("selected-summary");
+  const cartList = document.getElementById("inventory-cart-list");
+  const cartCountLabel = document.getElementById("cart-count-label");
   const copy = categoryCopy[activeCategory];
 
   if (preview) preview.textContent = selected?.title || `No ${copy?.label.toLowerCase() || "selection"} selected yet`;
@@ -414,19 +501,62 @@ function updateBuilderPreview() {
       })
       .join("");
   }
+
+  renderCart(cartList, cartCountLabel);
+}
+
+function renderCart(cartList, cartCountLabel) {
+  const cartItems = Object.values(build.cart || {}).filter((item) => Number(item.quantity) > 0);
+  const totalQuantity = cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+
+  if (cartCountLabel) {
+    cartCountLabel.textContent = `${totalQuantity} item${totalQuantity === 1 ? "" : "s"}`;
+  }
+
+  if (!cartList) return;
+
+  if (!cartItems.length) {
+    cartList.innerHTML = "<p>Your selected products will appear here.</p>";
+    return;
+  }
+
+  cartList.innerHTML = cartItems
+    .map(
+      (item) => `
+        <article class="cart-line">
+          <strong>${escapeHtml(item.title)}</strong>
+          <span>${Number(item.quantity)} x ${escapeHtml(categoryCopy[item.category]?.label || "Item")}</span>
+          <button type="button" data-remove-cart="${escapeHtml(item.id)}">Remove</button>
+        </article>
+      `
+    )
+    .join("");
+
+  cartList.querySelectorAll("[data-remove-cart]").forEach((button) => {
+    button.addEventListener("click", () => {
+      delete build.cart[button.dataset.removeCart];
+      saveBuild();
+      renderInventoryCategory(activeCategory);
+    });
+  });
 }
 
 function renderReview() {
   const reviewSummary = document.getElementById("review-summary");
   if (!reviewSummary) return;
+  const cartItems = Object.values(build.cart || {}).filter((item) => Number(item.quantity) > 0);
 
   const rows = flowCategoryIds
     .map((category) => {
       const selection = build.selections[category];
+      const cartForCategory = cartItems
+        .filter((item) => item.category === category)
+        .reduce((sum, item) => sum + Number(item.quantity || 0), 0);
       return `
         <article>
           <small>${escapeHtml(categoryCopy[category].savedLabel)}</small>
           <strong>${escapeHtml(selection?.title || categoryCopy[category].empty)}</strong>
+          ${cartForCategory ? `<span>${cartForCategory} item${cartForCategory === 1 ? "" : "s"} in cart</span>` : ""}
         </article>
       `;
     })
@@ -440,6 +570,10 @@ function renderReview() {
     <article>
       <small>Event Type</small>
       <strong>${escapeHtml(build.eventType || "Not selected")}</strong>
+    </article>
+    <article>
+      <small>Product cart</small>
+      <strong>${cartItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} items saved</strong>
     </article>
     ${rows}
   `;
@@ -508,6 +642,13 @@ document.querySelectorAll("[data-builder-category]").forEach((link) => {
   link.addEventListener("click", () => {
     activeCategory = normalizeInventoryCategory(link.dataset.builderCategory) || activeCategory;
   });
+});
+
+document.getElementById("clear-cart-button")?.addEventListener("click", () => {
+  build.cart = {};
+  saveBuild();
+  if (activeCategory) renderInventoryCategory(activeCategory);
+  else updateBuilderPreview();
 });
 
 document.querySelectorAll('a[href^="#"]').forEach((link) => {

@@ -1245,7 +1245,7 @@ svg {
 
 .table-choice {
   display: grid;
-  grid-template-rows: 160px auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
   gap: 10px;
   min-width: 0;
   min-height: 0;
@@ -1259,6 +1259,18 @@ svg {
   cursor: pointer;
   box-shadow: 0 18px 54px rgba(26, 37, 31, 0.08);
   transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.inventory-select-button {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  text-align: left;
 }
 
 .table-choice:hover,
@@ -1342,6 +1354,121 @@ svg {
   box-shadow: 0 18px 54px rgba(26, 37, 31, 0.08);
 }
 
+.inventory-cart {
+  grid-column: 1 / -1;
+  justify-self: center;
+  display: grid;
+  gap: 12px;
+  width: min(100%, 980px);
+  border: 1px solid rgba(17, 22, 20, 0.13);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.82);
+  box-shadow: 0 18px 54px rgba(26, 37, 31, 0.08);
+  padding: 16px;
+}
+
+.inventory-cart-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.inventory-cart-heading small,
+.cart-line span {
+  color: #667069;
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.inventory-cart-heading strong {
+  color: #111614;
+  font-family: var(--serif);
+  font-size: 1.45rem;
+}
+
+.inventory-cart-list {
+  display: grid;
+  gap: 8px;
+}
+
+.inventory-cart-list > p {
+  margin: 0;
+  color: #667069;
+  font-weight: 700;
+}
+
+.cart-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid rgba(17, 22, 20, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 253, 248, 0.8);
+  padding: 10px 12px;
+}
+
+.cart-line strong {
+  overflow: hidden;
+  color: #111614;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cart-line button,
+.secondary-flow-button,
+.inventory-add-button,
+.inventory-quantity-row button {
+  min-height: 38px;
+  border: 1px solid rgba(17, 22, 20, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.9);
+  color: #111614;
+  font-weight: 900;
+  padding: 0 14px;
+}
+
+.inventory-quantity-row {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) 38px;
+  gap: 8px;
+  align-items: end;
+}
+
+.inventory-quantity-row label {
+  display: grid;
+  gap: 4px;
+}
+
+.inventory-quantity-row label span {
+  color: #667069;
+  font-size: 0.64rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.inventory-quantity-row input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid rgba(17, 22, 20, 0.13);
+  border-radius: 999px;
+  background: rgba(255, 253, 248, 0.9);
+  color: #111614;
+  font-weight: 900;
+  padding: 0 12px;
+  text-align: center;
+}
+
+.inventory-add-button {
+  width: 100%;
+  background: #111614;
+  color: var(--bone-light);
+}
+
 .builder-preview > span {
   display: grid;
   width: 44px;
@@ -1412,6 +1539,12 @@ svg {
   font-family: var(--serif);
   font-size: clamp(1.05rem, 1.5vw, 1.45rem);
   line-height: 1;
+}
+
+.review-summary article > span {
+  color: #667069;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .flow-actions {
@@ -1649,6 +1782,10 @@ svg {
 
   .selected-summary,
   .review-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .cart-line {
     grid-template-columns: 1fr;
   }
 

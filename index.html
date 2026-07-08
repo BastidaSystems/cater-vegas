@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260707-event-type-polish">
+  <link rel="stylesheet" href="styles.css?v=public-cart-20260707">
 </head>
 <body>
   <header class="site-header" id="top">
@@ -291,6 +291,16 @@
           <p id="inventory-preview-note">Choose an item to save this category.</p>
         </div>
       </aside>
+      <aside class="inventory-cart" aria-live="polite">
+        <div class="inventory-cart-heading">
+          <small>Product cart</small>
+          <strong id="cart-count-label">0 items</strong>
+        </div>
+        <div class="inventory-cart-list" id="inventory-cart-list">
+          <p>Your selected products will appear here.</p>
+        </div>
+        <button class="secondary-flow-button" id="clear-cart-button" type="button">Clear cart</button>
+      </aside>
       <div class="selected-summary" id="selected-summary" aria-live="polite"></div>
       <div class="flow-actions">
         <a class="contact-button" id="inventory-next-link" href="#fnb">Continue</a>
@@ -371,6 +381,6 @@
     <p>Events, F&amp;B, Entertainment &amp; Hospitality.</p>
   </footer>
 
-  <script type="module" src="app.js?v=public-inventory-flow-20260706"></script>
+  <script type="module" src="app.js?v=public-cart-20260707"></script>
 </body>
 </html>
