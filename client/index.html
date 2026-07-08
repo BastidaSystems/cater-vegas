@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Portal de comprador de Cater Vegas." />
-    <title>Cater Vegas | Comprador</title>
+    <meta name="description" content="Cater Vegas buyer portal." />
+    <title>Cater Vegas | Buyer</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
@@ -14,36 +14,36 @@
     <header class="portal-header">
       <a class="portal-logo" href="../index.html">CATER VEGAS</a>
       <nav>
-        <a class="portal-home" href="../index.html" aria-label="Regresar al inicio">Home</a>
-        <a class="portal-home" href="../admin/" aria-label="Ir al admin">Admin</a>
+        <a class="portal-home" href="../index.html" aria-label="Return home">Home</a>
+        <a class="portal-home" href="../admin/" aria-label="Go to admin">Admin</a>
         <a href="../login.html">Login</a>
-        <button id="signoutButton" type="button">Salir</button>
+        <button id="signoutButton" type="button">Sign Out</button>
       </nav>
     </header>
 
     <main class="portal-shell">
       <section class="portal-hero">
         <p class="portal-kicker">Cater Vegas</p>
-        <h1>Catalogo para tu evento.</h1>
-        <p id="sessionStatus">Verificando sesion...</p>
+        <h1>Catalog for your event.</h1>
+        <p id="sessionStatus">Checking session...</p>
       </section>
 
       <section class="portal-card catalog-card">
-        <p class="portal-kicker">Inventario disponible</p>
-        <h2>Mesas, sillas y equipo</h2>
-        <p>Todo lo que el administrador agregue al inventario aparecera aqui para el comprador.</p>
+        <p class="portal-kicker">Available Inventory</p>
+        <h2>Tables, chairs, and equipment</h2>
+        <p>Everything the admin adds to inventory will appear here for the buyer.</p>
         <div class="catalog-grid" id="inventoryCatalog"></div>
       </section>
 
       <section class="portal-card">
-        <p class="portal-kicker">Eventos</p>
-        <h2>Planes aprobados</h2>
-        <p id="clientSummary">Los eventos aprobados para tu cuenta apareceran aqui.</p>
+        <p class="portal-kicker">Events</p>
+        <h2>Approved plans</h2>
+        <p id="clientSummary">Approved events for your account will appear here.</p>
         <div class="portal-list" id="eventsList"></div>
       </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="client.js?v=workspace-isolation-20260707"></script>
+    <script type="module" src="client.js?v=client-english-connection-20260707"></script>
   </body>
 </html>

@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Recuperar acceso de Cater Vegas con Supabase Auth." />
-    <title>Cater Vegas | Recuperar acceso</title>
+    <meta name="description" content="Recover Cater Vegas access with Supabase Auth." />
+    <title>Cater Vegas | Recover Access</title>
     <link rel="stylesheet" href="style.css?v=scale-2" />
     <style>
       body {
@@ -121,8 +121,8 @@
     </style>
   </head>
   <body>
-    <header class="site-header" aria-label="Encabezado principal">
-      <a class="logo" href="index.html" aria-label="Cater Vegas inicio">CATER VEGAS</a>
+    <header class="site-header" aria-label="Main header">
+      <a class="logo" href="index.html" aria-label="Cater Vegas home">CATER VEGAS</a>
     </header>
 
     <main class="auth-shell">
@@ -130,8 +130,8 @@
         <span class="auth-kicker">Supabase Auth</span>
         <h1 id="recover-title">Recover</h1>
         <p>
-          Pide un link para recuperar acceso. Al abrir el link del correo,
-          regresa a esta página y guarda una contraseña nueva.
+          Request a link to recover access. When you open the email link,
+          return to this page and save a new password.
         </p>
 
         <form class="auth-form" id="recoverRequestForm">
@@ -139,12 +139,12 @@
             Email
             <input id="recoverEmail" type="email" autocomplete="email" required />
           </label>
-          <button class="auth-button" type="submit">Enviar recovery</button>
+          <button class="auth-button" type="submit">Send Recovery</button>
         </form>
 
         <form class="auth-form" id="newPasswordForm">
           <label>
-            Nueva password
+            New password
             <input
               id="newPassword"
               type="password"
@@ -154,7 +154,7 @@
             />
           </label>
           <label>
-            Confirmar password
+            Confirm password
             <input
               id="confirmPassword"
               type="password"
@@ -163,20 +163,20 @@
               required
             />
           </label>
-          <button class="auth-button secondary" type="submit">Guardar password</button>
+          <button class="auth-button secondary" type="submit">Save Password</button>
           <p class="auth-status" id="recoverStatus" aria-live="polite"></p>
         </form>
 
-        <nav class="auth-links" aria-label="Navegación de sesión">
-          <a href="login.html">Volver al login</a>
-          <a href="index.html">Volver al generador</a>
+        <nav class="auth-links" aria-label="Session navigation">
+          <a href="login.html">Back to login</a>
+          <a href="index.html">Back to builder</a>
         </nav>
       </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
-      import { isSupabaseConfigured, requireSupabase } from "./lib/supabaseClient.js?v=workspace-isolation-20260707";
+      import { isSupabaseConfigured, requireSupabase } from "./lib/supabaseClient.js?v=workspace-connection-20260707";
 
       const recoverRequestForm = document.querySelector("#recoverRequestForm");
       const newPasswordForm = document.querySelector("#newPasswordForm");
@@ -184,7 +184,7 @@
       const newPassword = document.querySelector("#newPassword");
       const confirmPassword = document.querySelector("#confirmPassword");
       const recoverStatus = document.querySelector("#recoverStatus");
-      const authConnectionMessage = "No se pudo conectar con Supabase. Revisa la URL del proyecto o tu conexion.";
+      const authConnectionMessage = "Could not connect to Supabase. Check the project URL or your connection.";
       let supabase = null;
 
       function setStatus(message) {
@@ -205,11 +205,11 @@
           return authConnectionMessage;
         }
 
-        return message || "No se pudo completar la solicitud.";
+        return message || "Could not complete the request.";
       }
 
       if (!isSupabaseConfigured) {
-        setStatus("Configura Supabase en lib/supabaseClient.js antes de usar recovery.");
+        setStatus("Configure Supabase in lib/supabaseClient.js before using recovery.");
       }
 
       try {
@@ -224,13 +224,13 @@
           const { data, error } = await supabase.auth.getSession();
           if (error) throw error;
           if (data?.session) {
-            setStatus("Link validado. Escribe una password nueva.");
+            setStatus("Link validated. Enter a new password.");
             newPassword.focus();
             return;
           }
 
           if (window.location.hash || window.location.search.includes("type=recovery")) {
-            setStatus("Abre de nuevo el link de recovery o pide otro correo.");
+            setStatus("Open the recovery link again or request another email.");
           }
         } catch (error) {
           setStatus(getAuthErrorMessage(error));
@@ -241,7 +241,7 @@
         event.preventDefault();
         if (!supabase) return;
 
-        setStatus("Enviando recovery...");
+        setStatus("Sending recovery...");
         let error = null;
         try {
           ({ error } = await supabase.auth.resetPasswordForEmail(recoverEmail.value.trim(), {
@@ -251,7 +251,7 @@
           error = requestError;
         }
 
-        setStatus(error ? getAuthErrorMessage(error) : "Recovery enviado. Revisa el correo.");
+        setStatus(error ? getAuthErrorMessage(error) : "Recovery sent. Check your email.");
       });
 
       newPasswordForm.addEventListener("submit", async (event) => {
@@ -259,11 +259,11 @@
         if (!supabase) return;
 
         if (newPassword.value !== confirmPassword.value) {
-          setStatus("Las passwords no coinciden.");
+          setStatus("Passwords do not match.");
           return;
         }
 
-        setStatus("Guardando password...");
+        setStatus("Saving password...");
         let data = null;
         try {
           ({ data } = await supabase.auth.getSession());
@@ -272,7 +272,7 @@
           return;
         }
         if (!data?.session) {
-          setStatus("Primero abre el link de recovery desde el correo.");
+          setStatus("Open the recovery link from the email first.");
           return;
         }
 

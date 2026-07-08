@@ -6,7 +6,7 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=workspace-isolation-20260707";
+} from "../lib/supabaseClient.js?v=workspace-connection-20260707";
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const eventsList = document.querySelector("#eventsList");
@@ -51,7 +51,7 @@ async function loadClientEvents() {
   }
 
   if (!data?.length) {
-    eventsList.innerHTML = "<p>No hay eventos visibles para tu cuenta todavia.</p>";
+    eventsList.innerHTML = "<p>No events are visible for your account yet.</p>";
     return;
   }
 
@@ -59,8 +59,8 @@ async function loadClientEvents() {
     .map(
       (event) => `
         <article class="portal-row">
-          <strong>${escapeHtml(event.title || `Evento #${event.id}`)}</strong>
-          <span>#${event.id} · ${escapeHtml(event.event_type || "Sin tipo")} · ${escapeHtml(event.status || "draft")}</span>
+          <strong>${escapeHtml(event.title || `Event #${event.id}`)}</strong>
+          <span>#${event.id} · ${escapeHtml(event.event_type || "No type")} · ${escapeHtml(event.status || "draft")}</span>
         </article>
       `
     )
@@ -86,7 +86,7 @@ async function loadInventoryCatalog() {
     .filter((item) => item.meta?.kind === "inventory");
 
   if (!items.length) {
-    inventoryCatalog.innerHTML = "<p>El inventario disponible aparecera aqui cuando el administrador agregue articulos.</p>";
+    inventoryCatalog.innerHTML = "<p>Available inventory will appear here when the admin adds items.</p>";
     return;
   }
 
@@ -100,15 +100,15 @@ async function loadInventoryCatalog() {
             ${
               meta.image_url
                 ? `<img src="${escapeHtml(meta.image_url)}" alt="${escapeHtml(row.provider_name)}">`
-                : "<span>Sin foto</span>"
+                : "<span>No photo</span>"
             }
           </div>
           <div class="catalog-copy">
-            <span>${escapeHtml(meta.category || "Inventario")}</span>
+            <span>${escapeHtml(meta.category || "Inventory")}</span>
             <h3>${escapeHtml(row.provider_name)}</h3>
-            <p>${escapeHtml(meta.description || "Disponible para cotizacion.")}</p>
+            <p>${escapeHtml(meta.description || "Available for quote.")}</p>
             <div class="catalog-meta">
-              <strong>${quantity} disponibles</strong>
+              <strong>${quantity} available</strong>
               ${meta.price_label ? `<strong>${escapeHtml(meta.price_label)}</strong>` : ""}
             </div>
           </div>
@@ -121,7 +121,7 @@ async function loadInventoryCatalog() {
 
 async function bootClient() {
   if (!isSupabaseConfigured) {
-    sessionStatus.textContent = "Configura Supabase para usar el portal.";
+    sessionStatus.textContent = "Configure Supabase to use the portal.";
     return;
   }
 
@@ -140,8 +140,8 @@ async function bootClient() {
 
   const role = getEffectiveWorkspaceRole(profile, membership, user);
   const label = ["owner", "admin", "super_admin", "platform_admin", "organizer"].includes(role)
-    ? "Vista de comprador"
-    : "Comprador";
+    ? "Buyer View"
+    : "Buyer";
 
   currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
   sessionStatus.textContent = `${user.email} · ${label}`;

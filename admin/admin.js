@@ -6,7 +6,7 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=workspace-isolation-20260707";
+} from "../lib/supabaseClient.js?v=workspace-connection-20260707";
 
 const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
 const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
@@ -22,7 +22,7 @@ const INVENTORY_CATEGORY_LABELS = {
   food: "Food",
   beverages: "Beverages",
   entertainment: "Entertainment",
-  lodging: "Hospedaje",
+  lodging: "Lodging",
 };
 const INVENTORY_CATEGORY_ALIASES = {
   table: "tables",
@@ -130,7 +130,15 @@ function normalizeInventoryCategory(value) {
 }
 
 function inventoryCategoryLabel(category) {
-  return INVENTORY_CATEGORY_LABELS[normalizeInventoryCategory(category)] || "Inventario";
+  return INVENTORY_CATEGORY_LABELS[normalizeInventoryCategory(category)] || "Inventory";
+}
+
+function roleLabel(role) {
+  return String(role || "admin")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
 }
 
 function providerTypeForCategory(category) {
@@ -252,7 +260,7 @@ function renderInventoryCategories() {
   const categories = ["all", ...INVENTORY_CATEGORY_IDS.filter((category) => counts[category])];
   inventoryCategoryBar.innerHTML = categories
     .map((category) => {
-      const label = category === "all" ? "Todo" : inventoryCategoryLabel(category);
+      const label = category === "all" ? "All" : inventoryCategoryLabel(category);
       const icon = INVENTORY_CATEGORY_ICONS[category] || category.slice(0, 3);
       return `
         <button class="inventory-category-chip ${activeInventoryCategory === category ? "is-active" : ""}" type="button" data-inventory-category="${escapeHtml(category)}">
@@ -290,7 +298,7 @@ function fileToDataUrl(file) {
 
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("No se pudo leer la imagen."));
+    reader.onerror = () => reject(reader.error || new Error("Could not read the image."));
     reader.readAsDataURL(file);
   });
 }
@@ -310,15 +318,15 @@ function renderDashboardStats(monthEvents, upcomingEvents) {
   const activeInventory = inventoryItems.reduce((sum, item) => sum + Number(item.quantity_available || 0), 0);
   const nextEvent = upcomingEvents[0];
   const nextEventLabel = nextEvent?.event_date
-    ? new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric" }).format(eventDateValue(nextEvent))
-    : "Sin fecha";
+    ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(eventDateValue(nextEvent))
+    : "No date";
 
   const cards = [
-    { label: "Eventos totales", value: allEvents.length, note: "Registrados en Cater Vegas" },
-    { label: "Este mes", value: monthEvents.length, note: "Eventos en calendario" },
-    { label: "Hoy", value: todayEvents, note: "Eventos programados" },
-    { label: "Proximo", value: nextEvent ? nextEventLabel : "-", note: nextEvent?.title || "Sin eventos proximos" },
-    { label: "Inventario", value: activeInventory, note: "Piezas disponibles" },
+    { label: "Total Events", value: allEvents.length, note: "Registered in Cater Vegas" },
+    { label: "This Month", value: monthEvents.length, note: "Events on calendar" },
+    { label: "Today", value: todayEvents, note: "Scheduled events" },
+    { label: "Next", value: nextEvent ? nextEventLabel : "-", note: nextEvent?.title || "No upcoming events" },
+    { label: "Inventory", value: activeInventory, note: "Available pieces" },
   ];
 
   dashboardMetrics.innerHTML = cards
@@ -342,20 +350,20 @@ function renderDashboardSide(upcomingEvents) {
           .map((event) => {
             const date = eventDateValue(event);
             const dateLabel = date
-              ? new Intl.DateTimeFormat("es-US", { month: "short", day: "numeric" }).format(date)
-              : "Sin fecha";
+              ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date)
+              : "No date";
             return `
               <article class="dashboard-upcoming-item">
                 <span>${escapeHtml(dateLabel)}</span>
                 <div>
-                  <strong>${escapeHtml(event.title || "Evento")}</strong>
-                  <small>${escapeHtml(event.event_type || event.status || "Evento")}</small>
+                  <strong>${escapeHtml(event.title || "Event")}</strong>
+                  <small>${escapeHtml(event.event_type || event.status || "Event")}</small>
                 </div>
               </article>
             `;
           })
           .join("")
-      : '<p class="empty-state">No hay eventos proximos todavia.</p>';
+      : '<p class="empty-state">No upcoming events yet.</p>';
   }
 
   if (!dashboardInventorySummary) return;
@@ -363,9 +371,9 @@ function renderDashboardSide(upcomingEvents) {
   if (!inventoryItems.length) {
     dashboardInventorySummary.innerHTML = `
       <div class="dashboard-summary-block">
-        <p class="eyebrow">Inventario</p>
-        <strong>Sin articulos publicados</strong>
-        <small>Agrega mesas, sillas o decoracion desde Inventario.</small>
+        <p class="eyebrow">Inventory</p>
+        <strong>No published items</strong>
+        <small>Add tables, chairs, or decor from Inventory.</small>
       </div>
     `;
     return;
@@ -379,8 +387,8 @@ function renderDashboardSide(upcomingEvents) {
 
   dashboardInventorySummary.innerHTML = `
     <div class="dashboard-summary-block">
-      <p class="eyebrow">Inventario publicado</p>
-      <strong>${inventoryItems.length} articulos</strong>
+      <p class="eyebrow">Published Inventory</p>
+      <strong>${inventoryItems.length} items</strong>
       <div class="dashboard-inventory-tags">
         ${Object.entries(categoryCounts)
           .slice(0, 5)
@@ -406,13 +414,13 @@ function renderCalendar() {
     return eventDate.getMonth() === month && eventDate.getFullYear() === year;
   });
 
-  const formatter = new Intl.DateTimeFormat("es-US", { month: "long", year: "numeric" });
+  const formatter = new Intl.DateTimeFormat("en-US", { month: "long", year: "numeric" });
   if (calendarMonthLabel) {
     const label = formatter.format(now);
     calendarMonthLabel.textContent = label.charAt(0).toUpperCase() + label.slice(1);
   }
 
-  const weekdayLabels = ["L", "M", "M", "J", "V", "S", "D"];
+  const weekdayLabels = ["M", "T", "W", "T", "F", "S", "S"];
   const cells = [
     ...weekdayLabels.map((day) => `<span class="calendar-weekday">${day}</span>`),
     ...Array.from({ length: firstWeekday }, () => '<span class="calendar-day is-empty"></span>'),
@@ -444,7 +452,7 @@ function renderCalendar() {
   renderDashboardSide(upcomingEvents);
 
   dashboardCalendar.innerHTML = `
-    <div class="calendar-grid" aria-label="Calendario mensual">${cells.join("")}</div>
+    <div class="calendar-grid" aria-label="Monthly calendar">${cells.join("")}</div>
   `;
 }
 
@@ -454,7 +462,7 @@ function renderInventory() {
   renderInventoryCategories();
 
   if (!inventoryItems.length) {
-    inventoryList.innerHTML = '<div class="empty-state">No hay articulos en inventario todavia.</div>';
+    inventoryList.innerHTML = '<div class="empty-state">No inventory items yet.</div>';
     renderInventoryDetail(null);
     return;
   }
@@ -465,7 +473,7 @@ function renderInventory() {
       : inventoryItems.filter((item) => normalizeInventoryCategory(item.category) === activeInventoryCategory);
 
   if (!visibleItems.length) {
-    inventoryList.innerHTML = `<div class="empty-state">No hay articulos en ${escapeHtml(inventoryCategoryLabel(activeInventoryCategory))}.</div>`;
+    inventoryList.innerHTML = `<div class="empty-state">No items in ${escapeHtml(inventoryCategoryLabel(activeInventoryCategory))}.</div>`;
     renderInventoryDetail(null);
     return;
   }
@@ -488,7 +496,7 @@ function renderInventory() {
           <span class="inventory-icon-meta">
             <small>${escapeHtml(inventoryCategoryLabel(item.category))}</small>
             <strong>${escapeHtml(item.name)}</strong>
-            <em>${Number(item.quantity_available ?? 0)} disp.</em>
+            <em>${Number(item.quantity_available ?? 0)} available</em>
           </span>
         </button>
       `
@@ -505,8 +513,8 @@ function renderInventoryDetail(item) {
     inventoryDetailPanel.innerHTML = `
       <div class="inventory-detail-empty">
         <span aria-hidden="true">INV</span>
-        <strong>Selecciona un articulo</strong>
-        <small>La informacion completa aparecera aqui.</small>
+        <strong>Select an item</strong>
+        <small>Full item details will appear here.</small>
       </div>
     `;
     return;
@@ -524,13 +532,13 @@ function renderInventoryDetail(item) {
       <p class="eyebrow">${escapeHtml(inventoryCategoryLabel(item.category))}</p>
       <h3>${escapeHtml(item.name)}</h3>
       <div class="inventory-detail-tags">
-        <span>${Number(item.quantity_available ?? 0)} disponibles</span>
+        <span>${Number(item.quantity_available ?? 0)} available</span>
         ${item.price_label ? `<span>${escapeHtml(item.price_label)}</span>` : ""}
       </div>
-      <p>${escapeHtml(item.description || "Sin descripcion.")}</p>
+      <p>${escapeHtml(item.description || "No description.")}</p>
       <div class="inventory-actions">
-        <button class="secondary-button" type="button" data-edit-inventory="${escapeHtml(item.id)}">Editar</button>
-        <button class="tiny-button" type="button" data-delete-inventory="${escapeHtml(item.id)}">Eliminar</button>
+        <button class="secondary-button" type="button" data-edit-inventory="${escapeHtml(item.id)}">Edit</button>
+        <button class="tiny-button" type="button" data-delete-inventory="${escapeHtml(item.id)}">Delete</button>
       </div>
     </div>
   `;
@@ -550,7 +558,7 @@ async function loadEvents() {
     .order("event_date", { ascending: true });
 
   if (error) {
-    setStatus(`Calendario: ${error.message}`);
+    setStatus(`Calendar: ${error.message}`);
     allEvents = [];
   } else {
     allEvents = data || [];
@@ -564,7 +572,7 @@ async function loadInventory() {
     inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
     renderInventory();
     renderCalendar();
-    setInventoryStatus("Modo local: conecta Supabase para que el comprador lo vea en otro dispositivo.");
+    setInventoryStatus("Local mode: connect Supabase so buyers can see it on another device.");
     return;
   }
 
@@ -578,7 +586,7 @@ async function loadInventory() {
     inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
     renderInventory();
     renderCalendar();
-    setInventoryStatus(`No se pudo leer inventario: ${error.message}.`);
+    setInventoryStatus(`Could not read inventory: ${error.message}.`);
     return;
   }
 
@@ -586,7 +594,7 @@ async function loadInventory() {
   savePublicInventory(inventoryItems);
   renderInventory();
   renderCalendar();
-  setInventoryStatus("Inventario sincronizado.");
+  setInventoryStatus("Inventory synced.");
 }
 
 function resetInventoryForm() {
@@ -607,11 +615,11 @@ function editInventoryItem(id) {
   inventoryImageUrl.value = item.image_url || "";
   inventoryDescription.value = item.description || "";
   scrollToAdminTarget("#inventoryPanel", "inventory");
-  setInventoryStatus("Editando articulo. Guarda para actualizarlo.");
+  setInventoryStatus("Editing item. Save to update it.");
 }
 
 async function deleteInventoryItem(id) {
-  if (!window.confirm("Eliminar este articulo del inventario?")) return;
+  if (!window.confirm("Delete this item from inventory?")) return;
 
   if (!supabase) {
     const nextRows = localInventoryRows().filter((item) => String(item.id) !== String(id));
@@ -631,7 +639,7 @@ async function deleteInventoryItem(id) {
     return;
   }
 
-  setInventoryStatus("Articulo eliminado.");
+  setInventoryStatus("Item deleted.");
   await loadInventory();
 }
 
@@ -663,16 +671,16 @@ async function saveInventoryItem(event) {
   };
 
   if (!selectedCategory) {
-    setInventoryStatus("Selecciona una categoria de inventario.");
+    setInventoryStatus("Select an inventory category.");
     return;
   }
 
   if (!basePayload.provider_name) {
-    setInventoryStatus("Agrega el nombre del articulo.");
+    setInventoryStatus("Add the item name.");
     return;
   }
 
-  setInventoryStatus("Guardando inventario...");
+  setInventoryStatus("Saving inventory...");
 
   if (!supabase) {
     const rows = localInventoryRows();
@@ -714,7 +722,7 @@ async function saveInventoryItem(event) {
   }
 
   resetInventoryForm();
-  setInventoryStatus("Inventario guardado. El comprador ya lo puede ver.");
+  setInventoryStatus("Inventory saved. Buyers can now see it.");
   await loadInventory();
 }
 
@@ -722,7 +730,7 @@ async function bootAdmin() {
   renderCalendar();
 
   if (!isSupabaseConfigured) {
-    setStatus("Configura Supabase para sincronizar inventario.");
+    setStatus("Configure Supabase to sync inventory.");
     await loadInventory();
     return;
   }
@@ -743,14 +751,14 @@ async function bootAdmin() {
 
   currentRole = getEffectiveWorkspaceRole(profile, membership, user);
   if (!ADMIN_ROLES.has(currentRole)) {
-    setStatus(`No tienes permisos para este admin. Rol detectado: ${currentRole || "sin rol"}.`);
+    setStatus(`You do not have permission to access this admin. Detected role: ${currentRole || "no role"}.`);
     return;
   }
 
   currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
   if (dashboardEmail) dashboardEmail.textContent = user.email || "Admin";
-  if (dashboardRole) dashboardRole.textContent = currentRole.replace(/^./, (char) => char.toUpperCase());
-  setStatus(`${user.email} · Inventario listo`);
+  if (dashboardRole) dashboardRole.textContent = roleLabel(currentRole);
+  setStatus(user.email || "Admin");
 
   await Promise.all([loadEvents(), loadInventory()]);
 }

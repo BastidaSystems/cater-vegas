@@ -72,12 +72,12 @@ const categoryCopy = {
     step: "Entertainment",
   },
   lodging: {
-    label: "Hospedaje",
+    label: "Lodging",
     savedLabel: "Selected lodging",
-    title: "Choose hospedaje",
+    title: "Choose lodging",
     copy: "Select hotel, suite or guest stay support.",
     empty: "No lodging added yet",
-    step: "Hospedaje",
+    step: "Lodging",
   },
 };
 
@@ -133,12 +133,25 @@ let supabaseClientPromise = null;
 
 async function getPublicSupabaseClient() {
   if (!supabaseClientPromise) {
-    supabaseClientPromise = import("./lib/supabaseClient.js?v=workspace-isolation-20260707")
-      .then((module) => ({
-        workspaceId: module.DEFAULT_WORKSPACE_ID,
-        isConfigured: module.isSupabaseConfigured,
-        client: module.supabase,
-      }))
+    supabaseClientPromise = import("./lib/supabaseClient.js?v=workspace-connection-20260707")
+      .then(async (module) => {
+        let workspaceId = module.DEFAULT_WORKSPACE_ID;
+
+        if (module.isSupabaseConfigured && module.supabase) {
+          try {
+            const { workspace, membership, profile } = await module.getWorkspaceContext();
+            workspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || workspaceId;
+          } catch {
+            workspaceId = module.DEFAULT_WORKSPACE_ID;
+          }
+        }
+
+        return {
+          workspaceId,
+          isConfigured: module.isSupabaseConfigured,
+          client: module.supabase,
+        };
+      })
       .catch(() => ({
         workspaceId: "cater-vegas",
         isConfigured: false,
@@ -309,7 +322,7 @@ function updateBreadcrumb(container, category = activeCategory) {
   } else {
     crumbs.push("F&B");
     if (category === "entertainment" || category === "lodging") crumbs.push("Entertainment");
-    if (category === "lodging") crumbs.push("Hospedaje");
+    if (category === "lodging") crumbs.push("Lodging");
   }
 
   container.innerHTML = crumbs
@@ -602,6 +615,27 @@ function normalizeProviderRow(row) {
   };
 }
 
+function reconcileBuildWithInventory() {
+  const currentIds = new Set(publicInventory.map((item) => String(item.id)));
+  let changed = false;
+
+  Object.entries(build.selections || {}).forEach(([category, selection]) => {
+    if (selection?.id && !currentIds.has(String(selection.id))) {
+      delete build.selections[category];
+      changed = true;
+    }
+  });
+
+  Object.keys(build.cart || {}).forEach((id) => {
+    if (!currentIds.has(String(id))) {
+      delete build.cart[id];
+      changed = true;
+    }
+  });
+
+  if (changed) saveBuild();
+}
+
 async function loadPublicInventory() {
   const localItems = localInventoryRows().map(normalizeProviderRow).filter(Boolean);
   const { workspaceId, isConfigured, client } = await getPublicSupabaseClient();
@@ -627,11 +661,12 @@ async function loadPublicInventory() {
     if (error) throw error;
 
     const remoteItems = (data || []).map(normalizeProviderRow).filter(Boolean);
-    publicInventory = (remoteItems.length ? remoteItems : localItems).filter((item) => flowCategoryIds.includes(item.category));
+    publicInventory = remoteItems.filter((item) => flowCategoryIds.includes(item.category));
   } catch {
-    publicInventory = localItems.filter((item) => flowCategoryIds.includes(item.category));
+    publicInventory = [];
   }
 
+  reconcileBuildWithInventory();
   if (activeCategory) renderInventoryCategory(activeCategory);
   renderReview();
 }

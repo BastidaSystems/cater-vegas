@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Dashboard de administración e inventario de Cater Vegas." />
+    <meta name="description" content="Cater Vegas administration and inventory dashboard." />
     <title>Cater Vegas | Admin</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -12,7 +12,7 @@
   </head>
   <body>
     <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
-      <aside class="admin-sidebar" aria-label="Menu de administrador">
+      <aside class="admin-sidebar" aria-label="Admin menu">
         <a class="admin-logo" href="../index.html" aria-label="Cater Vegas home">
           <span>CV</span>
           <strong>CATER VEGAS <small>ADMIN</small></strong>
@@ -56,26 +56,26 @@
           </div>
 
           <div class="header-actions">
-            <a class="home-button" href="../client/" aria-label="Ver pagina del comprador">Ver comprador</a>
-            <div class="user-pill account-pill" aria-label="Usuario activo">
+            <a class="home-button" href="../client/" aria-label="View buyer page">View Buyer</a>
+            <div class="user-pill account-pill" aria-label="Active user">
               <span class="avatar">CV</span>
               <span class="account-copy">
-                <strong id="sessionStatus" class="session-status">Verificando sesion...</strong>
+                <strong id="sessionStatus" class="session-status">Checking session...</strong>
                 <small id="dashboardRole">Owner</small>
               </span>
-              <button id="signoutButton" class="logout-button" type="button">Salir</button>
+              <button id="signoutButton" class="logout-button" type="button">Sign Out</button>
             </div>
           </div>
         </header>
 
         <section class="admin-clean-grid">
-          <section class="panel simple-panel dashboard-panel calendar-panel" id="calendarPanel" aria-label="Dashboard de eventos">
+          <section class="panel simple-panel dashboard-panel calendar-panel" id="calendarPanel" aria-label="Event dashboard">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Operacion general</p>
+                <p class="eyebrow">Operations Overview</p>
                 <h2>Event Dashboard</h2>
               </div>
-              <span class="calendar-month-label" id="calendarMonthLabel">Este mes</span>
+              <span class="calendar-month-label" id="calendarMonthLabel">This Month</span>
             </div>
             <div class="dashboard-metrics" id="dashboardMetrics" aria-live="polite"></div>
             <div class="dashboard-overview-grid">
@@ -84,14 +84,14 @@
                 <section class="side-card agenda-card">
                   <div>
                     <p class="eyebrow">Agenda</p>
-                    <h3>Próximos eventos</h3>
+                    <h3>Upcoming Events</h3>
                   </div>
                   <div class="dashboard-upcoming-list" id="dashboardUpcomingList" aria-live="polite"></div>
                 </section>
                 <section class="side-card inventory-summary-card">
                   <div>
                     <p class="eyebrow">Inventory</p>
-                    <h3>Inventario</h3>
+                    <h3>Inventory</h3>
                   </div>
                   <div class="dashboard-inventory-summary" id="dashboardInventorySummary" aria-live="polite"></div>
                 </section>
@@ -99,23 +99,23 @@
             </div>
           </section>
 
-          <section class="panel simple-panel inventory-panel" id="inventoryPanel" aria-label="Inventario de Cater Vegas">
+          <section class="panel simple-panel inventory-panel" id="inventoryPanel" aria-label="Cater Vegas inventory">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Catalogo visible para compradores</p>
+                <p class="eyebrow">Buyer-facing catalog</p>
                 <h2>Inventory</h2>
               </div>
-              <button class="secondary-button" id="refreshInventoryButton" type="button">Actualizar</button>
+              <button class="secondary-button" id="refreshInventoryButton" type="button">Refresh</button>
             </div>
 
             <form class="inventory-form" id="inventoryForm">
               <input id="inventoryItemId" type="hidden" />
               <label>
-                <span>Nombre del articulo</span>
-                <input id="inventoryName" type="text" placeholder="Mesa redonda 60 pulgadas" required />
+                <span>Item name</span>
+                <input id="inventoryName" type="text" placeholder="60-inch round table" required />
               </label>
               <label>
-                <span>Categoria</span>
+                <span>Category</span>
                 <select id="inventoryCategory" required>
                   <option value="tables">Tables</option>
                   <option value="chairs">Chairs</option>
@@ -125,37 +125,37 @@
                   <option value="food">Food</option>
                   <option value="beverages">Beverages</option>
                   <option value="entertainment">Entertainment</option>
-                  <option value="lodging">Hospedaje</option>
+                  <option value="lodging">Lodging</option>
                 </select>
               </label>
               <label>
-                <span>Cantidad disponible</span>
+                <span>Available quantity</span>
                 <input id="inventoryQuantity" type="number" min="0" placeholder="12" required />
               </label>
               <label>
-                <span>Precio base</span>
-                <input id="inventoryPrice" type="text" placeholder="$18 renta por pieza" />
+                <span>Base price</span>
+                <input id="inventoryPrice" type="text" placeholder="$18 rental per piece" />
               </label>
               <label class="full-field">
-                <span>Foto por URL</span>
+                <span>Image URL</span>
                 <input id="inventoryImageUrl" type="url" placeholder="https://..." />
               </label>
               <label class="full-field">
-                <span>O subir foto desde tu computadora</span>
+                <span>Or upload an image from your computer</span>
                 <input id="inventoryImageFile" type="file" accept="image/*" />
               </label>
               <label class="full-field">
-                <span>Descripcion para el comprador</span>
-                <textarea id="inventoryDescription" rows="4" placeholder="Ideal para cenas, bodas y eventos VIP."></textarea>
+                <span>Buyer-facing description</span>
+                <textarea id="inventoryDescription" rows="4" placeholder="Ideal for dinners, weddings, and VIP events."></textarea>
               </label>
               <div class="form-actions full-field">
-                <button class="primary-button" type="submit">Guardar inventario</button>
-                <button class="secondary-button" id="resetInventoryButton" type="button">Limpiar</button>
+                <button class="primary-button" type="submit">Save Inventory</button>
+                <button class="secondary-button" id="resetInventoryButton" type="button">Clear</button>
                 <p class="admin-status" id="inventoryStatus" aria-live="polite"></p>
               </div>
             </form>
 
-            <div class="inventory-category-bar" id="inventoryCategoryBar" aria-label="Categorias de inventario"></div>
+            <div class="inventory-category-bar" id="inventoryCategoryBar" aria-label="Inventory categories"></div>
             <div class="inventory-browser">
               <div class="inventory-list" id="inventoryList" aria-live="polite"></div>
               <aside class="inventory-detail-panel" id="inventoryDetailPanel" aria-live="polite"></aside>
@@ -166,6 +166,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="admin.js?v=workspace-isolation-20260707"></script>
+    <script type="module" src="admin.js?v=admin-english-connection-20260707"></script>
   </body>
 </html>

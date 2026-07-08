@@ -6,7 +6,7 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=workspace-isolation-20260707";
+} from "../lib/supabaseClient.js?v=workspace-connection-20260707";
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const assignmentsList = document.querySelector("#assignmentsList");
@@ -33,7 +33,7 @@ async function loadAssignments(userEmail) {
     .maybeSingle();
 
   if (!collaborator) {
-    assignmentsList.innerHTML = "<p>No hay perfil de colaborador vinculado a este email todavía.</p>";
+    assignmentsList.innerHTML = "<p>No collaborator profile is linked to this email yet.</p>";
     return;
   }
 
@@ -51,7 +51,7 @@ async function loadAssignments(userEmail) {
   }
 
   if (!data?.length) {
-    assignmentsList.innerHTML = "<p>No tienes asignaciones visibles todavía.</p>";
+    assignmentsList.innerHTML = "<p>You do not have visible assignments yet.</p>";
     return;
   }
 
@@ -59,8 +59,8 @@ async function loadAssignments(userEmail) {
     .map(
       (assignment) => `
         <article class="portal-row">
-          <strong>Evento #${assignment.event_id}</strong>
-          <span>${escapeHtml(assignment.assignment_role)} · ${escapeHtml(assignment.status)} · ${escapeHtml(assignment.notes || "Sin notas")}</span>
+          <strong>Event #${assignment.event_id}</strong>
+          <span>${escapeHtml(assignment.assignment_role)} · ${escapeHtml(assignment.status)} · ${escapeHtml(assignment.notes || "No notes")}</span>
         </article>
       `
     )
@@ -69,7 +69,7 @@ async function loadAssignments(userEmail) {
 
 async function bootCollaborator() {
   if (!isSupabaseConfigured) {
-    sessionStatus.textContent = "Configura Supabase para usar el portal.";
+    sessionStatus.textContent = "Configure Supabase to use the portal.";
     return;
   }
 
@@ -93,7 +93,7 @@ async function bootCollaborator() {
   }
 
   currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
-  sessionStatus.textContent = `${user.email} · Colaborador`;
+  sessionStatus.textContent = `${user.email} · Collaborator`;
   await loadAssignments(user.email);
 }
 

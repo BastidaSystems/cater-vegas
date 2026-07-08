@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Cuenta pendiente de aprobación en BEOFlow." />
-    <title>BEOFlow | Pendiente</title>
+    <meta name="description" content="Pending account approval in BEOFlow." />
+    <title>BEOFlow | Pending</title>
     <link rel="stylesheet" href="style.css?v=scale-2" />
     <style>
       body {
@@ -82,19 +82,19 @@
     </style>
   </head>
   <body>
-    <header class="site-header" aria-label="Encabezado principal">
-      <a class="logo" href="index.html" aria-label="Cater Vegas inicio">BEOFlow</a>
+    <header class="site-header" aria-label="Main header">
+      <a class="logo" href="index.html" aria-label="Cater Vegas home">BEOFlow</a>
     </header>
 
     <main class="pending-shell">
       <section class="pending-panel" aria-labelledby="pending-title">
-        <p class="pending-kicker">Solicitud recibida</p>
-        <h1 id="pending-title">Pendiente</h1>
+        <p class="pending-kicker">Request Received</p>
+        <h1 id="pending-title">Pending</h1>
         <p id="pendingMessage">
-          Tu cuenta está pendiente de aprobación. Un admin del workspace debe aprobar tu acceso.
+          Your account is pending approval. A workspace admin must approve your access.
         </p>
         <div class="pending-actions">
-          <button id="pendingSignoutButton" type="button">Salir y login</button>
+          <button id="pendingSignoutButton" type="button">Sign Out & Login</button>
           <a href="index.html">Cater Vegas</a>
         </div>
       </section>
@@ -106,16 +106,16 @@
         navigateWithLoopGuard,
         requireSupabase,
         resolvePostLoginPath,
-      } from "./lib/supabaseClient.js?v=workspace-isolation-20260707";
+      } from "./lib/supabaseClient.js?v=workspace-connection-20260707";
 
       const params = new URLSearchParams(window.location.search);
       const message = document.querySelector("#pendingMessage");
       const signoutButton = document.querySelector("#pendingSignoutButton");
 
       if (params.get("status") === "disabled") {
-        message.textContent = "Tu acceso está desactivado. Contacta al admin del workspace.";
+        message.textContent = "Your access is disabled. Contact the workspace admin.";
       } else if (params.get("confirm") === "1") {
-        message.textContent = "Cuenta creada. Revisa tu email, confirma la cuenta y luego inicia sesión para abrir tu portal.";
+        message.textContent = "Account created. Check your email, confirm the account, then sign in to open your portal.";
       }
 
       async function redirectIfAccessIsReady() {
@@ -133,7 +133,7 @@
 
       signoutButton.addEventListener("click", async () => {
         signoutButton.disabled = true;
-        signoutButton.textContent = "Saliendo...";
+        signoutButton.textContent = "Signing out...";
 
         try {
           if (isSupabaseConfigured) {
@@ -141,7 +141,7 @@
             await supabase.auth.signOut();
           }
         } catch (error) {
-          console.warn("No se pudo cerrar la sesion de Supabase.", error);
+          console.warn("Could not sign out of Supabase.", error);
         } finally {
           window.sessionStorage.removeItem("caterVegasRouteHistory");
           window.location.href = "login.html?signout=1";
