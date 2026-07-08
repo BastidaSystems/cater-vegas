@@ -84,7 +84,6 @@ const inventoryName = document.querySelector("#inventoryName");
 const inventoryCategory = document.querySelector("#inventoryCategory");
 const inventoryQuantity = document.querySelector("#inventoryQuantity");
 const inventoryPrice = document.querySelector("#inventoryPrice");
-const inventoryImageUrl = document.querySelector("#inventoryImageUrl");
 const inventoryImageFile = document.querySelector("#inventoryImageFile");
 const inventoryDescription = document.querySelector("#inventoryDescription");
 const inventoryStatus = document.querySelector("#inventoryStatus");
@@ -949,7 +948,6 @@ function editInventoryItem(id) {
   inventoryCategory.value = normalizeInventoryCategory(item.category) || "tables";
   inventoryQuantity.value = Number(item.quantity_available ?? 0);
   inventoryPrice.value = item.price_label || "";
-  inventoryImageUrl.value = item.image_url || "";
   inventoryDescription.value = item.description || "";
   scrollToAdminTarget("#inventoryPanel", "inventory");
   setInventoryStatus("Editing item. Save to update it.");
@@ -1134,11 +1132,13 @@ async function saveInventoryItem(event) {
   }
 
   const selectedCategory = normalizeInventoryCategory(inventoryCategory.value);
+  const id = inventoryItemId.value;
+  const existingItem = id ? inventoryItems.find((row) => String(row.id) === String(id)) : null;
   const itemPayload = {
     category: selectedCategory,
     quantity_available: Number(inventoryQuantity.value || 0),
     price_label: inventoryPrice.value.trim() || null,
-    image_url: fileImage || inventoryImageUrl.value.trim() || null,
+    image_url: fileImage || existingItem?.image_url || null,
     description: inventoryDescription.value.trim() || null,
   };
   const basePayload = {
@@ -1172,7 +1172,6 @@ async function saveInventoryItem(event) {
     return;
   }
 
-  const id = inventoryItemId.value;
   const isReviewer = canReviewInventory();
   const insertPayload = {
     ...payload,
