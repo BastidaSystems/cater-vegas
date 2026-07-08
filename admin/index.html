@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="admin.css?v=event-dashboard-title-hidden-20260707" />
+    <link rel="stylesheet" href="admin.css?v=admin-account-pill-20260707" />
   </head>
   <body>
     <div class="admin-layout admin-layout-simple" data-admin-view="dashboard">
@@ -42,7 +42,7 @@
           <span class="avatar">CV</span>
           <div>
             <strong id="dashboardEmail">Admin</strong>
-            <small id="dashboardRole">Owner</small>
+            <small>Admin account</small>
           </div>
         </div>
       </aside>
@@ -53,16 +53,18 @@
             <p class="eyebrow">Cater Vegas Admin</p>
             <h1>Dashboard</h1>
             <p>Event planning, calendar visibility, and buyer-facing inventory in one calm workspace.</p>
-            <p id="sessionStatus" class="session-status">Verificando sesion...</p>
           </div>
 
           <div class="header-actions">
             <a class="home-button" href="../client/" aria-label="Ver pagina del comprador">Ver comprador</a>
-            <div class="user-pill" aria-label="Usuario activo">
+            <div class="user-pill account-pill" aria-label="Usuario activo">
               <span class="avatar">CV</span>
-              <strong>Perfil</strong>
+              <span class="account-copy">
+                <strong id="sessionStatus" class="session-status">Verificando sesion...</strong>
+                <small id="dashboardRole">Owner</small>
+              </span>
+              <button id="signoutButton" class="logout-button" type="button">Salir</button>
             </div>
-            <button id="signoutButton" class="logout-button" type="button">Salir</button>
           </div>
         </header>
 

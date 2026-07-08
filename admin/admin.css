@@ -7135,3 +7135,127 @@ body {
 .dashboard-panel > .panel-heading h2 {
   display: none !important;
 }
+
+/* Unified account/profile UI. Visual-only; keeps existing auth hooks intact. */
+.admin-layout-simple .admin-header {
+  display: flex !important;
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 0;
+  border: 0;
+  padding: 0 0 0.15rem;
+}
+
+.admin-layout-simple .header-title,
+.admin-layout-simple .home-button {
+  display: none !important;
+}
+
+.admin-layout-simple .header-actions {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.admin-layout-simple .account-pill {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  width: min(100%, 25rem);
+  max-width: 25rem;
+  min-width: 0;
+  min-height: 3.35rem;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid var(--cv-admin-line);
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 14px 38px rgba(32, 35, 32, 0.045);
+  padding: 0.42rem 0.48rem 0.42rem 0.55rem;
+  user-select: none;
+}
+
+.admin-layout-simple .account-pill .avatar {
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  font-size: 0.74rem;
+}
+
+.account-copy {
+  display: grid;
+  min-width: 0;
+  max-width: 100%;
+  gap: 0.05rem;
+}
+
+.admin-layout-simple .account-pill .session-status {
+  display: block;
+  height: auto;
+  max-width: 12.8rem;
+  margin: 0;
+  overflow: hidden;
+  color: var(--cv-admin-ink);
+  font-size: 0.86rem;
+  font-weight: 760;
+  line-height: 1.15;
+  opacity: 1;
+  pointer-events: auto;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-layout-simple .account-pill small {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--cv-admin-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-layout-simple .account-pill .logout-button {
+  width: auto;
+  min-height: 2.2rem;
+  flex: 0 0 auto;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 0.82rem;
+  font-size: 0.76rem;
+}
+
+.admin-layout-simple .account-pill .logout-button:hover {
+  transform: none;
+}
+
+.admin-layout-simple .sidebar-mini {
+  overflow: hidden;
+  user-select: none;
+}
+
+.sidebar-mini #dashboardEmail {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 820px) {
+  .admin-layout-simple .admin-header,
+  .admin-layout-simple .header-actions {
+    justify-content: stretch;
+  }
+
+  .admin-layout-simple .account-pill {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .admin-layout-simple .account-pill .session-status {
+    max-width: 100%;
+  }
+}
