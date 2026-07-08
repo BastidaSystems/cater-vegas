@@ -235,6 +235,10 @@ function publicRequestStatus(message, type = "") {
   requestStatus.classList.toggle("is-success", type === "success");
 }
 
+function clearPendingPaymentOrder() {
+  if (publicRequestForm) delete publicRequestForm.dataset.pendingEventId;
+}
+
 function selectedEventDateIso() {
   const raw = String(build.eventDate || "").trim();
   if (!raw) return "";
@@ -370,7 +374,10 @@ async function submitPublicPayment(event) {
   const notes = requestNotes?.value.trim() || "";
 
   const formValues = { fullName, email, phone, guestCount, notes };
-  const plan = requestPlanPayload(formValues);
+  const plan = {
+    ...requestPlanPayload(formValues),
+    payment_status: "payment_pending",
+  };
   const { isConfigured, client } = await getPublicSupabaseClient();
 
   if (!isConfigured || !client) {
@@ -380,12 +387,40 @@ async function submitPublicPayment(event) {
 
   const baseUrl = `${window.location.origin}${window.location.pathname}`;
   publicRequestForm.dataset.submitted = "false";
-  publicRequestStatus("Opening secure payment...");
+  const existingOrderId = Number(publicRequestForm.dataset.pendingEventId || 0);
+  publicRequestStatus(existingOrderId ? `Order #${existingOrderId} is pending. Opening secure payment...` : "Saving your order...");
   requestSubmitButton.disabled = true;
+  requestSubmitButton.textContent = existingOrderId ? "Opening checkout..." : "Saving order...";
+
+  let orderId = existingOrderId;
+  if (!orderId) {
+    const { data: orderData, error: orderError } = await client.rpc("cater_submit_public_request", {
+      p_full_name: fullName,
+      p_email: email,
+      p_phone: phone || null,
+      p_guest_count: guestCount,
+      p_notes: notes || null,
+      p_event_date: eventDate,
+      p_event_type: build.eventType || "Event Order",
+      p_plan: plan,
+    });
+
+    if (orderError || !orderData?.event_id) {
+      publicRequestStatus(orderError?.message || "Could not save the order. Please try again.", "error");
+      updateRequestFormState();
+      return;
+    }
+
+    orderId = Number(orderData.event_id);
+    publicRequestForm.dataset.pendingEventId = String(orderId);
+  }
+
+  publicRequestStatus(`Order #${orderId} saved as pending. Opening secure payment...`);
   requestSubmitButton.textContent = "Opening checkout...";
 
   const { data, error } = await client.functions.invoke("create-checkout-session", {
     body: {
+      event_id: orderId,
       full_name: fullName,
       email,
       phone: phone || null,
@@ -400,7 +435,7 @@ async function submitPublicPayment(event) {
   });
 
   if (error || !data?.checkout_url) {
-    publicRequestStatus(checkoutErrorMessage(error, data), "error");
+    publicRequestStatus(`Order #${orderId} is pending in admin. ${checkoutErrorMessage(error, data)}`, "error");
     updateRequestFormState();
     return;
   }
@@ -478,6 +513,7 @@ function setCartQuantity(item, quantity) {
   }
 
   saveBuild();
+  clearPendingPaymentOrder();
 }
 
 function normalizeInventoryCategory(value) {
@@ -843,6 +879,7 @@ function renderCart(cartList, cartCountLabel, cartTotalLabel) {
     button.addEventListener("click", () => {
       delete build.cart[button.dataset.removeCart];
       saveBuild();
+      clearPendingPaymentOrder();
       renderInventoryCategory(activeCategory);
     });
   });
@@ -991,6 +1028,7 @@ document.querySelectorAll("[data-builder-category]").forEach((link) => {
 document.getElementById("clear-cart-button")?.addEventListener("click", () => {
   build.cart = {};
   saveBuild();
+  clearPendingPaymentOrder();
   if (activeCategory) renderInventoryCategory(activeCategory);
   else updateBuilderPreview();
   updateRequestFormState();

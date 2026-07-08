@@ -68,13 +68,32 @@ Deno.serve(async (request) => {
   const email = String(body.email || "").trim().toLowerCase();
   const guestCount = Number(body.guest_count || 0);
   const eventDate = String(body.event_date || "").trim();
+  const eventId = Number(body.event_id || 0);
   if (!fullName || !email || !guestCount || !eventDate) {
     return jsonResponse({ error: "Name, email, guest count, and event date are required." }, 400);
+  }
+  if (!eventId) {
+    return jsonResponse({ error: "A pending admin order is required before payment." }, 400);
   }
 
   const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false },
   });
+
+  const { data: existingEvent, error: existingEventError } = await serviceClient
+    .from("cater_events")
+    .select("id,customer:cater_customers(email)")
+    .eq("workspace_id", "cater-vegas")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (existingEventError) return jsonResponse({ error: existingEventError.message }, 400);
+  if (!existingEvent) return jsonResponse({ error: "Pending admin order was not found." }, 404);
+
+  const eventCustomer = Array.isArray(existingEvent.customer) ? existingEvent.customer[0] : existingEvent.customer;
+  if (String(eventCustomer?.email || "").trim().toLowerCase() !== email) {
+    return jsonResponse({ error: "Pending admin order does not match this checkout email." }, 403);
+  }
 
   const checkoutId = crypto.randomUUID();
   const orderPlan = {
@@ -95,6 +114,7 @@ Deno.serve(async (request) => {
     event_type: body.event_type || "Event Order",
     plan: orderPlan,
     status: "created",
+    created_event_id: eventId,
   });
 
   if (createError) {
@@ -109,8 +129,10 @@ Deno.serve(async (request) => {
     cancel_url: safeUrl(body.cancel_url, fallbackCancel),
     customer_email: email,
     "metadata[checkout_id]": checkoutId,
+    "metadata[event_id]": String(eventId),
     "metadata[workspace_id]": "cater-vegas",
     "payment_intent_data[metadata][checkout_id]": checkoutId,
+    "payment_intent_data[metadata][event_id]": String(eventId),
     "payment_intent_data[metadata][workspace_id]": "cater-vegas",
   });
 
@@ -155,9 +177,18 @@ Deno.serve(async (request) => {
     .eq("workspace_id", "cater-vegas")
     .eq("id", checkoutId);
 
+  await serviceClient
+    .from("cater_events")
+    .update({
+      plan: { ...orderPlan, payment_status: "checkout_created", stripe_checkout_session_id: session.id },
+    })
+    .eq("workspace_id", "cater-vegas")
+    .eq("id", eventId);
+
   return jsonResponse({
     checkout_url: session.url,
     session_id: session.id,
     checkout_id: checkoutId,
+    event_id: eventId,
   });
 });

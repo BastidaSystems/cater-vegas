@@ -212,6 +212,14 @@ function requestStatusLabel(status) {
     .join(" ");
 }
 
+function requestDisplayStatus(event) {
+  const plan = requestPlan(event);
+  const paymentStatus = String(plan.payment_status || "").trim().toLowerCase();
+  if (["payment_pending", "checkout_pending", "checkout_created"].includes(paymentStatus)) return "Pending Payment";
+  if (paymentStatus === "paid") return "Confirmed";
+  return requestStatusLabel(event?.status || "draft");
+}
+
 function creatorLabel(item) {
   return item.created_by_name || item.created_by_email || item.created_by || "Unknown";
 }
@@ -716,6 +724,7 @@ function renderEventRequestDetail(event) {
   const items = requestCartItems(event);
   const selections = requestSelections(event);
   const status = String(event.status || "draft").toLowerCase();
+  const displayStatus = requestDisplayStatus(event);
   const createdLabel = formatRequestTimestamp(event.created_at);
   const publicNotes = event.notes || requestPlan(event).notes || "";
   const adminNotes = requestAdminNotes(event);
@@ -723,7 +732,7 @@ function renderEventRequestDetail(event) {
 
   eventRequestDetailPanel.innerHTML = `
     <div class="request-detail-content">
-      <p class="eyebrow">Request #${escapeHtml(event.id)} · ${escapeHtml(requestStatusLabel(status))}</p>
+      <p class="eyebrow">Request #${escapeHtml(event.id)} · ${escapeHtml(displayStatus)}</p>
       <h3>${escapeHtml(customer.full_name || event.title || "Public request")}</h3>
       <div class="request-detail-tags">
         <span>Request #${escapeHtml(event.id)}</span>
@@ -815,13 +824,14 @@ function renderEventRequests() {
   eventRequestsList.innerHTML = requests
     .map((request) => {
       const customer = requestCustomer(request);
+      const displayStatus = requestDisplayStatus(request);
       const createdLabel = request.created_at
         ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(request.created_at))
         : "No timestamp";
       return `
         <article class="event-request-card ${String(request.id) === String(selectedRequestId) ? "is-selected" : ""}">
           <button class="event-request-select" type="button" data-select-request="${escapeHtml(request.id)}">
-            <span class="event-request-status">${escapeHtml(request.status || "draft")}</span>
+            <span class="event-request-status">${escapeHtml(displayStatus)}</span>
             <strong>${escapeHtml(customer.full_name || request.title || "Public request")}</strong>
             <small>${escapeHtml(customer.email || "No email")} · ${escapeHtml(customer.phone || "No phone")}</small>
             <em>${escapeHtml(formatRequestDate(request.event_date))} · ${Number(request.guest_count || requestPlan(request).guest_count || 0)} guests</em>

@@ -97,9 +97,6 @@ Deno.serve(async (request) => {
 
   if (pendingError) return jsonResponse({ error: pendingError.message }, 400);
   if (!pending) return jsonResponse({ error: "Pending checkout not found." }, 404);
-  if (pending.created_event_id) {
-    return jsonResponse({ ok: true, event_id: pending.created_event_id, status: "confirmed", duplicate: true });
-  }
 
   const paidPlan = {
     ...((pending.plan || {}) as Record<string, unknown>),
@@ -111,21 +108,24 @@ Deno.serve(async (request) => {
     currency: session.currency || "usd",
   };
 
-  const { data: created, error: createError } = await serviceClient.rpc("cater_submit_public_request", {
-    p_full_name: pending.full_name,
-    p_email: pending.email,
-    p_phone: pending.phone || null,
-    p_guest_count: pending.guest_count,
-    p_notes: pending.notes || null,
-    p_event_date: pending.event_date,
-    p_event_type: pending.event_type || "Event Order",
-    p_plan: paidPlan,
-  });
+  let eventId = Number(pending.created_event_id || 0);
+  if (!eventId) {
+    const { data: created, error: createError } = await serviceClient.rpc("cater_submit_public_request", {
+      p_full_name: pending.full_name,
+      p_email: pending.email,
+      p_phone: pending.phone || null,
+      p_guest_count: pending.guest_count,
+      p_notes: pending.notes || null,
+      p_event_date: pending.event_date,
+      p_event_type: pending.event_type || "Event Order",
+      p_plan: paidPlan,
+    });
 
-  if (createError) return jsonResponse({ error: createError.message }, 400);
+    if (createError) return jsonResponse({ error: createError.message }, 400);
 
-  const eventId = Number(created?.event_id || created?.order_id || created?.request_id || 0);
-  if (!eventId) return jsonResponse({ error: "Could not create paid order." }, 500);
+    eventId = Number(created?.event_id || created?.order_id || created?.request_id || 0);
+    if (!eventId) return jsonResponse({ error: "Could not create paid order." }, 500);
+  }
 
   const { error: updateEventError } = await serviceClient
     .from("cater_events")
