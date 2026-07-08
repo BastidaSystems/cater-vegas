@@ -6,7 +6,7 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=workspace-connection-20260707";
+} from "../lib/supabaseClient.js?v=shared-workspace-approval-20260707";
 
 const sessionStatus = document.querySelector("#sessionStatus");
 const eventsList = document.querySelector("#eventsList");
@@ -70,10 +70,11 @@ async function loadClientEvents() {
 async function loadInventoryCatalog() {
   const { data, error } = await supabase
     .from("cater_providers")
-    .select("id,provider_name,provider_type,status,notes,updated_at,created_at")
-    .eq("workspace_id", currentWorkspaceId)
-    .eq("provider_type", "rental")
-    .eq("status", "active")
+    .select("id,provider_name,provider_type,status,notes,updated_at,created_at,service_category,public_visible,approval_status,public_description,image_url")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("public_visible", true)
+    .eq("approval_status", "approved")
+    .in("status", ["active", "preferred"])
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -98,15 +99,15 @@ async function loadInventoryCatalog() {
         <article class="catalog-item">
           <div class="catalog-photo">
             ${
-              meta.image_url
-                ? `<img src="${escapeHtml(meta.image_url)}" alt="${escapeHtml(row.provider_name)}">`
+              row.image_url || meta.image_url
+                ? `<img src="${escapeHtml(row.image_url || meta.image_url)}" alt="${escapeHtml(row.provider_name)}">`
                 : "<span>No photo</span>"
             }
           </div>
           <div class="catalog-copy">
-            <span>${escapeHtml(meta.category || "Inventory")}</span>
+            <span>${escapeHtml(row.service_category || meta.category || "Inventory")}</span>
             <h3>${escapeHtml(row.provider_name)}</h3>
-            <p>${escapeHtml(meta.description || "Available for quote.")}</p>
+            <p>${escapeHtml(row.public_description || meta.description || "Available for quote.")}</p>
             <div class="catalog-meta">
               <strong>${quantity} available</strong>
               ${meta.price_label ? `<strong>${escapeHtml(meta.price_label)}</strong>` : ""}
@@ -143,7 +144,7 @@ async function bootClient() {
     ? "Buyer View"
     : "Buyer";
 
-  currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
+  currentWorkspaceId = DEFAULT_WORKSPACE_ID;
   sessionStatus.textContent = `${user.email} · ${label}`;
   await Promise.all([loadClientEvents(), loadInventoryCatalog()]);
 }

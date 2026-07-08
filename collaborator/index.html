@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Cater Vegas collaborator portal in BEOFlow." />
     <title>Cater Vegas | Collaborator</title>
-    <link rel="stylesheet" href="collaborator.css?v=home-nav-20260618" />
+    <link rel="stylesheet" href="collaborator.css?v=shared-workspace-approval-20260707" />
   </head>
   <body>
     <header class="portal-header">
@@ -30,9 +30,58 @@
         <p id="collaboratorSummary">Approved assignments for your account will appear here.</p>
         <div class="portal-list" id="assignmentsList"></div>
       </section>
+
+      <section class="portal-card">
+        <p class="portal-kicker">Workspace Inventory</p>
+        <h2>Submit Inventory</h2>
+        <p>Items you submit are saved to the Cater Vegas workspace and remain pending until an admin approves and publishes them.</p>
+
+        <form class="portal-form" id="collaboratorInventoryForm">
+          <label>
+            <span>Item name</span>
+            <input id="collaboratorInventoryName" type="text" placeholder="White folding chair" required />
+          </label>
+          <label>
+            <span>Category</span>
+            <select id="collaboratorInventoryCategory" required>
+              <option value="tables">Tables</option>
+              <option value="chairs">Chairs</option>
+              <option value="linen">Linen</option>
+              <option value="decor">Decor</option>
+              <option value="tents">Tents</option>
+              <option value="food">Food</option>
+              <option value="beverages">Beverages</option>
+              <option value="entertainment">Entertainment</option>
+              <option value="lodging">Lodging</option>
+            </select>
+          </label>
+          <label>
+            <span>Available quantity</span>
+            <input id="collaboratorInventoryQuantity" type="number" min="0" placeholder="24" required />
+          </label>
+          <label>
+            <span>Base price</span>
+            <input id="collaboratorInventoryPrice" type="text" placeholder="$12 rental per piece" />
+          </label>
+          <label class="full-field">
+            <span>Image URL</span>
+            <input id="collaboratorInventoryImageUrl" type="url" placeholder="https://..." />
+          </label>
+          <label class="full-field">
+            <span>Description</span>
+            <textarea id="collaboratorInventoryDescription" rows="4" placeholder="Describe the item for admin review."></textarea>
+          </label>
+          <div class="portal-form-actions full-field">
+            <button type="submit">Submit for Review</button>
+            <p id="collaboratorInventoryStatus" aria-live="polite"></p>
+          </div>
+        </form>
+
+        <div class="portal-list inventory-submission-list" id="collaboratorInventoryList" aria-live="polite"></div>
+      </section>
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script type="module" src="collaborator.js?v=collaborator-english-connection-20260707"></script>
+    <script type="module" src="collaborator.js?v=shared-workspace-approval-20260707"></script>
   </body>
 </html>

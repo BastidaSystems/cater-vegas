@@ -17,6 +17,7 @@ create table if not exists public.cater_providers (
   notes text,
   service_category text,
   public_visible boolean not null default false,
+  approval_status text not null default 'pending' check (approval_status in ('pending', 'approved', 'rejected')),
   public_description text,
   image_url text,
   created_by uuid references public.cater_profiles(id) on delete set null default auth.uid(),
@@ -41,6 +42,8 @@ alter table public.cater_providers alter column status set default 'active';
 alter table public.cater_providers add column if not exists notes text;
 alter table public.cater_providers add column if not exists service_category text;
 alter table public.cater_providers add column if not exists public_visible boolean not null default false;
+alter table public.cater_providers add column if not exists approval_status text not null default 'pending';
+alter table public.cater_providers alter column approval_status set default 'pending';
 alter table public.cater_providers add column if not exists public_description text;
 alter table public.cater_providers add column if not exists image_url text;
 alter table public.cater_providers add column if not exists created_by uuid;
@@ -51,6 +54,9 @@ alter table public.cater_providers add constraint cater_providers_provider_type_
 alter table public.cater_providers drop constraint if exists cater_providers_status_check;
 alter table public.cater_providers add constraint cater_providers_status_check
   check (status in ('active', 'preferred', 'inactive', 'archived'));
+alter table public.cater_providers drop constraint if exists cater_providers_approval_status_check;
+alter table public.cater_providers add constraint cater_providers_approval_status_check
+  check (approval_status in ('pending', 'approved', 'rejected'));
 
 do $$
 begin
@@ -73,6 +79,13 @@ create index if not exists cater_providers_created_by_idx on public.cater_provid
 create index if not exists cater_providers_email_idx on public.cater_providers (email);
 create index if not exists cater_providers_workspace_status_type_idx
   on public.cater_providers (workspace_id, status, provider_type);
+create index if not exists cater_providers_workspace_approval_idx
+  on public.cater_providers (workspace_id, approval_status, created_at desc);
+create index if not exists cater_providers_workspace_created_by_idx
+  on public.cater_providers (workspace_id, created_by, created_at desc);
+create index if not exists cater_providers_public_inventory_idx
+  on public.cater_providers (workspace_id, service_category, status, created_at desc)
+  where public_visible = true and approval_status = 'approved';
 
 drop trigger if exists cater_providers_set_updated_at on public.cater_providers;
 create trigger cater_providers_set_updated_at
@@ -82,26 +95,76 @@ for each row execute function public.cater_set_updated_at();
 alter table public.cater_providers enable row level security;
 
 drop policy if exists "cater_providers_select_workspace_staff" on public.cater_providers;
+drop policy if exists "cater_providers_select_public_approved" on public.cater_providers;
+drop policy if exists "cater_providers_select_own_submissions" on public.cater_providers;
+drop policy if exists cater_providers_select_public_active on public.cater_providers;
+create policy "cater_providers_select_public_approved"
+on public.cater_providers
+for select
+to anon, authenticated
+using (
+  workspace_id = 'cater-vegas'
+  and public_visible = true
+  and approval_status = 'approved'
+  and status in ('active', 'preferred')
+);
+
 create policy "cater_providers_select_workspace_staff"
 on public.cater_providers
 for select
 to authenticated
 using (public.beoflow_is_workspace_staff(workspace_id));
 
+create policy "cater_providers_select_own_submissions"
+on public.cater_providers
+for select
+to authenticated
+using (
+  workspace_id = 'cater-vegas'
+  and created_by = (select auth.uid())
+);
+
 drop policy if exists "cater_providers_insert_workspace_staff" on public.cater_providers;
 create policy "cater_providers_insert_workspace_staff"
 on public.cater_providers
 for insert
 to authenticated
-with check (public.beoflow_is_workspace_staff(workspace_id));
+with check (
+  workspace_id = 'cater-vegas'
+  and created_by = (select auth.uid())
+  and (
+    public.beoflow_is_workspace_admin(workspace_id)
+    or (
+      public.beoflow_current_workspace_role(workspace_id) = 'collaborator'
+      and approval_status = 'pending'
+      and public_visible = false
+    )
+  )
+);
 
 drop policy if exists "cater_providers_update_workspace_staff" on public.cater_providers;
 create policy "cater_providers_update_workspace_staff"
 on public.cater_providers
 for update
 to authenticated
-using (public.beoflow_is_workspace_staff(workspace_id))
-with check (public.beoflow_is_workspace_staff(workspace_id));
+using (
+  public.beoflow_is_workspace_admin(workspace_id)
+  or (
+    public.beoflow_current_workspace_role(workspace_id) = 'collaborator'
+    and created_by = (select auth.uid())
+    and approval_status = 'pending'
+  )
+)
+with check (
+  public.beoflow_is_workspace_admin(workspace_id)
+  or (
+    workspace_id = 'cater-vegas'
+    and public.beoflow_current_workspace_role(workspace_id) = 'collaborator'
+    and created_by = (select auth.uid())
+    and approval_status = 'pending'
+    and public_visible = false
+  )
+);
 
 drop policy if exists "cater_providers_delete_workspace_admin" on public.cater_providers;
 create policy "cater_providers_delete_workspace_admin"
@@ -110,6 +173,7 @@ for delete
 to authenticated
 using (public.beoflow_is_workspace_admin(workspace_id));
 
+grant select on public.cater_providers to anon;
 grant select, insert, update, delete on public.cater_providers to authenticated;
 grant usage, select on all sequences in schema public to authenticated;
 

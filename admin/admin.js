@@ -6,11 +6,10 @@ import {
   navigateWithLoopGuard,
   isSupabaseConfigured,
   requireSupabase,
-} from "../lib/supabaseClient.js?v=workspace-connection-20260707";
+} from "../lib/supabaseClient.js?v=shared-workspace-approval-20260707";
 
 const ADMIN_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin", "organizer"]);
-const LOCAL_INVENTORY_KEY = "caterVegasInventoryDraft";
-const PUBLIC_INVENTORY_KEY = "caterVegasPublicInventory";
+const APPROVER_ROLES = new Set(["owner", "admin", "super_admin", "platform_admin"]);
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 const INVENTORY_CATEGORY_IDS = ["tables", "chairs", "linen", "decor", "tents", "food", "beverages", "entertainment", "lodging"];
 const INVENTORY_CATEGORY_LABELS = {
@@ -105,6 +104,11 @@ const INVENTORY_CATEGORY_ICONS = {
   entertainment: "Ent",
   lodging: "Stay",
 };
+const APPROVAL_LABELS = {
+  pending: "Pending Review",
+  approved: "Approved",
+  rejected: "Rejected",
+};
 
 let supabase = null;
 let currentUser = null;
@@ -141,13 +145,20 @@ function roleLabel(role) {
     .join(" ");
 }
 
-function providerTypeForCategory(category) {
-  return PROVIDER_TYPE_BY_CATEGORY[normalizeInventoryCategory(category)] || "vendor";
+function canReviewInventory() {
+  return APPROVER_ROLES.has(currentRole);
 }
 
-function isMissingSchemaColumnError(error) {
-  const message = String(error?.message || "").toLowerCase();
-  return error?.code === "PGRST204" || error?.code === "42703" || message.includes("schema cache") || message.includes("column");
+function approvalLabel(status) {
+  return APPROVAL_LABELS[String(status || "pending").trim().toLowerCase()] || "Pending Review";
+}
+
+function creatorLabel(item) {
+  return item.created_by_name || item.created_by_email || item.created_by || "Unknown";
+}
+
+function providerTypeForCategory(category) {
+  return PROVIDER_TYPE_BY_CATEGORY[normalizeInventoryCategory(category)] || "vendor";
 }
 
 function setStatus(message) {
@@ -168,22 +179,6 @@ function scrollToAdminTarget(targetSelector, requestedView = "") {
   const target = document.querySelector(targetSelector);
   if (!target) return;
   target.scrollIntoView({ behavior: "smooth", block: "start" });
-}
-
-function localInventoryRows() {
-  try {
-    return JSON.parse(window.localStorage.getItem(LOCAL_INVENTORY_KEY) || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveLocalInventory(rows) {
-  window.localStorage.setItem(LOCAL_INVENTORY_KEY, JSON.stringify(rows));
-}
-
-function savePublicInventory(rows) {
-  window.localStorage.setItem(PUBLIC_INVENTORY_KEY, JSON.stringify(rows));
 }
 
 function parseInventoryNotes(notes) {
@@ -212,18 +207,26 @@ function buildInventoryNotes(item) {
 function providerToInventory(row) {
   const meta = parseInventoryNotes(row.notes);
   if (!meta || meta.kind !== "inventory") return null;
-  const category = normalizeInventoryCategory(meta.category);
+  const category = normalizeInventoryCategory(row.service_category || meta.category);
   if (!category) return null;
+  const creator = row._creator || {};
 
   return {
     id: row.id,
     name: row.provider_name || "",
     category,
-    description: meta.description || "",
+    description: row.public_description || meta.description || "",
     quantity_available: Number(meta.quantity_available || 0),
     price_label: meta.price_label || "",
-    image_url: meta.image_url || "",
+    image_url: row.image_url || meta.image_url || "",
     status: row.status || "active",
+    approval_status: row.approval_status || "pending",
+    public_visible: Boolean(row.public_visible),
+    provider_type: row.provider_type || providerTypeForCategory(category),
+    created_by: row.created_by || "",
+    created_by_email: creator.email || "",
+    created_by_name: creator.full_name || "",
+    created_at: row.created_at || "",
   };
 }
 
@@ -241,6 +244,9 @@ function normalizeInventoryItem(item) {
     price_label: meta.price_label || item.price_label || "",
     image_url: meta.image_url || item.image_url || "",
     status: item.status || "active",
+    approval_status: item.approval_status || "pending",
+    public_visible: Boolean(item.public_visible),
+    created_by: item.created_by || "",
   };
 }
 
@@ -372,7 +378,7 @@ function renderDashboardSide(upcomingEvents) {
     dashboardInventorySummary.innerHTML = `
       <div class="dashboard-summary-block">
         <p class="eyebrow">Inventory</p>
-        <strong>No published items</strong>
+        <strong>No workspace items</strong>
         <small>Add tables, chairs, or decor from Inventory.</small>
       </div>
     `;
@@ -384,11 +390,14 @@ function renderDashboardSide(upcomingEvents) {
     acc[category] = (acc[category] || 0) + Number(item.quantity_available || 0);
     return acc;
   }, {});
+  const pendingCount = inventoryItems.filter((item) => item.approval_status === "pending").length;
+  const publicCount = inventoryItems.filter((item) => item.public_visible && item.approval_status === "approved").length;
 
   dashboardInventorySummary.innerHTML = `
     <div class="dashboard-summary-block">
-      <p class="eyebrow">Published Inventory</p>
+      <p class="eyebrow">Workspace Inventory</p>
       <strong>${inventoryItems.length} items</strong>
+      <small>${pendingCount} pending review · ${publicCount} public</small>
       <div class="dashboard-inventory-tags">
         ${Object.entries(categoryCounts)
           .slice(0, 5)
@@ -496,7 +505,7 @@ function renderInventory() {
           <span class="inventory-icon-meta">
             <small>${escapeHtml(inventoryCategoryLabel(item.category))}</small>
             <strong>${escapeHtml(item.name)}</strong>
-            <em>${Number(item.quantity_available ?? 0)} available</em>
+            <em>${Number(item.quantity_available ?? 0)} available · ${escapeHtml(approvalLabel(item.approval_status))}</em>
           </span>
         </button>
       `
@@ -520,6 +529,18 @@ function renderInventoryDetail(item) {
     return;
   }
 
+  const reviewActions = canReviewInventory()
+    ? `
+        ${item.approval_status !== "approved" ? `<button class="secondary-button" type="button" data-approve-inventory="${escapeHtml(item.id)}">Approve</button>` : ""}
+        ${item.approval_status !== "rejected" ? `<button class="tiny-button" type="button" data-reject-inventory="${escapeHtml(item.id)}">Reject</button>` : ""}
+        ${
+          item.public_visible
+            ? `<button class="secondary-button" type="button" data-unpublish-inventory="${escapeHtml(item.id)}">Unpublish</button>`
+            : `<button class="secondary-button" type="button" data-publish-inventory="${escapeHtml(item.id)}">Publish</button>`
+        }
+      `
+    : "";
+
   inventoryDetailPanel.innerHTML = `
     <div class="inventory-detail-image">
       ${
@@ -534,9 +555,13 @@ function renderInventoryDetail(item) {
       <div class="inventory-detail-tags">
         <span>${Number(item.quantity_available ?? 0)} available</span>
         ${item.price_label ? `<span>${escapeHtml(item.price_label)}</span>` : ""}
+        <span>${escapeHtml(approvalLabel(item.approval_status))}</span>
+        <span>${item.public_visible ? "Public" : "Not Public"}</span>
       </div>
       <p>${escapeHtml(item.description || "No description.")}</p>
+      <p class="inventory-creator">Created by ${escapeHtml(creatorLabel(item))}</p>
       <div class="inventory-actions">
+        ${reviewActions}
         <button class="secondary-button" type="button" data-edit-inventory="${escapeHtml(item.id)}">Edit</button>
         <button class="tiny-button" type="button" data-delete-inventory="${escapeHtml(item.id)}">Delete</button>
       </div>
@@ -567,31 +592,47 @@ async function loadEvents() {
   renderCalendar();
 }
 
+async function loadCreatorProfiles(userIds) {
+  const ids = [...new Set((userIds || []).filter(Boolean))];
+  if (!ids.length) return new Map();
+
+  const { data, error } = await supabase
+    .from("cater_profiles")
+    .select("id,email,full_name")
+    .in("id", ids);
+
+  if (error) return new Map();
+  return new Map((data || []).map((profile) => [profile.id, profile]));
+}
+
 async function loadInventory() {
   if (!supabase) {
-    inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
+    inventoryItems = [];
     renderInventory();
     renderCalendar();
-    setInventoryStatus("Local mode: connect Supabase so buyers can see it on another device.");
+    setInventoryStatus("Supabase is required for workspace inventory.");
     return;
   }
 
   const { data, error } = await supabase
     .from("cater_providers")
-    .select("id,provider_name,provider_type,status,notes,created_at")
-    .eq("workspace_id", currentWorkspaceId)
+    .select("id,workspace_id,provider_name,provider_type,status,notes,created_at,service_category,public_visible,approval_status,public_description,image_url,created_by")
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
     .order("created_at", { ascending: false });
 
   if (error) {
-    inventoryItems = localInventoryRows().map(normalizeInventoryItem).filter(Boolean);
+    inventoryItems = [];
     renderInventory();
     renderCalendar();
     setInventoryStatus(`Could not read inventory: ${error.message}.`);
     return;
   }
 
-  inventoryItems = (data || []).map(providerToInventory).filter(Boolean);
-  savePublicInventory(inventoryItems);
+  const creatorProfiles = await loadCreatorProfiles((data || []).map((item) => item.created_by));
+  inventoryItems = (data || [])
+    .map((row) => ({ ...row, _creator: creatorProfiles.get(row.created_by) || null }))
+    .map(providerToInventory)
+    .filter(Boolean);
   renderInventory();
   renderCalendar();
   setInventoryStatus("Inventory synced.");
@@ -622,16 +663,14 @@ async function deleteInventoryItem(id) {
   if (!window.confirm("Delete this item from inventory?")) return;
 
   if (!supabase) {
-    const nextRows = localInventoryRows().filter((item) => String(item.id) !== String(id));
-    saveLocalInventory(nextRows);
-    await loadInventory();
+    setInventoryStatus("Supabase is required for workspace inventory.");
     return;
   }
 
   const { error } = await supabase
     .from("cater_providers")
     .delete()
-    .eq("workspace_id", currentWorkspaceId)
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
     .eq("id", id);
 
   if (error) {
@@ -656,7 +695,7 @@ async function saveInventoryItem(event) {
     description: inventoryDescription.value.trim() || null,
   };
   const basePayload = {
-    workspace_id: currentWorkspaceId,
+    workspace_id: DEFAULT_WORKSPACE_ID,
     provider_name: inventoryName.value.trim(),
     provider_type: providerTypeForCategory(selectedCategory),
     status: "active",
@@ -665,7 +704,6 @@ async function saveInventoryItem(event) {
   const payload = {
     ...basePayload,
     service_category: selectedCategory,
-    public_visible: true,
     public_description: itemPayload.description,
     image_url: itemPayload.image_url,
   };
@@ -683,38 +721,33 @@ async function saveInventoryItem(event) {
   setInventoryStatus("Saving inventory...");
 
   if (!supabase) {
-    const rows = localInventoryRows();
-    const id = inventoryItemId.value || `local-${Date.now()}`;
-    const nextRows = [
-      { ...payload, id, created_at: new Date().toISOString() },
-      ...rows.filter((item) => String(item.id) !== String(id)),
-    ];
-    saveLocalInventory(nextRows);
-    resetInventoryForm();
-    await loadInventory();
+    setInventoryStatus("Supabase is required for workspace inventory.");
     return;
   }
 
   const id = inventoryItemId.value;
+  const insertPayload = {
+    ...payload,
+    approval_status: "pending",
+    public_visible: false,
+    created_by: currentUser?.id || null,
+  };
   const savePayload = (nextPayload) =>
     id
       ? supabase
           .from("cater_providers")
           .update(nextPayload)
-          .eq("workspace_id", currentWorkspaceId)
+          .eq("workspace_id", DEFAULT_WORKSPACE_ID)
           .eq("id", id)
           .select()
           .single()
       : supabase
           .from("cater_providers")
-          .insert({ ...nextPayload, created_by: currentUser?.id || null })
+          .insert(nextPayload)
           .select()
           .single();
 
-  let { error } = await savePayload(payload);
-  if (isMissingSchemaColumnError(error)) {
-    ({ error } = await savePayload(basePayload));
-  }
+  const { error } = await savePayload(id ? payload : insertPayload);
 
   if (error) {
     setInventoryStatus(error.message);
@@ -722,7 +755,33 @@ async function saveInventoryItem(event) {
   }
 
   resetInventoryForm();
-  setInventoryStatus("Inventory saved. Buyers can now see it.");
+  setInventoryStatus(id ? "Inventory updated." : "Inventory saved as pending review. Publish it after approval.");
+  await loadInventory();
+}
+
+async function updateInventoryReview(id, patch, successMessage) {
+  if (!canReviewInventory()) {
+    setInventoryStatus("Only admins can review or publish inventory.");
+    return;
+  }
+
+  if (!supabase) {
+    setInventoryStatus("Supabase is required for workspace inventory.");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("cater_providers")
+    .update(patch)
+    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("id", id);
+
+  if (error) {
+    setInventoryStatus(error.message);
+    return;
+  }
+
+  setInventoryStatus(successMessage);
   await loadInventory();
 }
 
@@ -755,7 +814,7 @@ async function bootAdmin() {
     return;
   }
 
-  currentWorkspaceId = workspace?.id || membership?.workspace_id || profile?.workspace_id || DEFAULT_WORKSPACE_ID;
+  currentWorkspaceId = DEFAULT_WORKSPACE_ID;
   if (dashboardEmail) dashboardEmail.textContent = user.email || "Admin";
   if (dashboardRole) dashboardRole.textContent = roleLabel(currentRole);
   setStatus(user.email || "Admin");
@@ -776,10 +835,32 @@ inventoryList?.addEventListener("click", (event) => {
 });
 
 inventoryDetailPanel?.addEventListener("click", (event) => {
-  const target = event.target.closest("[data-edit-inventory], [data-delete-inventory]");
+  const target = event.target.closest(
+    "[data-edit-inventory], [data-delete-inventory], [data-approve-inventory], [data-reject-inventory], [data-publish-inventory], [data-unpublish-inventory]"
+  );
   if (!target) return;
   if (target.dataset.editInventory) editInventoryItem(target.dataset.editInventory);
   if (target.dataset.deleteInventory) deleteInventoryItem(target.dataset.deleteInventory);
+  if (target.dataset.approveInventory) {
+    updateInventoryReview(target.dataset.approveInventory, { approval_status: "approved" }, "Item approved.");
+  }
+  if (target.dataset.rejectInventory) {
+    updateInventoryReview(
+      target.dataset.rejectInventory,
+      { approval_status: "rejected", public_visible: false },
+      "Item rejected and hidden from the public catalog."
+    );
+  }
+  if (target.dataset.publishInventory) {
+    updateInventoryReview(
+      target.dataset.publishInventory,
+      { approval_status: "approved", public_visible: true, status: "active" },
+      "Item approved and published."
+    );
+  }
+  if (target.dataset.unpublishInventory) {
+    updateInventoryReview(target.dataset.unpublishInventory, { public_visible: false }, "Item unpublished.");
+  }
 });
 
 inventoryCategoryBar?.addEventListener("click", (event) => {

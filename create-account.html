@@ -634,29 +634,22 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
       import {
+        DEFAULT_WORKSPACE_ID,
         isSupabaseConfigured,
         navigateWithLoopGuard,
         requireSupabase,
         resolvePostLoginPath,
-      } from "./lib/supabaseClient.js?v=workspace-connection-20260707";
+      } from "./lib/supabaseClient.js?v=shared-workspace-approval-20260707";
 
       const form = document.querySelector("#accountForm");
       const fullName = document.querySelector("#fullName");
       const email = document.querySelector("#accountEmail");
       const password = document.querySelector("#accountPassword");
       const status = document.querySelector("#accountStatus");
-      const accountType = "owner";
-      const ownerWorkspaceId = createOwnerWorkspaceId();
+      const accountType = "collaborator";
+      const sharedWorkspaceId = DEFAULT_WORKSPACE_ID;
       const authConnectionMessage = "Could not connect to Supabase. Check the project URL or your connection.";
       let supabase = null;
-
-      function createOwnerWorkspaceId() {
-        const id =
-          globalThis.crypto && typeof globalThis.crypto.randomUUID === "function"
-            ? globalThis.crypto.randomUUID()
-            : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-        return `cater-vegas-${id}`.toLowerCase();
-      }
 
       function setStatus(message) {
         status.textContent = message;
@@ -698,13 +691,13 @@
       }
 
       async function createWorkspaceAccess(user) {
-        await upsertProfile(user.id, ownerWorkspaceId, "owner");
+        await upsertProfile(user.id, sharedWorkspaceId, "collaborator_pending");
         const { error } = await supabase.from("beoflow_workspace_members").upsert(
           {
-            workspace_id: ownerWorkspaceId,
+            workspace_id: sharedWorkspaceId,
             user_id: user.id,
-            role: "owner",
-            status: "active",
+            role: "collaborator",
+            status: "pending",
           },
           { onConflict: "workspace_id,user_id" }
         );
@@ -731,9 +724,9 @@
             options: {
               data: {
                 full_name: fullName.value.trim(),
-                cater_role: "owner",
-                workspace_id: ownerWorkspaceId,
-                workspace_name: `${fullName.value.trim() || "Cater Vegas"} Workspace`,
+                cater_role: "collaborator_pending",
+                workspace_id: sharedWorkspaceId,
+                workspace_name: "Cater Vegas",
                 account_type: accountType,
               },
               emailRedirectTo: new URL("login.html", window.location.href).href,
@@ -761,7 +754,7 @@
           return;
         }
 
-        setStatus("Account created. Check your email if Supabase requires confirmation, then sign in.");
+        setStatus("Account created. Check your email if Supabase requires confirmation, then sign in. Admin approval is required.");
         window.setTimeout(() => {
           window.location.href = "login.html?created=1";
         }, 900);

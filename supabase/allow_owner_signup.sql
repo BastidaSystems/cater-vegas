@@ -1,4 +1,4 @@
--- Allow Cater Vegas Create Account signups to become workspace owners.
+-- Allow Cater Vegas Create Account signups to join the shared workspace.
 -- Run in the CATER VEGAS Supabase project.
 
 begin;
@@ -45,6 +45,7 @@ begin
     'super_admin',
     'platform_admin',
     'organizer',
+    'collaborator',
     'client',
     'client_pending',
     'collaborator_pending',
@@ -54,31 +55,30 @@ begin
     safe_role := requested_role;
   end if;
 
-  target_workspace_id := coalesce(
-    nullif(new.raw_user_meta_data ->> 'workspace_id', ''),
-    case
-      when safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer')
-        then 'cater-vegas-' || replace(new.id::text, '-', '')
-      else 'cater-vegas'
-    end
-  );
-  workspace_name := coalesce(
-    nullif(new.raw_user_meta_data ->> 'workspace_name', ''),
-    nullif(new.raw_user_meta_data ->> 'full_name', '') || ' Workspace',
-    split_part(new.email, '@', 1) || ' Workspace'
-  );
+  if lower(coalesce(new.email, '')) <> 'exmarquesado@gmail.com'
+     and safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer', 'collaborator', 'client') then
+    safe_role := 'collaborator_pending';
+  end if;
+
+  target_workspace_id := 'cater-vegas';
+  workspace_name := 'Cater Vegas';
   workspace_slug := lower(regexp_replace(target_workspace_id, '[^a-z0-9]+', '-', 'g'));
 
-  if safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer') then
-    insert into public.beoflow_workspaces (id, name, slug, industry, status, owner_id)
-    values (target_workspace_id, workspace_name, workspace_slug, 'catering_events', 'active', new.id)
-    on conflict (id) do update
-      set name = coalesce(nullif(public.beoflow_workspaces.name, ''), excluded.name),
-          industry = coalesce(public.beoflow_workspaces.industry, excluded.industry),
-          status = 'active',
-          owner_id = coalesce(public.beoflow_workspaces.owner_id, excluded.owner_id),
-          updated_at = now();
-  end if;
+  insert into public.beoflow_workspaces (id, name, slug, industry, status, owner_id)
+  values (
+    target_workspace_id,
+    workspace_name,
+    workspace_slug,
+    'catering_events',
+    'active',
+    case when safe_role in ('owner', 'admin', 'super_admin', 'platform_admin') then new.id else null end
+  )
+  on conflict (id) do update
+    set name = coalesce(nullif(public.beoflow_workspaces.name, ''), excluded.name),
+        industry = coalesce(public.beoflow_workspaces.industry, excluded.industry),
+        status = 'active',
+        owner_id = coalesce(public.beoflow_workspaces.owner_id, excluded.owner_id),
+        updated_at = now();
 
   insert into public.cater_profiles (id, workspace_id, email, full_name, phone, company, role)
   values (
@@ -91,20 +91,33 @@ begin
     safe_role
   )
   on conflict (id) do update
-    set email = excluded.email,
+    set workspace_id = excluded.workspace_id,
+        email = excluded.email,
         full_name = coalesce(nullif(excluded.full_name, ''), public.cater_profiles.full_name),
         phone = coalesce(excluded.phone, public.cater_profiles.phone),
         company = coalesce(excluded.company, public.cater_profiles.company),
+        role = excluded.role,
         updated_at = now();
 
-  if safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer') then
-    insert into public.beoflow_workspace_members (workspace_id, user_id, role, status)
-    values (target_workspace_id, new.id, safe_role, 'active')
-    on conflict (workspace_id, user_id) do update
-      set role = excluded.role,
-          status = 'active',
-          updated_at = now();
-  end if;
+  insert into public.beoflow_workspace_members (workspace_id, user_id, role, status)
+  values (
+    target_workspace_id,
+    new.id,
+    case
+      when safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer', 'collaborator') then safe_role
+      when safe_role = 'organizer_pending' then 'organizer'
+      when safe_role = 'collaborator_pending' then 'collaborator'
+      else 'viewer'
+    end,
+    case
+      when safe_role in ('owner', 'admin', 'super_admin', 'platform_admin', 'organizer', 'collaborator', 'client') then 'active'
+      else 'pending'
+    end
+  )
+  on conflict (workspace_id, user_id) do update
+    set role = excluded.role,
+        status = excluded.status,
+        updated_at = now();
 
   return new;
 end;
@@ -125,6 +138,7 @@ with check (
       'super_admin',
       'platform_admin',
       'organizer',
+      'collaborator',
       'client',
       'client_pending',
       'collaborator_pending',
