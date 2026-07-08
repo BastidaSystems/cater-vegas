@@ -131,12 +131,16 @@ const APPROVAL_LABELS = {
   approved: "Approved",
   rejected: "Rejected",
 };
+const REQUEST_STATUS_OPTIONS = ["draft", "planning", "confirmed", "completed", "cancelled"];
+const EVENT_SELECT_COLUMNS =
+  "id,title,event_type,event_date,status,guest_count,notes,plan,created_at,updated_at,customer:cater_customers(id,full_name,email,phone)";
 
 let supabase = null;
 let currentUser = null;
 let currentRole = "";
 let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
 let allEvents = [];
+let requestEvents = [];
 let inventoryItems = [];
 let companyUsers = [];
 let workspaceMembers = [];
@@ -180,6 +184,14 @@ function approvalLabel(status) {
 
 function workspaceStatusLabel(status) {
   return String(status || "pending")
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+function requestStatusLabel(status) {
+  return String(status || "draft")
     .split("_")
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -572,7 +584,7 @@ function isPublicRequest(event) {
 }
 
 function publicRequests() {
-  return allEvents
+  return requestEvents
     .filter(isPublicRequest)
     .slice()
     .sort((a, b) => new Date(b.created_at || b.updated_at || 0) - new Date(a.created_at || a.updated_at || 0));
@@ -591,11 +603,33 @@ function requestCartSummary(event) {
     .join(", ");
 }
 
+function requestSelections(event) {
+  const selections = requestPlan(event).selections;
+  return selections && typeof selections === "object" && !Array.isArray(selections) ? selections : {};
+}
+
+function requestAdminNotes(event) {
+  return String(requestPlan(event).admin_notes || "");
+}
+
 function formatRequestDate(value) {
   if (!value) return "No date";
   const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return value;
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(date);
+}
+
+function formatRequestTimestamp(value) {
+  if (!value) return "No timestamp";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
 }
 
 function renderEventRequestDetail(event) {
@@ -614,15 +648,19 @@ function renderEventRequestDetail(event) {
 
   const customer = requestCustomer(event);
   const items = requestCartItems(event);
-  const createdLabel = event.created_at
-    ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(event.created_at))
-    : "No timestamp";
+  const selections = requestSelections(event);
+  const status = String(event.status || "draft").toLowerCase();
+  const createdLabel = formatRequestTimestamp(event.created_at);
+  const publicNotes = event.notes || requestPlan(event).notes || "";
+  const adminNotes = requestAdminNotes(event);
+  const selectionEntries = Object.entries(selections).filter(([, selection]) => selection && typeof selection === "object");
 
   eventRequestDetailPanel.innerHTML = `
     <div class="request-detail-content">
-      <p class="eyebrow">${escapeHtml(event.status || "draft")}</p>
+      <p class="eyebrow">Request #${escapeHtml(event.id)} · ${escapeHtml(requestStatusLabel(status))}</p>
       <h3>${escapeHtml(customer.full_name || event.title || "Public request")}</h3>
       <div class="request-detail-tags">
+        <span>Request #${escapeHtml(event.id)}</span>
         <span>${escapeHtml(formatRequestDate(event.event_date))}</span>
         <span>${Number(event.guest_count || requestPlan(event).guest_count || 0)} guests</span>
         <span>${escapeHtml(event.event_type || "Event")}</span>
@@ -633,8 +671,44 @@ function renderEventRequestDetail(event) {
         <span><small>Phone</small><strong>${escapeHtml(customer.phone || "Not provided")}</strong></span>
       </div>
       <div class="request-notes">
-        <small>Notes</small>
-        <p>${escapeHtml(event.notes || requestPlan(event).notes || "No notes.")}</p>
+        <small>Public notes</small>
+        <p>${escapeHtml(publicNotes || "No public notes.")}</p>
+      </div>
+      <form class="request-management-form" data-request-status-form data-request-id="${escapeHtml(event.id)}">
+        <label>
+          <span>Status</span>
+          <select data-request-status-select>
+            ${REQUEST_STATUS_OPTIONS.map(
+              (option) => `<option value="${escapeHtml(option)}" ${option === status ? "selected" : ""}>${escapeHtml(requestStatusLabel(option))}</option>`
+            ).join("")}
+          </select>
+        </label>
+        <button class="primary-button" type="submit">Update Status</button>
+      </form>
+      <form class="request-management-form request-notes-form" data-request-notes-form data-request-id="${escapeHtml(event.id)}">
+        <label>
+          <span>Internal admin notes</span>
+          <textarea data-request-admin-notes rows="4" placeholder="Add internal notes for Rodi/Admin.">${escapeHtml(adminNotes)}</textarea>
+        </label>
+        <button class="secondary-button" type="submit">Save Notes</button>
+      </form>
+      <p class="request-management-status" data-request-management-status aria-live="polite"></p>
+      <div class="request-products">
+        <small>Selections</small>
+        ${
+          selectionEntries.length
+            ? selectionEntries
+                .map(
+                  ([category, selection]) => `
+                    <article>
+                      <strong>${escapeHtml(selection.provider_name || selection.title || "Selected item")}</strong>
+                      <span>${escapeHtml(inventoryCategoryLabel(category))} · Qty ${Number(selection.quantity || 0)}</span>
+                    </article>
+                  `
+                )
+                .join("")
+            : '<p class="empty-state">No selections were saved in the plan.</p>'
+        }
       </div>
       <div class="request-products">
         <small>Requested products</small>
@@ -949,6 +1023,7 @@ function renderInventoryDetail(item) {
 async function loadEvents() {
   if (!supabase) {
     allEvents = [];
+    requestEvents = [];
     renderCalendar();
     renderEventRequests();
     return;
@@ -956,19 +1031,98 @@ async function loadEvents() {
 
   const { data, error } = await supabase
     .from("cater_events")
-    .select("id,title,event_type,event_date,status,guest_count,notes,plan,created_at,updated_at,customer:cater_customers(id,full_name,email,phone)")
+    .select(EVENT_SELECT_COLUMNS)
     .eq("workspace_id", currentWorkspaceId)
     .order("created_at", { ascending: false });
 
   if (error) {
     setStatus(`Calendar: ${error.message}`);
     allEvents = [];
+    requestEvents = [];
   } else {
-    allEvents = (data || []).filter(isDashboardEvent);
+    requestEvents = data || [];
+    allEvents = requestEvents.filter(isDashboardEvent);
   }
 
   renderCalendar();
   renderEventRequests();
+}
+
+function setRequestManagementStatus(message, type = "") {
+  const statusElement = eventRequestDetailPanel?.querySelector("[data-request-management-status]");
+  if (!statusElement) return;
+  statusElement.textContent = message;
+  statusElement.classList.toggle("is-error", type === "error");
+  statusElement.classList.toggle("is-success", type === "success");
+}
+
+function requestById(id) {
+  return requestEvents.find((event) => String(event.id) === String(id)) || null;
+}
+
+async function updateEventRequestStatus(id, status) {
+  const normalizedStatus = String(status || "").trim().toLowerCase();
+  if (!REQUEST_STATUS_OPTIONS.includes(normalizedStatus)) {
+    setRequestManagementStatus("Choose a valid request status.", "error");
+    return;
+  }
+
+  if (!supabase) {
+    setRequestManagementStatus("Supabase is required to update requests.", "error");
+    return;
+  }
+
+  setRequestManagementStatus("Updating request status...");
+  const { error } = await supabase
+    .from("cater_events")
+    .update({ status: normalizedStatus })
+    .eq("workspace_id", currentWorkspaceId)
+    .eq("id", id);
+
+  if (error) {
+    setRequestManagementStatus(error.message, "error");
+    return;
+  }
+
+  selectedRequestId = id;
+  await loadEvents();
+  setRequestManagementStatus(`Request status updated to ${requestStatusLabel(normalizedStatus)}.`, "success");
+}
+
+async function updateEventRequestAdminNotes(id, adminNotes) {
+  if (!supabase) {
+    setRequestManagementStatus("Supabase is required to update requests.", "error");
+    return;
+  }
+
+  const request = requestById(id);
+  if (!request) {
+    setRequestManagementStatus("Request could not be found. Refresh and try again.", "error");
+    return;
+  }
+
+  const nextPlan = {
+    ...requestPlan(request),
+    admin_notes: String(adminNotes || "").trim(),
+    admin_notes_updated_at: new Date().toISOString(),
+    admin_notes_updated_by: currentUser?.id || null,
+  };
+
+  setRequestManagementStatus("Saving internal notes...");
+  const { error } = await supabase
+    .from("cater_events")
+    .update({ plan: nextPlan })
+    .eq("workspace_id", currentWorkspaceId)
+    .eq("id", id);
+
+  if (error) {
+    setRequestManagementStatus(error.message, "error");
+    return;
+  }
+
+  selectedRequestId = id;
+  await loadEvents();
+  setRequestManagementStatus("Internal notes saved.", "success");
 }
 
 async function loadCreatorProfiles(userIds) {
@@ -1508,6 +1662,26 @@ eventRequestsList?.addEventListener("click", (event) => {
   if (!target) return;
   selectedRequestId = target.dataset.selectRequest || "";
   renderEventRequests();
+});
+
+eventRequestDetailPanel?.addEventListener("submit", (event) => {
+  const statusForm = event.target.closest("[data-request-status-form]");
+  const notesForm = event.target.closest("[data-request-notes-form]");
+  if (!statusForm && !notesForm) return;
+
+  event.preventDefault();
+
+  if (statusForm) {
+    const id = statusForm.dataset.requestId || selectedRequestId;
+    const status = statusForm.querySelector("[data-request-status-select]")?.value || "";
+    updateEventRequestStatus(id, status);
+  }
+
+  if (notesForm) {
+    const id = notesForm.dataset.requestId || selectedRequestId;
+    const adminNotes = notesForm.querySelector("[data-request-admin-notes]")?.value || "";
+    updateEventRequestAdminNotes(id, adminNotes);
+  }
 });
 
 usersList?.addEventListener("click", (event) => {
