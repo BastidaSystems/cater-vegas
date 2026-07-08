@@ -396,9 +396,24 @@ svg {
   color: #a5ada8;
 }
 
+.calendar-grid .calendar-spacer {
+  min-height: clamp(35px, 2.5vw, 43px);
+}
+
+.calendar-grid button:disabled {
+  cursor: not-allowed;
+  color: #c2c7c3;
+  opacity: 0.45;
+}
+
 .calendar-grid button:hover {
   background: rgba(181, 154, 106, 0.08);
   transform: translateY(-1px);
+}
+
+.calendar-grid button:disabled:hover {
+  background: transparent;
+  transform: none;
 }
 
 .calendar-grid button.is-selected {

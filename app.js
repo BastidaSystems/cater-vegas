@@ -5,6 +5,7 @@ const storageKey = "caterVegasBuild";
 const pricingRulesStorageKey = "caterVegasPricingRules";
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 const notesCategoryLabel = "Inventory category";
+const calendarWeekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const categoryCopy = {
   tables: {
@@ -129,6 +130,7 @@ const providerTypeByCategory = {
 let publicInventory = [];
 let activeCategory = "";
 let build = loadBuild();
+let visibleCalendarDate = monthStart(parseEventDate(build.eventDate) || todayDate());
 let supabaseClientPromise = null;
 let inventoryLoadError = "";
 let pricingRules = {
@@ -203,18 +205,72 @@ function saveBuild() {
   window.localStorage.setItem(storageKey, JSON.stringify(build));
 }
 
+function todayDate() {
+  const today = new Date();
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+}
+
+function monthStart(date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addMonths(date, count) {
+  return new Date(date.getFullYear(), date.getMonth() + count, 1);
+}
+
+function dateIso(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function parseEventDate(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+  const match = /^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/.exec(value);
+  const monthNames = {
+    january: 0,
+    february: 1,
+    march: 2,
+    april: 3,
+    may: 4,
+    june: 5,
+    july: 6,
+    august: 7,
+    september: 8,
+    october: 9,
+    november: 10,
+    december: 11,
+  };
+
+  if (match) {
+    const [, monthName, day, year] = match;
+    const month = monthNames[monthName.toLowerCase()];
+    if (month === undefined) return null;
+    return new Date(Number(year), month, Number(day));
+  }
+
+  const parsed = new Date(`${value} 00:00:00`);
+  return Number.isNaN(parsed.getTime()) ? null : new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}
+
+function formatEventDate(date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
 function defaultSelectedEventDate() {
-  const selectedDay = document.querySelector(".calendar-grid button.is-selected")?.textContent.trim() || "18";
-  const month = document.querySelector(".month-name")?.textContent.trim() || "June";
-  const year = document.querySelector(".month-year")?.textContent.trim() || "2026";
-  return `${month} ${selectedDay}, ${year}`;
+  return formatEventDate(todayDate());
 }
 
 function ensureBuildDefaults() {
   let changed = false;
+  const today = todayDate();
+  const savedDate = parseEventDate(build.eventDate);
 
-  if (!build.eventDate) {
-    build.eventDate = defaultSelectedEventDate();
+  if (!savedDate || savedDate < today) {
+    build.eventDate = formatEventDate(today);
     changed = true;
   }
 
@@ -324,33 +380,8 @@ function clearPendingPaymentOrder() {
 }
 
 function selectedEventDateIso() {
-  const raw = String(build.eventDate || "").trim();
-  if (!raw) return "";
-  const match = /^([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})$/.exec(raw);
-  const monthNames = {
-    january: "01",
-    february: "02",
-    march: "03",
-    april: "04",
-    may: "05",
-    june: "06",
-    july: "07",
-    august: "08",
-    september: "09",
-    october: "10",
-    november: "11",
-    december: "12",
-  };
-
-  if (match) {
-    const [, monthName, day, year] = match;
-    const month = monthNames[monthName.toLowerCase()];
-    if (month) return `${year}-${month}-${String(day).padStart(2, "0")}`;
-  }
-
-  const parsed = new Date(`${raw} 00:00:00`);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toISOString().slice(0, 10);
+  const parsed = parseEventDate(build.eventDate);
+  return parsed ? dateIso(parsed) : "";
 }
 
 function requestPlanPayload(formValues = {}) {
@@ -1225,42 +1256,87 @@ document.querySelectorAll(".industry-panel").forEach((panel) => {
   });
 });
 
-function updateHeroSelectedDate(dayValue) {
-  const day = Number(dayValue);
-  if (!Number.isFinite(day)) return;
-  const selectedDate = new Date(2026, 5, day);
+function selectedCalendarDate() {
+  return parseEventDate(build.eventDate) || todayDate();
+}
+
+function updateHeroSelectedDate(date = selectedCalendarDate()) {
   const selectedDateDay = document.getElementById("selected-date-day");
   const selectedDateValue = document.getElementById("selected-date-value");
 
   if (selectedDateDay) {
-    selectedDateDay.textContent = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(selectedDate);
+    selectedDateDay.textContent = new Intl.DateTimeFormat("en-US", { weekday: "long" }).format(date);
   }
 
   if (selectedDateValue) {
-    selectedDateValue.textContent = new Intl.DateTimeFormat("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }).format(selectedDate);
+    selectedDateValue.textContent = formatEventDate(date);
   }
 }
 
-document.querySelectorAll(".calendar-grid button:not(.muted)").forEach((button) => {
-  button.addEventListener("click", () => {
-    document.querySelectorAll(".calendar-grid button").forEach((day) => day.classList.remove("is-selected"));
-    button.classList.add("is-selected");
-    build.eventDate = `June ${button.textContent.trim()}, 2026`;
-    updateHeroSelectedDate(button.textContent.trim());
-    saveBuild();
-    clearPendingPaymentOrder();
-    renderCart(document.getElementById("inventory-cart-list"), document.getElementById("cart-count-label"), document.getElementById("cart-total-label"));
-    renderReview();
-    window.setTimeout(() => showStep("event-type"), 260);
+function selectCalendarDate(date, advance = true) {
+  build.eventDate = formatEventDate(date);
+  visibleCalendarDate = monthStart(date);
+  updateHeroSelectedDate(date);
+  saveBuild();
+  clearPendingPaymentOrder();
+  renderCalendar();
+  renderCart(document.getElementById("inventory-cart-list"), document.getElementById("cart-count-label"), document.getElementById("cart-total-label"));
+  renderReview();
+  if (advance) window.setTimeout(() => showStep("event-type"), 260);
+}
+
+function renderCalendar() {
+  const calendarGrid = document.getElementById("calendarGrid");
+  const monthName = document.querySelector(".month-name");
+  const monthYear = document.querySelector(".month-year");
+  const calendarCard = document.querySelector(".calendar-card");
+  if (!calendarGrid) return;
+
+  const selectedDate = selectedCalendarDate();
+  const today = todayDate();
+  const monthDate = monthStart(visibleCalendarDate);
+  const monthLabel = new Intl.DateTimeFormat("en-US", { month: "long" }).format(monthDate);
+  const yearLabel = String(monthDate.getFullYear());
+  const firstDayOffset = (monthDate.getDay() + 6) % 7;
+  const daysInMonth = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate();
+
+  if (monthName) monthName.textContent = monthLabel;
+  if (monthYear) monthYear.textContent = yearLabel;
+  if (calendarCard) calendarCard.setAttribute("aria-label", `${monthLabel} ${yearLabel} event date calendar`);
+
+  const weekdayMarkup = calendarWeekdays.map((day) => `<span>${day}</span>`).join("");
+  const spacerMarkup = Array.from({ length: firstDayOffset }, () => `<span class="calendar-spacer" aria-hidden="true"></span>`).join("");
+  const dayMarkup = Array.from({ length: daysInMonth }, (_, index) => {
+    const day = index + 1;
+    const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), day);
+    const isSelected = dateIso(date) === dateIso(selectedDate);
+    const isPast = date < today;
+    return `<button type="button" data-calendar-date="${dateIso(date)}" class="${isSelected ? "is-selected" : ""}" ${isPast ? "disabled aria-disabled=\"true\"" : ""}>${day}</button>`;
+  }).join("");
+
+  calendarGrid.innerHTML = `${weekdayMarkup}${spacerMarkup}${dayMarkup}`;
+  calendarGrid.querySelectorAll("[data-calendar-date]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const [year, month, day] = button.dataset.calendarDate.split("-").map(Number);
+      selectCalendarDate(new Date(year, month - 1, day));
+    });
   });
+}
+
+document.getElementById("calendarPrevMonth")?.addEventListener("click", () => {
+  visibleCalendarDate = addMonths(visibleCalendarDate, -1);
+  renderCalendar();
+});
+
+document.getElementById("calendarNextMonth")?.addEventListener("click", () => {
+  visibleCalendarDate = addMonths(visibleCalendarDate, 1);
+  renderCalendar();
 });
 
 ensureBuildDefaults();
-updateHeroSelectedDate(document.querySelector(".calendar-grid button.is-selected")?.textContent.trim() || "18");
+visibleCalendarDate = monthStart(selectedCalendarDate());
+renderCalendar();
+updateHeroSelectedDate();
 Promise.all([loadPublicInventory(), loadPublicPricingRules()]);
 const initialRoute = parseHashRoute();
 showStep(initialRoute.stepId, initialRoute.category);

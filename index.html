@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=pricing-local-fallback-20260708">
+  <link rel="stylesheet" href="styles.css?v=dynamic-calendar-20260708">
 </head>
 <body>
   <header class="site-header" id="top">
@@ -57,48 +57,18 @@
       </div>
 
       <div class="booking-shell" aria-label="Calendar design options">
-        <div class="calendar-card compact-calendar" aria-label="June 2026 compact month calendar">
+        <div class="calendar-card compact-calendar" aria-label="Event date calendar">
           <div class="calendar-card-header">
-            <button type="button" aria-label="Previous month">&lt;</button>
+            <button type="button" id="calendarPrevMonth" aria-label="Previous month">&lt;</button>
             <strong>
               <span class="month-name">June</span>
               <span class="month-year">2026</span>
             </strong>
-            <button type="button" aria-label="Next month">&gt;</button>
+            <button type="button" id="calendarNextMonth" aria-label="Next month">&gt;</button>
           </div>
 
-          <div class="calendar-grid" aria-label="Calendar days">
+          <div class="calendar-grid" id="calendarGrid" aria-label="Calendar days">
             <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-            <button type="button">1</button>
-            <button type="button">2</button>
-            <button type="button">3</button>
-            <button type="button">4</button>
-            <button type="button">5</button>
-            <button type="button">6</button>
-            <button type="button">7</button>
-            <button type="button">8</button>
-            <button type="button">9</button>
-            <button type="button">10</button>
-            <button type="button">11</button>
-            <button type="button">12</button>
-            <button type="button">13</button>
-            <button type="button">14</button>
-            <button type="button">15</button>
-            <button type="button">16</button>
-            <button type="button">17</button>
-            <button type="button" class="is-selected">18</button>
-            <button type="button">19</button>
-            <button type="button">20</button>
-            <button type="button">21</button>
-            <button type="button">22</button>
-            <button type="button">23</button>
-            <button type="button">24</button>
-            <button type="button">25</button>
-            <button type="button">26</button>
-            <button type="button">27</button>
-            <button type="button">28</button>
-            <button type="button">29</button>
-            <button type="button">30</button>
           </div>
         </div>
 
@@ -399,6 +369,6 @@
     <p>Events, F&amp;B, Entertainment &amp; Hospitality.</p>
   </footer>
 
-  <script type="module" src="app.js?v=pricing-local-fallback-20260708"></script>
+  <script type="module" src="app.js?v=dynamic-calendar-20260708"></script>
 </body>
 </html>
