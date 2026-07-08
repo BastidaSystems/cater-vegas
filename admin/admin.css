@@ -7121,3 +7121,12 @@ body {
     padding: 0.85rem;
   }
 }
+
+/* Hide the duplicated admin intro/header section requested by the client. */
+.admin-layout-simple .admin-header {
+  display: none !important;
+}
+
+.admin-layout-simple .admin-main {
+  gap: 1.35rem;
+}
