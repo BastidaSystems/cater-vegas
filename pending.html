@@ -102,6 +102,7 @@
 
     <script type="module">
       import {
+        clearWorkspaceContextCache,
         isSupabaseConfigured,
         navigateWithLoopGuard,
         requireSupabase,
@@ -138,12 +139,14 @@
         try {
           if (isSupabaseConfigured) {
             const supabase = requireSupabase();
+            clearWorkspaceContextCache();
             await supabase.auth.signOut();
+            clearWorkspaceContextCache();
           }
         } catch (error) {
           console.warn("Could not sign out of Supabase.", error);
         } finally {
-          window.sessionStorage.removeItem("caterVegasRouteHistory");
+          clearWorkspaceContextCache();
           window.location.href = "login.html?signout=1";
         }
       });

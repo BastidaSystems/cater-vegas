@@ -1,5 +1,5 @@
 import {
-  DEFAULT_WORKSPACE_ID,
+  clearWorkspaceContextCache,
   getEffectiveWorkspaceRole,
   getWorkspaceContext,
   isPendingWorkspaceAccess,
@@ -15,7 +15,7 @@ const signoutButton = document.querySelector("#signoutButton");
 const INVENTORY_NOTE_PREFIX = "CATER_INVENTORY_JSON:";
 
 let supabase = null;
-let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
+let currentWorkspaceId = "";
 
 function escapeHtml(value) {
   return String(value ?? "")
@@ -71,7 +71,7 @@ async function loadInventoryCatalog() {
   const { data, error } = await supabase
     .from("cater_providers")
     .select("id,provider_name,provider_type,status,notes,updated_at,created_at,service_category,public_visible,approval_status,public_description,image_url")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .eq("public_visible", true)
     .eq("approval_status", "approved")
     .in("status", ["active", "preferred"])
@@ -127,31 +127,34 @@ async function bootClient() {
   }
 
   supabase = requireSupabase();
-  const { user, profile, membership, workspace } = await getWorkspaceContext();
+  const context = await getWorkspaceContext();
+  const { user, profile, membership, workspace, workspaceId, role, accessError } = context;
 
   if (!user) {
     navigateWithLoopGuard("../login.html", "client-missing-user");
     return;
   }
 
-  if (membership?.status === "disabled" || isPendingWorkspaceAccess(profile, membership, user)) {
+  if (accessError || membership?.status === "disabled" || isPendingWorkspaceAccess(profile, membership, user)) {
     navigateWithLoopGuard("../pending.html", "client-pending");
     return;
   }
 
-  const role = getEffectiveWorkspaceRole(profile, membership, user);
-  const label = ["owner", "admin", "super_admin", "platform_admin", "organizer"].includes(role)
+  const workspaceRole = role || getEffectiveWorkspaceRole(profile, membership, user, workspaceId);
+  const label = ["owner", "admin", "super_admin", "platform_admin", "organizer"].includes(workspaceRole)
     ? "Buyer View"
     : "Buyer";
 
-  currentWorkspaceId = DEFAULT_WORKSPACE_ID;
+  currentWorkspaceId = workspaceId;
   sessionStatus.textContent = `${user.email} · ${label}`;
   await Promise.all([loadClientEvents(), loadInventoryCatalog()]);
 }
 
 signoutButton.addEventListener("click", async () => {
   if (!supabase) return;
+  clearWorkspaceContextCache();
   await supabase.auth.signOut();
+  clearWorkspaceContextCache();
   window.location.href = "../login.html";
 });
 

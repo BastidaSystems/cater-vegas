@@ -230,6 +230,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script type="module">
       import {
+        clearWorkspaceContextCache,
         isSupabaseConfigured,
         navigateWithLoopGuard,
         requireSupabase,
@@ -354,7 +355,9 @@
       signoutButton.addEventListener("click", async () => {
         if (!supabase) return;
         try {
+          clearWorkspaceContextCache();
           await supabase.auth.signOut();
+          clearWorkspaceContextCache();
           setStatus("Signed out.");
         } catch (error) {
           setStatus(getAuthErrorMessage(error));

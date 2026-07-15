@@ -1,5 +1,5 @@
 import {
-  DEFAULT_WORKSPACE_ID,
+  clearWorkspaceContextCache,
   getEffectiveWorkspaceRole,
   getWorkspaceContext,
   isPendingWorkspaceAccess,
@@ -159,7 +159,7 @@ const EVENT_SELECT_COLUMNS =
 let supabase = null;
 let currentUser = null;
 let currentRole = "";
-let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
+let currentWorkspaceId = "";
 let allEvents = [];
 let requestEvents = [];
 let inventoryItems = [];
@@ -1092,7 +1092,7 @@ function renderWorkspaceMembers() {
             <strong>${escapeHtml(displayName)}</strong>
             <p>${escapeHtml(displayEmail)}</p>
             <div class="user-company-meta">
-              <span>Workspace: ${escapeHtml(member.workspace_id || DEFAULT_WORKSPACE_ID)}</span>
+              <span>Workspace: ${escapeHtml(member.workspace_id || currentWorkspaceId)}</span>
               <span>${status === "active" ? "Accepted" : status === "disabled" ? "Disabled" : "Awaiting admin review"}</span>
             </div>
           </div>
@@ -1351,7 +1351,7 @@ async function loadInventory() {
   const { data, error } = await supabase
     .from("cater_providers")
     .select("id,workspace_id,provider_name,provider_type,status,notes,created_at,service_category,public_visible,approval_status,approved_by,approved_at,public_description,image_url,created_by")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -1496,7 +1496,7 @@ async function loadWorkspaceMembers() {
   const { data, error } = await supabase
     .from("beoflow_workspace_members")
     .select("workspace_id,user_id,role,status,created_at,updated_at")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -1592,7 +1592,7 @@ async function deleteInventoryItem(id) {
   const { error } = await supabase
     .from("cater_providers")
     .delete()
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .eq("id", id);
 
   if (error) {
@@ -1724,7 +1724,7 @@ async function updateWorkspaceMember(userId, status) {
   const { error: memberError } = await supabase
     .from("beoflow_workspace_members")
     .update({ role, status })
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .eq("user_id", userId);
 
   if (memberError) {
@@ -1735,7 +1735,7 @@ async function updateWorkspaceMember(userId, status) {
   const { error: profileError } = await supabase
     .from("cater_profiles")
     .update({
-      workspace_id: DEFAULT_WORKSPACE_ID,
+      workspace_id: currentWorkspaceId,
       role: profileRole,
     })
     .eq("id", userId);
@@ -1771,7 +1771,7 @@ async function saveInventoryItem(event) {
     description: inventoryDescription.value.trim() || null,
   };
   const basePayload = {
-    workspace_id: DEFAULT_WORKSPACE_ID,
+    workspace_id: currentWorkspaceId,
     provider_name: inventoryName.value.trim(),
     provider_type: providerTypeForCategory(selectedCategory),
     status: "active",
@@ -1815,7 +1815,7 @@ async function saveInventoryItem(event) {
       ? supabase
           .from("cater_providers")
           .update(nextPayload)
-          .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+          .eq("workspace_id", currentWorkspaceId)
           .eq("id", id)
           .select()
           .single()
@@ -1851,7 +1851,7 @@ async function updateInventoryReview(id, patch, successMessage) {
   const { error } = await supabase
     .from("cater_providers")
     .update(patch)
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .eq("id", id);
 
   if (error) {
@@ -1873,7 +1873,8 @@ async function bootAdmin() {
   }
 
   supabase = requireSupabase();
-  const { user, profile, membership, workspace } = await getWorkspaceContext();
+  const context = await getWorkspaceContext();
+  const { user, profile, membership, workspace, workspaceId, role, accessError } = context;
   currentUser = user;
 
   if (!user) {
@@ -1881,18 +1882,18 @@ async function bootAdmin() {
     return;
   }
 
-  if (membership?.status === "disabled" || isPendingWorkspaceAccess(profile, membership, user)) {
+  if (accessError || membership?.status === "disabled" || isPendingWorkspaceAccess(profile, membership, user)) {
     navigateWithLoopGuard("../pending.html", "admin-pending");
     return;
   }
 
-  currentRole = getEffectiveWorkspaceRole(profile, membership, user);
+  currentRole = role || getEffectiveWorkspaceRole(profile, membership, user, workspaceId);
   if (!ADMIN_ROLES.has(currentRole)) {
     setStatus(`You do not have permission to access this admin. Detected role: ${currentRole || "no role"}.`);
     return;
   }
 
-  currentWorkspaceId = DEFAULT_WORKSPACE_ID;
+  currentWorkspaceId = workspaceId;
   if (dashboardEmail) dashboardEmail.textContent = user.email || "Admin";
   if (dashboardRole) dashboardRole.textContent = roleLabel(currentRole);
   setStatus(user.email || "Admin");
@@ -2063,7 +2064,9 @@ document.querySelectorAll(".sidebar-link").forEach((link) => {
 
 signoutButton?.addEventListener("click", async () => {
   if (!supabase) return;
+  clearWorkspaceContextCache();
   await supabase.auth.signOut();
+  clearWorkspaceContextCache();
   window.location.href = "../login.html";
 });
 

@@ -1,5 +1,5 @@
 import {
-  DEFAULT_WORKSPACE_ID,
+  clearWorkspaceContextCache,
   getEffectiveWorkspaceRole,
   getWorkspaceContext,
   isPendingWorkspaceAccess,
@@ -79,7 +79,7 @@ const PROVIDER_TYPE_BY_CATEGORY = {
 };
 
 let supabase = null;
-let currentWorkspaceId = DEFAULT_WORKSPACE_ID;
+let currentWorkspaceId = "";
 let currentUser = null;
 
 function setCollaboratorView(view) {
@@ -259,7 +259,7 @@ async function loadCollaboratorInventory(userId) {
   const { data, error } = await supabase
     .from("cater_providers")
     .select("id,provider_name,provider_type,status,notes,created_at,service_category,public_visible,approval_status,public_description,image_url,created_by")
-    .eq("workspace_id", DEFAULT_WORKSPACE_ID)
+    .eq("workspace_id", currentWorkspaceId)
     .eq("created_by", userId)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -326,7 +326,7 @@ async function saveCollaboratorInventory(event) {
   setInventoryStatus("Submitting item...");
 
   const { error } = await supabase.from("cater_providers").insert({
-    workspace_id: DEFAULT_WORKSPACE_ID,
+    workspace_id: currentWorkspaceId,
     provider_name: name,
     provider_type: providerTypeForCategory(category),
     status: "active",
@@ -356,7 +356,8 @@ async function bootCollaborator() {
   }
 
   supabase = requireSupabase();
-  const { user, profile, membership, workspace } = await getWorkspaceContext();
+  const context = await getWorkspaceContext();
+  const { user, profile, membership, workspace, workspaceId, role, accessError } = context;
   currentUser = user;
 
   if (!user) {
@@ -364,28 +365,28 @@ async function bootCollaborator() {
     return;
   }
 
-  if (membership?.status === "disabled" || isPendingWorkspaceAccess(profile, membership, user)) {
+  if (accessError || membership?.status === "disabled" || isPendingWorkspaceAccess(profile, membership, user)) {
     navigateWithLoopGuard("../pending.html", "collaborator-pending");
     return;
   }
 
-  const role = getEffectiveWorkspaceRole(profile, membership, user);
-  if (["owner", "admin", "super_admin", "platform_admin"].includes(role)) {
+  const workspaceRole = role || getEffectiveWorkspaceRole(profile, membership, user, workspaceId);
+  if (["owner", "admin", "super_admin", "platform_admin"].includes(workspaceRole)) {
     navigateWithLoopGuard("../admin/", "collaborator-admin-role");
     return;
   }
 
-  if (role === "viewer" || profile?.role === "client") {
+  if (workspaceRole === "viewer" || profile?.role === "client") {
     navigateWithLoopGuard("../client/", "collaborator-viewer-role");
     return;
   }
 
-  if (!["collaborator", "organizer"].includes(role)) {
+  if (!["collaborator", "organizer"].includes(workspaceRole)) {
     navigateWithLoopGuard("../pending.html", "collaborator-unknown-role");
     return;
   }
 
-  currentWorkspaceId = DEFAULT_WORKSPACE_ID;
+  currentWorkspaceId = workspaceId;
   sessionStatus.textContent = `${user.email} · Collaborator`;
   if (dashboardEmail) dashboardEmail.textContent = shortEmail(user.email);
   if (dashboardRole) dashboardRole.textContent = "Collaborator";
@@ -400,7 +401,9 @@ collaboratorViewButtons.forEach((button) => {
 
 signoutButton.addEventListener("click", async () => {
   if (!supabase) return;
+  clearWorkspaceContextCache();
   await supabase.auth.signOut();
+  clearWorkspaceContextCache();
   window.location.href = "../login.html";
 });
 
